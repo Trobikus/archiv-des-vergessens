@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Hintergrund Gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a28" />
+      <stop offset="100%" stop-color="#0d0d14" />
+    </linearGradient>
+    
+    <!-- Gold Gradient für Artefakte -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f4d75e" />
+      <stop offset="50%" stop-color="#d4af37" />
+      <stop offset="100%" stop-color="#8a7a5a" />
+    </linearGradient>
+    
+    <!-- Leucht-Effekte -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="25" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Hintergrund (Abgerundetes Rechteck) -->
+  <rect width="512" height="512" rx="115" fill="url(#bg)" stroke="#4a3e2e" stroke-width="12" />
+
+  <!-- Äußere Ringe (Der Mneme-Bund) -->
+  <circle cx="256" cy="256" r="180" stroke="#2a2a35" stroke-width="6" fill="none" />
+  <circle cx="256" cy="256" r="150" stroke="#8a7a5a" stroke-width="3" fill="none" stroke-dasharray="15 15" opacity="0.7" />
+
+  <!-- Abstraktes offenes Buch (Das Archiv) -->
+  <path d="M 110 390 Q 183 340 256 360 Q 329 340 402 390 L 382 430 Q 319 390 256 410 Q 193 390 130 430 Z" fill="url(#gold)" opacity="0.9" />
+  <path d="M 130 360 Q 193 310 256 330 Q 319 310 382 360 L 362 390 Q 309 350 256 370 Q 203 350 150 390 Z" fill="#8a7a5a" opacity="0.4" />
+
+  <!-- Zentrales Artefakt / Erinnerungskristall -->
+  <polygon points="256,90 305,190 405,210 305,250 256,330 207,250 107,210 207,190" fill="url(#gold)" filter="url(#glow)" />
+
+  <!-- Leuchtendes Mneme-Partikel im Zentrum -->
+  <circle cx="256" cy="210" r="35" fill="#ffffff" filter="url(#glow-strong)" />
+  <circle cx="256" cy="210" r="18" fill="#f4d75e" />
+
+  <!-- Schwebende kleine Partikel -->
+  <circle cx="150" cy="130" r="8" fill="#d4af37" filter="url(#glow)" />
+  <circle cx="370" cy="110" r="10" fill="#f4d75e" filter="url(#glow)" />
+  <circle cx="110" cy="270" r="6" fill="#ffffff" filter="url(#glow)" opacity="0.6" />
+  <circle cx="390" cy="300" r="7" fill="#d4af37" filter="url(#glow)" opacity="0.8" />
+</svg>

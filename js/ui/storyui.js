@@ -1,0 +1,207 @@
+import { generateStoryBosses } from '../data/bosses.js';
+import { EVENTS } from '../core/events.js';
+import { formatNumber } from '../utils/format.js';
+import BaseModalUI from './basemodal.js';
+
+export default class StoryUI extends BaseModalUI {
+  constructor(context) {
+    super('story-overlay', 'story-close');
+    this.eventBus = context.eventBus;
+    this.storyManager = context.storyManager;
+    this.hero = context.hero;
+    
+    this.currentViewChapter = 1;
+    this.maxUnlockedChapter = 1;
+
+    this.bossList = document.getElementById('story-boss-list');
+    this.chapterInfo = document.getElementById('story-chapter-info');
+    this.currentBossName = document.getElementById('story-current-boss-name');
+    this.currentBossStats = document.getElementById('story-current-boss-stats');
+    this.fightResult = document.getElementById('story-fight-result');
+    this.fightBtn = document.getElementById('story-fight-btn');
+    this.prevBtn = document.getElementById('story-prev-chapter');
+    this.nextBtn = document.getElementById('story-next-chapter');
+    this.lockedOverlay = document.getElementById('story-locked-overlay');
+    
+    this._bossHash = '';
+    this._timerInterval = null; 
+
+    if (this.prevBtn) this.prevBtn.addEventListener('click', () => this.changeChapter(-1));
+    if (this.nextBtn) this.nextBtn.addEventListener('click', () => this.changeChapter(1));
+
+    this.fightBtn.addEventListener('click', () => {
+      if (this.fightResult) this.fightResult.innerHTML = '';
+      this.storyManager.startBossFromHub();
+      
+      this.fightBtn.disabled = true;
+      let timeLeft = 2.5;
+      this.fightBtn.textContent = `⚔️ Kampf läuft... (${timeLeft.toFixed(1)}s)`;
+      
+      if (this._timerInterval) clearInterval(this._timerInterval);
+      this._timerInterval = setInterval(() => {
+        timeLeft -= 0.1;
+        if (timeLeft <= 0) {
+          clearInterval(this._timerInterval);
+          this._timerInterval = null;
+          this.fightBtn.textContent = '⚔️ Berechne...';
+        } else {
+          this.fightBtn.textContent = `⚔️ Kampf läuft... (${timeLeft.toFixed(1)}s)`;
+        }
+      }, 100);
+    });
+
+    this.eventBus.subscribe(EVENTS.UI_OPEN_STORY, () => this.open());
+    this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
+      if (this.isOpen) this.render();
+    });
+    this.eventBus.subscribe(EVENTS.STORY_UPDATED, () => {
+      if (this.isOpen) this.render();
+    });
+
+    this.eventBus.subscribe(EVENTS.STORY_BATTLE_RESULT, (data) => {
+      if (this._timerInterval) {
+        clearInterval(this._timerInterval);
+        this._timerInterval = null;
+      }
+
+      if (this.isOpen && this.fightResult) {
+        if (data.victory) {
+          this.fightResult.innerHTML = `<div class="boss-result-box boss-result-victory">🏆 SIEG! ${data.boss.name} besiegt!</div>`;
+          document.body.classList.add('boss-defeat-flash');
+          setTimeout(() => document.body.classList.remove('boss-defeat-flash'), 500);
+        } else {
+          this.fightResult.innerHTML = `<div class="boss-result-box boss-result-defeat">💀 NIEDERLAGE! Du warst zu schwach.</div>`;
+        }
+
+        setTimeout(() => {
+          if (this.fightResult && this.fightResult.innerHTML.includes(data.boss.name || 'NIEDERLAGE')) {
+            this.fightResult.innerHTML = '';
+          }
+        }, 6000);
+      }
+    });
+  }
+
+  onOpen() {
+    this.maxUnlockedChapter = this.hero.getChapter();
+    this.currentViewChapter = this.maxUnlockedChapter;
+    if (this.fightResult) this.fightResult.innerHTML = '';
+    requestAnimationFrame(() => this.render());
+  }
+
+  onClose() {
+    if (this._timerInterval) {
+      clearInterval(this._timerInterval);
+      this._timerInterval = null;
+    }
+
+    if (!this.storyManager.battleInProgress) {
+      this.fightBtn.disabled = false;
+      this.fightBtn.textContent = '⚔️ Bosskampf starten';
+    }
+  }
+
+  changeChapter(dir) {
+    const nextChap = this.currentViewChapter + dir;
+    if (nextChap >= 1 && nextChap <= 10) {
+      this.currentViewChapter = nextChap;
+      this.render();
+    }
+  }
+
+  render() {
+    if (!this.hero || !this.isOpen) return;
+    const allBosses = generateStoryBosses();
+    const currentBoss = this.storyManager.getCurrentBoss();
+    this.maxUnlockedChapter = this.hero.getChapter();
+
+    this.chapterInfo.textContent = `Kapitel ${this.currentViewChapter} - ${this._getChapterName(this.currentViewChapter)}`;
+    this.prevBtn.disabled = this.currentViewChapter <= 1;
+    this.nextBtn.disabled = this.currentViewChapter >= 10;
+
+    const chapterBosses = allBosses.filter(b => b.chapter === this.currentViewChapter);
+
+    if (this.currentViewChapter > this.maxUnlockedChapter) {
+      this.lockedOverlay.style.display = 'flex';
+      this.bossList.style.opacity = '0.05';
+      this.bossList.style.pointerEvents = 'none';
+      this.currentBossName.textContent = '???';
+      this.currentBossStats.textContent = 'Verborgen in der Dunkelheit';
+      this.fightBtn.style.display = 'none';
+    } else {
+      this.lockedOverlay.style.display = 'none';
+      this.bossList.style.opacity = '1';
+      this.bossList.style.pointerEvents = 'auto';
+      this.fightBtn.style.display = 'block';
+
+      if (this.currentViewChapter === this.maxUnlockedChapter && currentBoss) {
+        this.currentBossName.textContent = currentBoss.name;
+        this.currentBossStats.textContent = `HP: ${formatNumber(currentBoss.hp)} | Stärke: ${formatNumber(currentBoss.attack)} | Zähigkeit: ${formatNumber(currentBoss.defense)}`;
+        
+        if (!this.storyManager.battleInProgress) {
+          this.fightBtn.disabled = false;
+          this.fightBtn.textContent = '⚔️ Bosskampf starten';
+        }
+      } else if (this.currentViewChapter < this.maxUnlockedChapter) {
+        this.currentBossName.textContent = 'Kapitel Abgeschlossen';
+        this.currentBossStats.textContent = 'Alle Gegner in diesem Bereich wurden besiegt.';
+        this.fightBtn.disabled = true;
+        this.fightBtn.textContent = '✅ Abgeschlossen';
+      }
+    }
+
+    const bossHash = this.hero.defeatedBosses.join('|') + '|' + (currentBoss ? currentBoss.id : 'none') + '|' + this.currentViewChapter;
+    if (this._bossHash !== bossHash) {
+      this._bossHash = bossHash;
+      this._renderBossList(chapterBosses);
+    }
+
+    if (this.storyManager.battleInProgress && !this._timerInterval && this.fightBtn.style.display !== 'none') {
+      this.fightBtn.disabled = true;
+      this.fightBtn.textContent = '⚔️ Kampf läuft...';
+    }
+  }
+
+  _renderBossList(chapterBosses) {
+    while (this.bossList.children.length > chapterBosses.length) {
+      this.bossList.removeChild(this.bossList.lastChild);
+    }
+
+    chapterBosses.forEach((boss, index) => {
+      let div = this.bossList.children[index];
+      if (!div) {
+        div = document.createElement('div');
+        div.className = 'story-boss-entry';
+        div.innerHTML = `<span class="boss-name"></span><span class="boss-status"></span>`;
+        this.bossList.appendChild(div);
+      }
+
+      const nameSpan = div.querySelector('.boss-name');
+      const statusSpan = div.querySelector('.boss-status');
+      const isChapterBoss = index === chapterBosses.length - 1;
+
+      nameSpan.textContent = `${index + 1}. ${boss.name} ${isChapterBoss ? '👑' : ''}`;
+      statusSpan.className = 'boss-status';
+
+      if (this.hero.defeatedBosses.includes(boss.id)) {
+        statusSpan.textContent = '✅ Besiegt';
+        statusSpan.classList.add('defeated');
+      } else if (this.storyManager.getCurrentBoss() && this.storyManager.getCurrentBoss().id === boss.id) {
+        statusSpan.textContent = '⚔️ Aktiv';
+        statusSpan.classList.add('current');
+      } else {
+        statusSpan.textContent = '🔒 Ausstehend';
+        statusSpan.classList.add('pending');
+      }
+    });
+  }
+
+  _getChapterName(chapter) {
+    const names = {
+      1: 'Die Erwachenden', 2: 'Die Flüsternden', 3: 'Die Schattenwächter',
+      4: 'Die Vergessenen', 5: 'Die Hüter des Archivs', 6: 'Die Mneme-Wächter',
+      7: 'Die Alten', 8: 'Die Zeitlosen', 9: 'Die Schöpfer', 10: 'Das Ende aller Erinnerungen'
+    };
+    return names[chapter] || `Kapitel ${chapter}`;
+  }
+}
