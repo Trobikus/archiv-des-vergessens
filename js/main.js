@@ -30,8 +30,16 @@ import TutorialManager from './managers/tutorial.js';
 import LibraryManager from './managers/library.js';
 import CraftingManager from './managers/crafting.js';
 
-// --- NEU: LEADERBOARD ---
+// --- PHASE 1: AUDIO, CLOUD, LEADERBOARD ---
+import AudioManager from './audio/AudioManager.js';
+import CloudSaveManager from './core/CloudSaveManager.js';
 import LocalLeaderboard from './core/LocalLeaderboard.js';
+import TransitionManager from './core/TransitionManager.js';
+import UIAnimations from './ui/animations.js';
+
+// --- PHASE 2: STORY BRANCHING, DIALOG, CODEX ---
+import StoryBranchManager from './core/StoryBranchManager.js';
+import CodexManager from './core/CodexManager.js';
 
 // --- UI ---
 import ClanUI from './ui/clanui.js';
@@ -49,9 +57,9 @@ import QuestUI from './ui/questui.js';
 import TutorialUI from './ui/tutorialui.js';
 import LibraryUI from './ui/libraryui.js';
 import CraftingUI from './ui/craftingui.js';
-
-// --- NEU: LEADERBOARD UI ---
 import LeaderboardUI from './ui/LeaderboardUI.js';
+import DialogUI from './ui/DialogUI.js';
+import CodexUI from './ui/CodexUI.js';
 
 // --- PREACT IMPORTS ---
 import { html, render } from './ui/preact-setup.js';
@@ -120,8 +128,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   context.tutorialManager = new TutorialManager(eventBus, context.hero, context.resourceManager);
   context.craftingManager = new CraftingManager(context);
 
-  // --- NEU: LEADERBOARD MANAGER ---
+  // --- PHASE 1 MANAGER ---
+  context.audioManager = new AudioManager(eventBus);
+  context.cloudSaveManager = new CloudSaveManager(eventBus);
   context.leaderboardManager = new LocalLeaderboard();
+  context.transitionManager = new TransitionManager(eventBus);
+  context.uiAnimations = new UIAnimations(context);
+
+  // --- PHASE 2 MANAGER ---
+  context.storyBranchManager = new StoryBranchManager(eventBus, context.hero);
+  context.codexManager = new CodexManager(eventBus, context.hero);
+
+  // Audio initialisieren (nach User-Interaktion)
+  document.addEventListener('click', () => {
+    if (!context.audioManager.isInitialized) {
+      context.audioManager.init();
+      context.audioManager.playMusic('menu');
+    }
+  }, { once: true });
 
   // --- SAVEGAME REGISTRATION ---
   SaveGameManager.register('hero', context.hero);
@@ -135,7 +159,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   SaveGameManager.register('quests', context.questManager);
   SaveGameManager.register('tutorial', context.tutorialManager);
   SaveGameManager.register('crafting', context.craftingManager);
-  SaveGameManager.register('leaderboard', context.leaderboardManager); // NEU
+  SaveGameManager.register('audio', context.audioManager);
+  SaveGameManager.register('cloud', context.cloudSaveManager);
+  SaveGameManager.register('leaderboard', context.leaderboardManager);
+  SaveGameManager.register('storyBranch', context.storyBranchManager);
+  SaveGameManager.register('codex', context.codexManager);
 
   // --- UI INITIALIZATION ---
   let heroUI, storyUI, forgeUI, libraryUI, relicHuntUI, skillTreeUI, challengeUI;
@@ -155,7 +183,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     new TutorialUI(context);
     new GatherController(context);
     new CraftingUI(context);
-    new LeaderboardUI(context); // NEU
+    new LeaderboardUI(context);
+    new DialogUI(context);
+    new CodexUI(context);
 
     // --- PREACT RENDERING ---
     const preactRoot = document.getElementById('preact-root');
@@ -163,6 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       render(html`<${AchievementUI} context=${context} />`, preactRoot);
     }
 
+    // Event für den "Erfolge" Button im Hub binden
     const openAchBtn = document.getElementById('open-achievements-btn');
     if (openAchBtn) {
       openAchBtn.addEventListener('click', () => {
@@ -170,6 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
+    // Hub-Button für Meisterwerkstatt
     const hubCraftingBtn = document.getElementById('hub-crafting');
     if (hubCraftingBtn) {
       hubCraftingBtn.addEventListener('click', () => {
@@ -177,11 +209,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // --- NEU: LEADERBOARD BUTTON ---
+    // Hub-Button für Leaderboard
     const leaderboardBtn = document.getElementById('hub-leaderboard');
     if (leaderboardBtn) {
       leaderboardBtn.addEventListener('click', () => {
         eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
+      });
+    }
+
+    // Hub-Button für Story-Branching
+    const storyBranchBtn = document.getElementById('hub-story-branch');
+    if (storyBranchBtn) {
+      storyBranchBtn.addEventListener('click', () => {
+        eventBus.publish('ui:openDialog', { npcId: 'archivist' });
+      });
+    }
+
+    // Hub-Button für Codex
+    const codexBtn = document.getElementById('hub-codex');
+    if (codexBtn) {
+      codexBtn.addEventListener('click', () => {
+        eventBus.publish('ui:openCodex');
       });
     }
 
@@ -193,7 +241,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function saveGame() {
     if (context.storyManager.battleInProgress) return false;
-    return await SaveGameManager.saveGame();
+    const result = await SaveGameManager.saveGame();
+    if (result && context.cloudSaveManager.isCloudEnabled()) {
+      context.cloudSaveManager.sync();
+    }
+    return result;
   }
 
   function startAutosave() {
@@ -209,94 +261,147 @@ document.addEventListener('DOMContentLoaded', async () => {
   eventBus.subscribe(EVENTS.ACHIEVEMENT_CLAIMED, () => saveGame());
   eventBus.subscribe(EVENTS.EXPEDITION_STARTED, () => saveGame());
   eventBus.subscribe(EVENTS.SETTINGS_UPDATED, () => startAutosave());
+  eventBus.subscribe('story:branchChanged', () => saveGame());
+  eventBus.subscribe('story:endingReached', () => saveGame());
+  eventBus.subscribe('codex:entryUnlocked', () => saveGame());
 
-  // --- NEU: LEADERBOARD UPDATES ---
-
-  // Bei Boss-Sieg
-  eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, (data) => {
-    if (context.leaderboardManager) {
-      const boss = data.boss;
-      const chapter = context.hero.getChapter();
-      const timeSincePrestige = context.hero._prestigeStartTime
-        ? (Date.now() - context.hero._prestigeStartTime) / 1000
-        : 0;
-      context.leaderboardManager.updateBossDefeated(boss.id, timeSincePrestige, chapter);
-    }
-  });
-
-  // Bei Prestige
-  eventBus.subscribe(EVENTS.HERO_PRESTIGE, (data) => {
-    if (context.leaderboardManager) {
-      const timeSinceLastPrestige = data.timeSinceLastPrestige || 0;
-      context.leaderboardManager.updatePrestige(data.prestigeLevel, timeSinceLastPrestige);
-    }
-  });
-
-  // Bei Level-Up (wird über hero:updated getriggert)
-  let lastLeaderboardLevel = context.hero.level;
+  // Hero-Updates für Leaderboard
   eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
-    if (context.leaderboardManager && context.hero.level > lastLeaderboardLevel) {
-      const timePerLevel = 0; // Kann später berechnet werden
-      context.leaderboardManager.updateHero(context.hero.level, timePerLevel);
-      lastLeaderboardLevel = context.hero.level;
-    }
-  });
-
-  // Bei Crafting
-  eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, (data) => {
-    if (context.leaderboardManager && data.quality !== undefined) {
-      const level = context.craftingManager ? context.craftingManager.craftingLevel : 0;
-      context.leaderboardManager.updateCrafting(level, data.quality, data.quality >= 90);
-    }
-  });
-
-  // Bei Expedition
-  eventBus.subscribe(EVENTS.EXPEDITION_COMPLETE, (data) => {
     if (context.leaderboardManager) {
-      context.leaderboardManager.updateExpedition(data.success);
+      context.leaderboardManager.addEntry({
+        name: context.hero.name,
+        prestige: context.hero.prestigeLevel,
+        bosses: context.hero.defeatedBosses.length,
+        level: context.hero.level,
+        craftingLevel: context.craftingManager ? context.craftingManager.craftingLevel : 0,
+        particles: context.resourceManager.totalParticles
+      });
     }
   });
 
-  // Bei Achievements
-  eventBus.subscribe(EVENTS.ACHIEVEMENT_UNLOCKED, () => {
-    if (context.leaderboardManager && context.achievementManager) {
-      const count = context.achievementManager.getAchievements().filter(a => a.achieved).length;
-      context.leaderboardManager.updateAchievements(count);
+  // --- OPTIONEN: AUDIO & CLOUD EVENT LISTENER ---
+  // Audio Toggle
+  const audioToggleBtn = document.getElementById('opt-audio-toggle');
+  if (audioToggleBtn) {
+    audioToggleBtn.addEventListener('click', () => {
+      const muted = context.audioManager.toggleMute();
+      audioToggleBtn.textContent = muted ? '🔇 Stumm' : '🔊 Aktiv';
+      eventBus.publish(EVENTS.UI_ADD_LOG, { text: muted ? '🔇 Audio stummgeschaltet' : '🔊 Audio aktiviert', type: 'system' });
+    });
+    if (context.audioManager.isMuted) {
+      audioToggleBtn.textContent = '🔇 Stumm';
     }
-  });
-
-  // Ressourcen-Update für Spitzenwerte (alle 5 Sekunden)
-  let lastResourceUpdate = 0;
-  eventBus.subscribe(EVENTS.GAME_RENDER_TICK, (data) => {
-    if (context.leaderboardManager && context.resourceManager) {
-      const now = Date.now();
-      if (now - lastResourceUpdate > 5000) {
-        const res = context.resourceManager.getResources();
-        const ps = res.particles / 5; // Partikel pro Sekunde über 5 Sekunden
-        const rs = res.relics / 5;
-        context.leaderboardManager.updateResources(ps, rs, res.totalParticles, res.totalRelics);
-        lastResourceUpdate = now;
-      }
-    }
-  });
-
-  // Spielzeit
-  let playTimeAccumulator = 0;
-  eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, (data) => {
-    if (context.leaderboardManager && context.gameStateManager.getState() === 'running') {
-      playTimeAccumulator += data.delta / 1000;
-      if (playTimeAccumulator >= 60) {
-        context.leaderboardManager.updatePlayTime(Math.floor(playTimeAccumulator));
-        playTimeAccumulator = 0;
-      }
-    }
-  });
-
-  // Session-Count beim ersten Laden
-  if (context.leaderboardManager) {
-    context.leaderboardManager.incrementSession();
   }
 
+  // Musik-Lautstärke
+  const musicVolumeSlider = document.getElementById('opt-music-volume');
+  if (musicVolumeSlider) {
+    musicVolumeSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value) / 100;
+      context.audioManager.setMusicVolume(val);
+    });
+    musicVolumeSlider.value = context.audioManager.musicVolume * 100;
+  }
+
+  // SFX-Lautstärke
+  const sfxVolumeSlider = document.getElementById('opt-sfx-volume');
+  if (sfxVolumeSlider) {
+    sfxVolumeSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value) / 100;
+      context.audioManager.setSfxVolume(val);
+    });
+    sfxVolumeSlider.value = context.audioManager.sfxVolume * 100;
+  }
+
+  // Cloud-Sync aktivieren
+  const cloudEnabledCheck = document.getElementById('opt-cloud-enabled');
+  if (cloudEnabledCheck) {
+    cloudEnabledCheck.addEventListener('change', (e) => {
+      context.cloudSaveManager.setEnabled(e.target.checked);
+      eventBus.publish(EVENTS.UI_ADD_LOG, { text: e.target.checked ? '☁️ Cloud-Sync aktiviert' : '☁️ Cloud-Sync deaktiviert', type: 'system' });
+      updateCloudLastSync();
+    });
+    cloudEnabledCheck.checked = context.cloudSaveManager.isCloudEnabled();
+  }
+
+  // Cloud manuell synchronisieren
+  const cloudSyncBtn = document.getElementById('opt-cloud-sync-btn');
+  if (cloudSyncBtn) {
+    cloudSyncBtn.addEventListener('click', async () => {
+      if (!context.cloudSaveManager.isCloudEnabled()) {
+        eventBus.publish(EVENTS.UI_ADD_LOG, { text: '⚠️ Cloud-Sync ist deaktiviert. Bitte zuerst aktivieren.', type: 'system' });
+        return;
+      }
+      cloudSyncBtn.textContent = '⏳ Synchrone...';
+      cloudSyncBtn.disabled = true;
+      const success = await context.cloudSaveManager.forceSync();
+      cloudSyncBtn.disabled = false;
+      cloudSyncBtn.textContent = '☁️ Jetzt sichern';
+      if (success) {
+        eventBus.publish(EVENTS.UI_ADD_LOG, { text: '☁️ Spielstand erfolgreich in der Cloud gesichert!', type: 'system' });
+        updateCloudLastSync();
+      } else {
+        eventBus.publish(EVENTS.UI_ADD_LOG, { text: '⚠️ Cloud-Sync fehlgeschlagen.', type: 'system' });
+      }
+    });
+  }
+
+  function updateCloudLastSync() {
+    const lastSyncEl = document.getElementById('opt-cloud-last-sync');
+    if (lastSyncEl) {
+      const info = context.cloudSaveManager.getCloudInfo();
+      if (info && info.timestamp) {
+        const date = new Date(info.timestamp);
+        lastSyncEl.textContent = date.toLocaleString();
+      } else {
+        lastSyncEl.textContent = 'Nie';
+      }
+    }
+  }
+  updateCloudLastSync();
+
+  eventBus.subscribe('cloud:synced', updateCloudLastSync);
+
+  // --- OPTIONEN: BESTEHENDE EVENT LISTENER ---
+  const optParticles = document.getElementById('opt-particles');
+  if (optParticles) {
+    optParticles.addEventListener('change', (e) => {
+      context.settingsManager.set('particles', e.target.checked);
+    });
+    optParticles.checked = context.settingsManager.get('particles');
+  }
+
+  const optFloating = document.getElementById('opt-floating');
+  if (optFloating) {
+    optFloating.addEventListener('change', (e) => {
+      context.settingsManager.set('floatingText', e.target.checked);
+    });
+    optFloating.checked = context.settingsManager.get('floatingText');
+  }
+
+  const optAutosave = document.getElementById('opt-autosave');
+  if (optAutosave) {
+    optAutosave.addEventListener('change', (e) => {
+      context.settingsManager.set('autosave', e.target.value);
+    });
+    optAutosave.value = context.settingsManager.get('autosave');
+  }
+
+  const optHardReset = document.getElementById('opt-hard-reset');
+  if (optHardReset) {
+    optHardReset.addEventListener('click', async () => {
+      if (confirm('WARNUNG! Möchtest du deinen kompletten Spielstand UNWIDERRUFLICH löschen?')) {
+        if (saveTimer) clearInterval(saveTimer);
+        if (context.gameLoop.isRunning()) context.gameLoop.stop();
+        await SaveGameManager.deleteSaveGame();
+        context.cloudSaveManager.clearCloudData();
+        context.leaderboardManager.reset();
+        location.reload();
+      }
+    });
+  }
+
+  // --- NAVIGATION ---
   async function loadGame() {
     const saveData = await SaveGameManager.loadGame();
     if (!saveData) return false;
@@ -305,6 +410,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       eventBus.publish(EVENTS.HERO_UPDATED);
       eventBus.publish(EVENTS.RESOURCES_UPDATED);
       eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, { members: context.clanManager.members });
+
+      if (context.cloudSaveManager.isCloudEnabled()) {
+        context.cloudSaveManager.sync(saveData);
+        updateCloudLastSync();
+      }
 
       if (saveData.timestamp) {
         const now = Date.now();
@@ -371,7 +481,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnHubChallenges: document.getElementById('hub-challenges'),
     btnHubLibrary: document.getElementById('hub-library'),
     btnHubCrafting: document.getElementById('hub-crafting'),
-    btnHubLeaderboard: document.getElementById('hub-leaderboard'), // NEU
+    btnHubLeaderboard: document.getElementById('hub-leaderboard'),
+    btnHubStoryBranch: document.getElementById('hub-story-branch'),
+    btnHubCodex: document.getElementById('hub-codex'),
     btnHubBack: document.getElementById('hub-back-to-menu'),
     btnBackToHub: document.getElementById('back-to-hub-btn'),
     btnOptionsBack: document.getElementById('options-back-btn'),
@@ -408,7 +520,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.questManager.fromJSON({ questIndex: 0, dailyQuests: { date: '', gatherClicks: 0, expeditions: 0, craftedItems: 0, claimed: [] } });
       context.tutorialManager.fromJSON({ completed: false });
       context.craftingManager.fromJSON({});
-      context.leaderboardManager.fromJSON({}); // NEU
+      context.audioManager.fromJSON({});
+      context.cloudSaveManager.fromJSON({});
+      context.leaderboardManager.fromJSON({});
+      context.storyBranchManager.fromJSON({});
+      context.codexManager.fromJSON({});
 
       eventBus.publish(EVENTS.HERO_UPDATED);
 
@@ -416,22 +532,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       navController.showHub();
       context.tutorialManager.start();
 
-      // Leaderboard Session increment
-      if (context.leaderboardManager) {
-        context.leaderboardManager.incrementSession();
+      if (context.audioManager.isInitialized) {
+        context.audioManager.playMusic('hub');
       }
     },
     onHardReset: async () => {
       if (saveTimer) clearInterval(saveTimer);
       if (context.gameLoop.isRunning()) context.gameLoop.stop();
       await SaveGameManager.deleteSaveGame();
-      if (context.leaderboardManager) {
-        context.leaderboardManager.reset();
-      }
+      context.cloudSaveManager.clearCloudData();
+      context.leaderboardManager.reset();
       location.reload();
     },
     onGameStart: () => {
       context.achievementManager._checkProgress();
+      if (context.audioManager.isInitialized) {
+        context.audioManager.playMusic('game');
+      }
     }
   });
 
@@ -452,8 +569,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
     });
   }
+  if (navElements.btnHubStoryBranch) {
+    navElements.btnHubStoryBranch.addEventListener('click', () => {
+      eventBus.publish('ui:openDialog', { npcId: 'archivist' });
+    });
+  }
+  if (navElements.btnHubCodex) {
+    navElements.btnHubCodex.addEventListener('click', () => {
+      eventBus.publish('ui:openCodex');
+    });
+  }
 
   eventBus.subscribe(EVENTS.UI_START_BOSS_FIGHT, () => context.storyManager.startBossFromHub());
+
+  // Codex: Boss-Einträge beim Besiegen freischalten
+  eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, (data) => {
+    if (context.codexManager) {
+      // CodexManager hat eigene Event-Listener
+    }
+  });
 
   await navController.updateMenuButtons();
   navController.showMenu();

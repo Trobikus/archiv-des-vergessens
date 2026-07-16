@@ -160,6 +160,17 @@
           <span class="cinzel text-lg">Bestenliste</span>
           <span class="label">Persönliche Rekorde</span>
         </button>
+        <button class="hub-btn glass-btn" id="hub-story-branch">
+          <span class="icon">📖</span>
+          <span class="cinzel text-lg">Story</span>
+          <span class="label">Entscheidungen treffen</span>
+        </button>
+        
+        <button class="hub-btn glass-btn" id="hub-codex">
+          <span class="icon">📚</span>
+          <span class="cinzel text-lg">Codex</span>
+          <span class="label">Tagebuch &amp; Lore</span>
+        </button>
         <button class="hub-btn glass-btn" id="hub-library" style="display: none;">
           <span class="icon">📚</span><span class="cinzel text-lg">Bibliothek</span><span class="label">Endlose
             Forschungen</span>
@@ -600,6 +611,60 @@
         <button id="leaderboard-reset-btn" class="glass-btn btn-danger btn-small mt-2"
           style="display: none; margin: 0 auto;">Rekorde zurücksetzen</button>
         </div>
+        </div>
+        <!-- DIALOG MODAL -->
+        <div id="dialog-overlay" class="modal-overlay" style="display: none;">
+          <div id="dialog-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 80vh;">
+            <button class="modal-close" id="dialog-close" aria-label="Schließen">&times;</button>
+            <div class="flex-row gap-md mb-1" style="align-items: center;">
+              <span id="dialog-npc-portrait" style="font-size: 3rem;">👤</span>
+              <div>
+                <div id="dialog-npc-name" class="text-gold text-bold cinzel text-lg"></div>
+                <div id="dialog-npc-title" class="text-muted text-sm"></div>
+              </div>
+            </div>
+            <div id="dialog-text" class="glass-inner-panel mb-1" style="min-height: 80px; padding: 1rem; line-height: 1.6;">
+            </div>
+            <div id="dialog-options" class="flex-column" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+          </div>
+        </div>
+        <!-- CODEX MODAL -->
+        <div id="codex-overlay" class="modal-overlay" style="display: none;">
+          <div id="codex-modal" class="modal-content-wide glass-panel" style="max-width: 1000px; max-height: 85vh;">
+            <button class="modal-close" id="codex-close" aria-label="Schließen">&times;</button>
+            <h2 class="modal-title glow-text cinzel text-center">📚 Codex – Das Tagebuch des Archivs</h2>
+            <div class="hub-subtitle text-center mb-1">Alle entdeckten Geheimnisse und Erinnerungen</div>
+        
+            <!-- Grid mit fester Höhe für scrollbare Bereiche -->
+            <div
+              style="display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; flex: 1; min-height: 0; height: calc(100% - 130px); max-height: 60vh;">
+        
+              <!-- Linke Spalte: Kategorien, Suche, Liste -->
+              <div class="glass-inner-panel"
+                style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+                <div id="codex-categories" class="flex-row gap-sm mb-1" style="flex-wrap: wrap;"></div>
+                <input id="codex-search" type="text" placeholder="🔍 Suchen..." class="ui-select w-100 mb-1"
+                  style="padding: 0.5rem;" />
+                <!-- Container für die Eintragsliste – scrollbar -->
+                <div id="codex-container" class="modal-scroll-area"
+                  style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
+              </div>
+        
+              <!-- Rechte Spalte: Detailansicht -->
+              <div class="glass-inner-panel"
+                style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+                <div class="text-muted text-sm mb-1"
+                  style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; flex-shrink: 0;">Details</div>
+                <!-- Container für die Detailansicht – scrollbar -->
+                <div id="codex-entry-detail" class="modal-scroll-area"
+                  style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
+              </div>
+            </div>
+        
+            <div class="text-center text-muted text-sm mt-1" style="flex-shrink: 0; padding-top: 0.5rem;">
+              Fortschritt: <span id="codex-progress">0</span>% freigeschaltet
+            </div>
+          </div>
         </div>
     <!-- PREACT ROOT CONTAINER -->
     <div id="preact-root"></div>

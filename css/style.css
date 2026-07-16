@@ -8,7 +8,7 @@
 :root {
   /* Farbpalette */
   --bg-dark: #090a0f;
-    --bg-panel: rgba(18, 20, 28, 0.65);
+  --bg-panel: rgba(18, 20, 28, 0.65);
     --bg-panel-hover: rgba(28, 31, 42, 0.8);
     --bg-inner: rgba(0, 0, 0, 0.4);
     --color-text-main: #e2e8f0;
@@ -31,7 +31,8 @@
     /* Typografie */
     --font-header: 'Cinzel', serif;
   --font-body: 'Inter', sans-serif;
-/* Layout & Animationen */
+
+  /* Layout & Animationen */
   --border-radius: 12px;
   --border-radius-sm: 6px;
   --transition-fast: 0.2s ease;
@@ -174,7 +175,7 @@ h3,
 .flex-between {
   display: flex;
   justify-content: space-between;
-    align-items: center;
+  align-items: center;
 }
 
 .flex-row {
@@ -253,7 +254,7 @@ button:disabled {
 .glass-btn {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.2) 100%);
   border: var(--border-glass);
-    border-radius: var(--border-radius-sm);
+  border-radius: var(--border-radius-sm);
     padding: 0.6rem 1.2rem;
   font-weight: 600;
   backdrop-filter: blur(4px);
@@ -325,6 +326,7 @@ button:disabled {
 .ui-btn:not(:disabled):active {
   transform: translateY(0);
 }
+
 .ui-btn-gold {
   border-color: var(--color-gold);
   color: var(--color-gold);
@@ -354,6 +356,7 @@ button:disabled {
   color: var(--color-danger);
   box-shadow: 0 0 8px var(--color-danger-glow) inset;
 }
+
 .ui-btn-red:not(:disabled):hover {
   background: rgba(248, 113, 113, 0.12);
   box-shadow: 0 0 15px var(--color-danger-glow) inset, 0 4px 12px var(--color-danger-glow);
@@ -456,7 +459,7 @@ button:disabled {
   font-family: var(--font-body);
   font-size: 1.2rem;
   color: var(--color-gold);
-    letter-spacing: 4px;
+  letter-spacing: 4px;
     text-transform: uppercase;
     margin-bottom: 3rem;
 }
@@ -496,7 +499,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
-    width: 600px;
+  width: 600px;
     max-width: 90vw;
 }
 
@@ -505,7 +508,7 @@ button:disabled {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-    padding: 1.5rem;
+  padding: 1.5rem;
     height: 120px;
 }
 
@@ -528,7 +531,7 @@ button:disabled {
 #game-container {
   padding: 2rem;
   max-width: 1400px;
-    margin: 0 auto;
+  margin: 0 auto;
     width: 100%;
     height: 100%;
   display: flex;
@@ -566,7 +569,7 @@ button:disabled {
 #game-header .subtitle {
   margin-bottom: 0;
   font-size: 1rem;
-    letter-spacing: 3px;
+  letter-spacing: 3px;
 }
 
 /* Ressourcenelemente */
@@ -600,14 +603,14 @@ button:disabled {
 .resource-value {
   font-family: var(--font-header);
   font-size: 1.5rem;
-    font-weight: bold;
+  font-weight: bold;
 }
 
 /* Sammelbereich */
 .gather-section {
   display: flex;
   flex-direction: column;
-    align-items: center;
+  align-items: center;
     gap: 1rem;
     margin-bottom: 3rem;
 }
@@ -646,10 +649,11 @@ button:disabled {
   height: 100%;
   min-height: 0;
 }
+
 .panel-title {
   font-size: 1.2rem;
   margin-bottom: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
 }
 
@@ -658,7 +662,7 @@ button:disabled {
   max-height: calc(100% - 3rem);
   padding-right: 0.5rem;
   flex: 1;
-    min-height: 0;
+  min-height: 0;
   }
   
   /* --- EINHEITLICHE SCROLLLEISTE (global) --- */
@@ -725,7 +729,7 @@ tr:hover td {
 .progress-bar-container {
   background: var(--bg-inner);
   border-radius: 20px;
-    height: 14px;
+  height: 14px;
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -737,7 +741,7 @@ tr:hover td {
   height: 100%;
   width: 0%;
   transition: transform 0.1s linear, width 0.3s ease;
-    box-shadow: 0 0 10px var(--color-blue-glow);
+  box-shadow: 0 0 10px var(--color-blue-glow);
 }
 
 .progress-text {
@@ -751,7 +755,7 @@ tr:hover td {
   justify-content: center;
   font-size: 0.65rem;
   font-weight: bold;
-    text-shadow: 1px 1px 2px #000;
+  text-shadow: 1px 1px 2px #000;
 }
 
 .recruit-buttons {
@@ -773,7 +777,7 @@ tr:hover td {
   justify-content: space-between;
   font-size: 0.8rem;
   border-radius: 0;
-    border-left: none;
+  border-left: none;
     border-right: none;
     border-bottom: none;
 }
@@ -781,7 +785,7 @@ tr:hover td {
 .status-indicator {
   display: inline-block;
   width: 8px;
-    height: 8px;
+  height: 8px;
   border-radius: 50%;
   margin-right: 5px;
 }
@@ -840,17 +844,17 @@ tr:hover td {
   position: absolute;
   top: 1rem;
   right: 1rem;
-    width: 32px;
+  width: 32px;
     height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
-    justify-content: center;
+  justify-content: center;
     font-size: 1.5rem;
   padding: 0;
   line-height: 1;
   background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   .modal-close:hover {
@@ -862,19 +866,18 @@ tr:hover td {
 .modal-title {
   font-size: 1.8rem;
   margin-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
 }
 
-/* --- ARTEfAKT-SCHMIEDE: Feste Höhen für Spalten --- */
+/* --- ARTEFAKT-SCHMIEDE: Feste Höhen für Spalten --- */
 #forge-modal .forge-split-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   flex: 1;
   min-height: 0;
-    height: calc(100% - 160px);
-    /* Platz für Titel, Ressourcen, Ergebnis */
+  height: calc(100% - 160px);
 }
 
 #forge-modal .forge-column {
@@ -1053,7 +1056,7 @@ tr:hover td {
   grid-template-columns: 300px 1fr;
   gap: 2rem;
   flex: 1;
-    min-height: 0;
+  min-height: 0;
 }
 
 .hero-avatar-panel {
@@ -1061,7 +1064,7 @@ tr:hover td {
   flex-direction: column;
   align-items: center;
   height: 100%;
-    min-height: 0;
+  min-height: 0;
     overflow-y: auto;
     padding-right: 0.5rem;
 }
@@ -1096,7 +1099,7 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-    background: var(--bg-dark);
+  background: var(--bg-dark);
     border: 2px solid var(--color-gold);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
     z-index: 2;
@@ -1136,7 +1139,7 @@ tr:hover td {
   display: flex;
   gap: 1rem;
   margin-bottom: 1rem;
-    justify-content: flex-end;
+  justify-content: flex-end;
 }
 
 .bulk-actions-container {
@@ -1202,34 +1205,6 @@ tr:hover td {
   color: var(--color-danger);
 }
 
-/* ----- ARTEfAKT-SCHMIEDE (FORGE) ----- */
-#forge-modal .forge-split-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  flex: 1;
-    min-height: 0;
-    height: calc(100% - 160px);
-}
-
-#forge-modal .forge-column {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  }
-  
-  #forge-modal .forge-column .modal-scroll-area {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-    padding-right: 0.3rem;
-  }
-  
-  #forge-modal .forge-column .modal-scroll-area::-webkit-scrollbar {
-    width: 4px;
-}
-
 .options-header,
 .options-header-blue {
   font-family: var(--font-header);
@@ -1253,7 +1228,7 @@ tr:hover td {
   z-index: 10000;
   font-weight: bold;
   font-size: 1.2rem;
-    color: var(--color-gold);
+  color: var(--color-gold);
     text-shadow: 0 0 5px #000, 0 0 10px var(--color-gold);
     animation: floatUpFade 1.2s ease-out forwards;
 }
@@ -1352,9 +1327,11 @@ tr:hover td {
   color: #000;
   box-shadow: 0 0 15px var(--color-gold-glow);
 }
+
 /* --------------------------------------------------------------------------
    12. ANIMATIONEN & KEYFRAMES
    -------------------------------------------------------------------------- */
+/* --- VERZÖGERTER FADE-UP EFFEKT --- */
 @keyframes fadeUpIn {
   from {
     opacity: 0;
@@ -1370,41 +1347,47 @@ tr:hover td {
 .fade-in {
   animation: fadeUpIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
+/* --- EPISCHES GOLDENES GLÜHEN --- */
 @keyframes epicPulse {
   0% {
     box-shadow: 0 0 0 0 var(--color-gold-glow);
   }
-70% {
-  box-shadow: 0 0 0 15px rgba(212, 175, 55, 0);
-}
 
-100% {
-  box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
-}
+                                70% {
+                                  box-shadow: 0 0 0 15px rgba(212, 175, 55, 0);
+                                }
+
+                                100% {
+                                  box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+                                }
 }
 
 .epic-pulse {
   animation: epicPulse 2s infinite;
 }
 
+/* --- SCHWEBETEXT SCHWINDEN --- */
 @keyframes floatUpFade {
   0% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-50% {
-  transform: translateY(-30px) scale(1.1);
-}
+
+                                50% {
+                                  transform: translateY(-30px) scale(1.1);
+                                }
+
     100% {
       opacity: 0;
     transform: translateY(-50px) scale(1);
   
 }
 
+/* --- SCREEN-SHAKE BEI ERFOLGEN --- */
 @keyframes screenShake {
   0% {
     transform: translate(0, 0);
-  }
+  
 
   10% {
     transform: translate(-2px, -2px);
@@ -1451,15 +1434,16 @@ tr:hover td {
   animation: screenShake 0.4s ease-in-out;
 }
 
+/* --- PULSIEREN FÜR ABHOLBEREITE ELEMENTE --- */
 @keyframes claimablePulse {
   0% {
     border-color: rgba(212, 175, 55, 0.4);
-      box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
   }
 
   50% {
     border-color: rgba(212, 175, 55, 0.95);
-      box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
     }
     
     100% {
@@ -1467,39 +1451,59 @@ tr:hover td {
       box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
     }
     }
-    
-    body.boss-defeat-flash::after {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(255, 255, 255, 0.8);
-      pointer-events: none;
-      z-index: 999999;
-      animation: whiteFlash 0.6s ease-out forwards;
-    }
-    
-    @keyframes whiteFlash {
-      0% {
-        opacity: 0;
-      }
-    
-      15% {
-        opacity: 1;
+/* --- BLITZ BEIM SIEG ÜBER BOSSE --- */
+body.boss-defeat-flash::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  z-index: 999999;
+  animation: whiteFlash 0.6s ease-out forwards;
+}
+
+@keyframes whiteFlash {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
   }
 
   100% {
     opacity: 0;
   }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-  
-    to {
-      opacity: 1;
+}
+
+/* --- EINBLENDUNG FÜR MODALS --- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
+
+  to {
+    opacity: 1;
+  }
+}
+/* Codex-Container speziell für scrollbare Listen */
+#codex-container,
+#codex-entry-detail {
+  overflow-y: auto !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+}
+
+/* Verhindert Überlauf im Grid */
+#codex-modal .glass-inner-panel {
+  overflow: hidden;
+}
+
+/* Sicherstellen, dass die Karten nicht überlaufen */
+.codex-entry {
+  flex-shrink: 0;
 }

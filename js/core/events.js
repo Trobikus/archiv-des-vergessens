@@ -27,6 +27,11 @@ export const EVENTS = {
     STORY_BOSS_DEFEATED: 'story:bossDefeated',
     STORY_UPDATED: 'story:updated',
 
+    // === STORY BRANCH (NEU) ===
+    STORY_BRANCH_CHANGED: 'story:branchChanged',
+    STORY_BRANCH_RESET: 'story:branchReset',
+    STORY_ENDING_REACHED: 'story:endingReached',
+
     // === FORGE ===
     FORGE_CRAFTED: 'forge:crafted',
 
@@ -63,6 +68,8 @@ export const EVENTS = {
     UI_OPEN_FORGE: 'ui:openForge',
     UI_OPEN_RELICHUNT: 'ui:openRelicHunt',
     UI_OPEN_LIBRARY: 'ui:openLibrary',
+    UI_OPEN_CODEX: 'ui:openCodex',
+    UI_OPEN_DIALOG: 'ui:openDialog',
     UI_REFRESH_QUEST: 'ui:refreshQuestUI',
     UI_START_BOSS_FIGHT: 'ui:startBossFight',
     UI_ENTER_GAME: 'ui:enterGame',
@@ -74,5 +81,8 @@ export const EVENTS = {
 
     // === LEADERBOARD ===
     UI_OPEN_LEADERBOARD: 'ui:openLeaderboard',
-    LEADERBOARD_UPDATED: 'leaderboard:updated'
+    LEADERBOARD_UPDATED: 'leaderboard:updated',
+
+    // === CODEX (NEU) ===
+    CODEX_ENTRY_UNLOCKED: 'codex:entryUnlocked'
 };
