@@ -9,7 +9,7 @@ export default class StoryUI extends BaseModalUI {
     this.eventBus = context.eventBus;
     this.storyManager = context.storyManager;
     this.hero = context.hero;
-    
+
     this.currentViewChapter = 1;
     this.maxUnlockedChapter = 1;
 
@@ -22,9 +22,8 @@ export default class StoryUI extends BaseModalUI {
     this.prevBtn = document.getElementById('story-prev-chapter');
     this.nextBtn = document.getElementById('story-next-chapter');
     this.lockedOverlay = document.getElementById('story-locked-overlay');
-    
+
     this._bossHash = '';
-    this._timerInterval = null; 
 
     if (this.prevBtn) this.prevBtn.addEventListener('click', () => this.changeChapter(-1));
     if (this.nextBtn) this.nextBtn.addEventListener('click', () => this.changeChapter(1));
@@ -32,22 +31,7 @@ export default class StoryUI extends BaseModalUI {
     this.fightBtn.addEventListener('click', () => {
       if (this.fightResult) this.fightResult.innerHTML = '';
       this.storyManager.startBossFromHub();
-      
       this.fightBtn.disabled = true;
-      let timeLeft = 2.5;
-      this.fightBtn.textContent = `⚔️ Kampf läuft... (${timeLeft.toFixed(1)}s)`;
-      
-      if (this._timerInterval) clearInterval(this._timerInterval);
-      this._timerInterval = setInterval(() => {
-        timeLeft -= 0.1;
-        if (timeLeft <= 0) {
-          clearInterval(this._timerInterval);
-          this._timerInterval = null;
-          this.fightBtn.textContent = '⚔️ Berechne...';
-        } else {
-          this.fightBtn.textContent = `⚔️ Kampf läuft... (${timeLeft.toFixed(1)}s)`;
-        }
-      }, 100);
     });
 
     this.eventBus.subscribe(EVENTS.UI_OPEN_STORY, () => this.open());
@@ -58,17 +42,24 @@ export default class StoryUI extends BaseModalUI {
       if (this.isOpen) this.render();
     });
 
-    this.eventBus.subscribe(EVENTS.STORY_BATTLE_RESULT, (data) => {
-      if (this._timerInterval) {
-        clearInterval(this._timerInterval);
-        this._timerInterval = null;
+    // NEU: Präziser Timer direkt aus der Spiel-Logik (kein asynchroner Drift mehr)
+    this.eventBus.subscribe(EVENTS.GAME_RENDER_TICK, () => {
+      if (this.isOpen && this.storyManager.battleInProgress) {
+        const timeLeft = Math.max(0, this.storyManager.battleTimer / 1000);
+        if (timeLeft > 0) {
+          this.fightBtn.textContent = `⚔️ Kampf läuft... (${timeLeft.toFixed(1)}s)`;
+        } else {
+          this.fightBtn.textContent = '⚔️ Berechne...';
+        }
       }
+    });
 
+    this.eventBus.subscribe(EVENTS.STORY_BATTLE_RESULT, (data) => {
       if (this.isOpen && this.fightResult) {
         if (data.victory) {
           this.fightResult.innerHTML = `<div class="boss-result-box boss-result-victory">🏆 SIEG! ${data.boss.name} besiegt!</div>`;
           document.body.classList.add('boss-defeat-flash');
-          setTimeout(() => document.body.classList.remove('boss-defeat-flash'), 500);
+          setTimeout(() => document.body.classList.remove('boss-defeat-flash'), 600);
         } else {
           this.fightResult.innerHTML = `<div class="boss-result-box boss-result-defeat">💀 NIEDERLAGE! Du warst zu schwach.</div>`;
         }
@@ -90,11 +81,6 @@ export default class StoryUI extends BaseModalUI {
   }
 
   onClose() {
-    if (this._timerInterval) {
-      clearInterval(this._timerInterval);
-      this._timerInterval = null;
-    }
-
     if (!this.storyManager.battleInProgress) {
       this.fightBtn.disabled = false;
       this.fightBtn.textContent = '⚔️ Bosskampf starten';
@@ -137,7 +123,7 @@ export default class StoryUI extends BaseModalUI {
       if (this.currentViewChapter === this.maxUnlockedChapter && currentBoss) {
         this.currentBossName.textContent = currentBoss.name;
         this.currentBossStats.textContent = `HP: ${formatNumber(currentBoss.hp)} | Stärke: ${formatNumber(currentBoss.attack)} | Zähigkeit: ${formatNumber(currentBoss.defense)}`;
-        
+
         if (!this.storyManager.battleInProgress) {
           this.fightBtn.disabled = false;
           this.fightBtn.textContent = '⚔️ Bosskampf starten';
@@ -154,11 +140,6 @@ export default class StoryUI extends BaseModalUI {
     if (this._bossHash !== bossHash) {
       this._bossHash = bossHash;
       this._renderBossList(chapterBosses);
-    }
-
-    if (this.storyManager.battleInProgress && !this._timerInterval && this.fightBtn.style.display !== 'none') {
-      this.fightBtn.disabled = true;
-      this.fightBtn.textContent = '⚔️ Kampf läuft...';
     }
   }
 

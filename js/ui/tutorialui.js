@@ -10,30 +10,27 @@ export default class TutorialUI {
   createElements() {
     this.overlay = document.createElement('div');
     this.overlay.id = 'tutorial-overlay';
-    
-    this.overlay.style.display = 'none'; 
+
+    this.overlay.style.display = 'none';
     this.overlay.style.position = 'fixed';
     this.overlay.style.top = '0';
     this.overlay.style.left = '0';
     this.overlay.style.width = '100vw';
     this.overlay.style.height = '100vh';
     this.overlay.style.zIndex = '99999';
-    // WICHTIGSTER FIX: Lässt alle Klicks durch das Fullscreen-Overlay auf das eigentliche Spiel fallen!
-    this.overlay.style.pointerEvents = 'none'; 
+    this.overlay.style.pointerEvents = 'none';
 
     this.highlight = document.createElement('div');
     this.highlight.className = 'tutorial-highlight';
-    // Der Highlight-Rahmen darf Klicks ebenfalls nicht blockieren
     this.highlight.style.pointerEvents = 'none';
 
     this.dialog = document.createElement('div');
     this.dialog.id = 'tutorial-dialog';
-    // NUR die Tutorial-Textbox fängt Klicks ab, damit man den "Weiter"-Button drücken kann
     this.dialog.style.pointerEvents = 'auto';
 
     this.textEl = document.createElement('div');
-    this.textEl.style.marginBottom = '1rem';
-    this.textEl.style.lineHeight = '1.5';
+    this.textEl.style.marginBottom = '1.5rem';
+    this.textEl.style.lineHeight = '1.6';
 
     this.btnEl = document.createElement('button');
     this.btnEl.className = 'tutorial-btn';
@@ -48,8 +45,8 @@ export default class TutorialUI {
 
   bindEvents() {
     this.btnEl.addEventListener('click', () => {
-      const step = this.tutorialManager.steps[this.tutorialManager.currentStepIndex];
-      if (step.action === 'next' || step.action === 'finish') {
+      const step = this.tutorialManager.getCurrentStep();
+      if (step && (step.action === 'next' || step.action === 'finish')) {
         this.tutorialManager.nextStep();
       }
     });
@@ -57,22 +54,22 @@ export default class TutorialUI {
     this.eventBus.subscribe('tutorial:step', (step) => this.renderStep(step));
     this.eventBus.subscribe('tutorial:end', () => this.hide());
 
-    // Sauberes Lauschen auf alle Events über EventBus API
     this.eventBus.subscribeAll((eventName) => {
       this.checkCondition(eventName);
     });
-    
+
     window.addEventListener('resize', () => {
       if (this.tutorialManager.isActive) {
-        this.renderStep(this.tutorialManager.steps[this.tutorialManager.currentStepIndex]);
+        const step = this.tutorialManager.getCurrentStep();
+        if (step) this.renderStep(step);
       }
     });
   }
 
   checkCondition(eventName) {
     if (!this.tutorialManager.isActive) return;
-    const step = this.tutorialManager.steps[this.tutorialManager.currentStepIndex];
-    
+    const step = this.tutorialManager.getCurrentStep();
+
     if (step && step.action === 'wait_event' && step.eventName === eventName) {
       if (step.condition()) {
         this.tutorialManager.nextStep();
@@ -81,6 +78,7 @@ export default class TutorialUI {
   }
 
   renderStep(step) {
+    if (!step) return;
     this.overlay.style.display = 'block';
     this.textEl.innerHTML = step.text;
 
@@ -92,11 +90,13 @@ export default class TutorialUI {
     }
 
     if (step.target) {
+      // Timeout auf 350ms erhöht, um die CSS Fade-In Animation (0.3s) der Modals abzuwarten,
+      // bevor die Koordinaten berechnet werden.
       setTimeout(() => {
         const targetEl = document.querySelector(step.target);
         if (targetEl) {
           const rect = targetEl.getBoundingClientRect();
-          
+
           this.highlight.style.display = 'block';
           this.highlight.style.top = (rect.top - 8) + 'px';
           this.highlight.style.left = (rect.left - 8) + 'px';
@@ -104,12 +104,12 @@ export default class TutorialUI {
           this.highlight.style.height = (rect.height + 16) + 'px';
 
           const dialogRect = this.dialog.getBoundingClientRect();
-          const dialogWidth = dialogRect.width || 320;
-          const dialogHeight = dialogRect.height || 150;
-          
+          const dialogWidth = dialogRect.width || 400;
+          const dialogHeight = dialogRect.height || 180;
+
           const spaceAbove = rect.top;
           const spaceBelow = window.innerHeight - rect.bottom;
-          
+
           let dialogTop, dialogLeft;
 
           if (spaceBelow >= dialogHeight + 20 || spaceBelow > spaceAbove) {
@@ -125,7 +125,7 @@ export default class TutorialUI {
           this.dialog.style.top = dialogTop + 'px';
           this.dialog.style.left = dialogLeft + 'px';
         }
-      }, 50);
+      }, 350);
     } else {
       this.highlight.style.display = 'none';
       this.dialog.style.top = '50%';
