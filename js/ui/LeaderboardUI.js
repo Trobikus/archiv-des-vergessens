@@ -5,22 +5,16 @@ import { formatNumber } from '../utils/format.js';
 
 export default class LeaderboardUI extends BaseModalUI {
     constructor(context) {
-        // Wir verwenden ein eigenes Modal oder erweitern das Achievement-Modal?
-        // Für Einfachheit: eigenes Modal
         super('leaderboard-overlay', 'leaderboard-close');
 
         this.eventBus = context.eventBus;
-        this.leaderboard = context.leaderboardManager; // LocalLeaderboard
+        this.leaderboard = context.leaderboardManager;
         this.hero = context.hero;
         this.resourceManager = context.resourceManager;
 
         this.container = document.getElementById('leaderboard-container');
-        this.statsContainer = document.getElementById('leaderboard-stats');
 
-        // Event: UI öffnen (über Hub-Button)
         this.eventBus.subscribe('ui:openLeaderboard', () => this.open());
-
-        // Automatisch aktualisieren, wenn sich der Held ändert
         this.eventBus.subscribe('hero:updated', () => {
             if (this.isOpen) this.render();
         });
@@ -39,46 +33,39 @@ export default class LeaderboardUI extends BaseModalUI {
         const stats = this.leaderboard.getFormattedStats();
         const records = this.leaderboard.getRecords();
 
-        // Bestenliste als Tabelle
         let html = `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; text-align: left;">
-    `;
+            <div class="leaderboard-stats-grid">
+        `;
 
         for (const [label, value] of Object.entries(stats)) {
             html += `
-        <div class="glass-inner-panel" style="padding: 0.5rem 0.8rem; display: flex; justify-content: space-between; align-items: center;">
-          <span class="text-muted text-sm">${label}</span>
-          <span class="text-gold text-bold">${value}</span>
-        </div>
-      `;
+                <div class="leaderboard-stat glass-inner-panel">
+                    <span class="text-muted text-sm">${label}</span>
+                    <span class="text-gold text-bold">${value}</span>
+                </div>
+            `;
         }
 
         html += `
-      </div>
-      <div class="text-center text-muted text-sm mt-2" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
-        📊 Persönliche Rekorde – gespeichert in deinem Browser
-      </div>
-    `;
-
-        // Zusätzliche Statistiken
-        html += `
-      <div class="flex-between mt-1" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.8rem;">
-        <span class="text-muted text-sm">Sitzungen</span>
-        <span class="text-highlight">${records.sessionCount}</span>
-        <span class="text-muted text-sm">Zuletzt gespielt</span>
-        <span class="text-highlight">${new Date(records.lastPlayed).toLocaleDateString()}</span>
-      </div>
-      <div class="text-center text-muted text-sm mt-1">
-        Gesamtspielzeit: ${Math.floor(records.totalPlayTime / 60)} Minuten
-      </div>
-    `;
+            </div>
+            <div class="leaderboard-footer">
+                <span class="text-muted text-sm">📊 Persönliche Rekorde – gespeichert in deinem Browser</span>
+            </div>
+            <div class="leaderboard-meta">
+                <span class="text-muted text-sm">Sitzungen: <span class="text-highlight">${records.sessionCount}</span></span>
+                <span class="text-muted text-sm">Zuletzt gespielt: <span class="text-highlight">${new Date(records.lastPlayed).toLocaleDateString()}</span></span>
+                <span class="text-muted text-sm">Gesamtspielzeit: <span class="text-highlight">${Math.floor(records.totalPlayTime / 60)} Minuten</span></span>
+            </div>
+        `;
 
         this.container.innerHTML = html;
 
-        // Reset-Button (optional, nur für Debug)
         const resetBtn = document.getElementById('leaderboard-reset-btn');
         if (resetBtn) {
             resetBtn.style.display = 'block';
+            resetBtn.className = 'glass-btn btn-danger btn-small';
+            resetBtn.style.margin = '0.5rem auto 0';
+            resetBtn.textContent = '🗑️ Rekorde zurücksetzen';
             resetBtn.addEventListener('click', () => {
                 if (confirm('Möchtest du deine persönlichen Rekorde zurücksetzen?')) {
                     this.leaderboard.reset();

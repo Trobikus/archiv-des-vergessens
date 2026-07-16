@@ -83,7 +83,6 @@ export default class NavigationController {
       }
     });
 
-    // Optionen
     const optParticles = document.getElementById('opt-particles');
     safeAddEventListener(optParticles, 'change', (e) => {
       this.settingsManager.set('particles', e.target.checked);

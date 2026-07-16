@@ -1,5 +1,8 @@
+// --- START OF FILE ui/relicHuntUI.js ---
+
 import { EVENTS } from '../core/events.js';
 import BaseModalUI from './basemodal.js';
+import { formatNumber } from '../utils/format.js';
 
 export default class RelicHuntUI extends BaseModalUI {
   constructor(context) {
@@ -62,24 +65,36 @@ export default class RelicHuntUI extends BaseModalUI {
   _performHunt() {
     const result = this.relicHuntManager.performHunt();
     if (result.success === false && result.message !== 'Warte noch...') {
-      if (this.resultDisplay) this.resultDisplay.innerHTML = `<span style="color:#e0a080;">${result.message}</span>`;
+      if (this.resultDisplay) {
+        this.resultDisplay.innerHTML = `<div class="relic-result-error">❌ ${result.message}</div>`;
+      }
       return;
     }
 
     if (this.resultDisplay) {
       if (result.success) {
-        this.resultDisplay.innerHTML = `<span style="color:#9acd9a;">✅ ${result.message}</span>`;
+        this.resultDisplay.innerHTML = `
+          <div class="relic-result-success">
+            <span class="text-success glow-text">✦ ${result.message} ✦</span>
+          </div>
+        `;
       } else if (result.message && result.message !== 'Warte noch...') {
-        this.resultDisplay.innerHTML = `<span style="color:#e0a080;">❌ ${result.message}</span>`;
+        this.resultDisplay.innerHTML = `
+          <div class="relic-result-error">❌ ${result.message}</div>
+        `;
       }
     }
   }
 
   _startCooldownUI() {
-    if (this.cooldownContainer) this.cooldownContainer.style.display = 'block';
+    if (this.cooldownContainer) {
+      this.cooldownContainer.style.display = 'block';
+      this.cooldownContainer.className = 'relic-cooldown-panel glass-inner-panel';
+    }
     if (this.startBtn) {
       this.startBtn.disabled = true;
-      this.startBtn.textContent = 'WARTEN...';
+      this.startBtn.textContent = '⏳ WARTEN...';
+      this.startBtn.classList.remove('epic-pulse');
     }
   }
   
@@ -89,14 +104,15 @@ export default class RelicHuntUI extends BaseModalUI {
     
     const progress = ((status.total - status.remaining) / status.total) * 100;
     if (this.cooldownFill) this.cooldownFill.style.width = Math.min(100, Math.max(0, progress)) + '%';
-    if (this.cooldownText) this.cooldownText.textContent = `Wartezeit: ${Math.ceil(status.remaining / 1000)}s`;
+    if (this.cooldownText) this.cooldownText.textContent = `⏳ Wartezeit: ${Math.ceil(status.remaining / 1000)}s`;
   }
 
   _endCooldownUI() {
     if (this.cooldownContainer) this.cooldownContainer.style.display = 'none';
     if (this.startBtn) {
       this.startBtn.disabled = false;
-      this.startBtn.textContent = 'SUCHE STARTEN';
+      this.startBtn.textContent = '🔮 SUCHE STARTEN';
+      this.startBtn.classList.add('epic-pulse');
     }
     this._updateStats();
   }

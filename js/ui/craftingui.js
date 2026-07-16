@@ -6,7 +6,6 @@ import BaseModalUI from './basemodal.js';
 
 export default class CraftingUI extends BaseModalUI {
     constructor(context) {
-        // Wir verwenden ein eigenes Overlay oder erweitern die Schmiede? Ich erstelle ein eigenes Modal.
         super('crafting-overlay', 'crafting-close');
         this.eventBus = context.eventBus;
         this.craftingManager = context.craftingManager;
@@ -18,8 +17,7 @@ export default class CraftingUI extends BaseModalUI {
         this.skillContainer = document.getElementById('crafting-skill');
         this.resultContainer = document.getElementById('crafting-result');
 
-        // Event: UI öffnen (über Hub-Button)
-        this.eventBus.subscribe(EVENTS.UI_OPEN_CRAFTING, () => this.open());
+        this.eventBus.subscribe('ui:openCrafting', () => this.open());
         this.eventBus.subscribe(EVENTS.RESOURCES_UPDATED, () => {
             if (this.isOpen) {
                 this._renderResources();
@@ -44,15 +42,15 @@ export default class CraftingUI extends BaseModalUI {
     _renderResources() {
         const res = this.resourceManager.getResources();
         this.resourcesContainer.innerHTML = `
-      <div class="resource-grid" style="display: grid; grid-template-columns: repeat(4,1fr); gap: 0.5rem; text-align: center;">
-        <div><span class="text-muted">Partikel</span><br><span class="text-gold">${formatNumber(res.particles)}</span></div>
-        <div><span class="text-muted">Relikte</span><br><span class="text-gold">${formatNumber(res.relics)}</span></div>
-        <div><span class="text-muted">Artefakte</span><br><span class="text-gold">${formatNumber(res.artifacts)}</span></div>
-        <div><span class="text-muted">Staub</span><br><span class="text-dust">${formatNumber(res.memoryDust)}</span></div>
-        <div><span class="text-muted">Katalysator</span><br><span class="text-highlight">${formatNumber(res.catalyst)}</span></div>
-        <div><span class="text-muted">Essenz</span><br><span class="text-success">${formatNumber(res.essence)}</span></div>
-      </div>
-    `;
+            <div class="crafting-resource-grid">
+                <div class="glass-inner-panel resource-chip"><span class="text-muted text-sm">Partikel</span><span class="text-gold text-bold">${formatNumber(res.particles)}</span></div>
+                <div class="glass-inner-panel resource-chip"><span class="text-muted text-sm">Relikte</span><span class="text-gold text-bold">${formatNumber(res.relics)}</span></div>
+                <div class="glass-inner-panel resource-chip"><span class="text-muted text-sm">Artefakte</span><span class="text-gold text-bold">${formatNumber(res.artifacts)}</span></div>
+                <div class="glass-inner-panel resource-chip"><span class="text-muted text-sm">Staub</span><span class="text-dust text-bold">${formatNumber(res.memoryDust)}</span></div>
+                <div class="glass-inner-panel resource-chip"><span class="text-muted text-sm">Katalysator</span><span class="text-highlight text-bold">${formatNumber(res.catalyst)}</span></div>
+                <div class="glass-inner-panel resource-chip"><span class="text-muted text-sm">Essenz</span><span class="text-success text-bold">${formatNumber(res.essence)}</span></div>
+            </div>
+        `;
     }
 
     _renderSkill() {
@@ -61,15 +59,17 @@ export default class CraftingUI extends BaseModalUI {
         const max = this.craftingManager.craftingExpToNext;
         const progress = Math.min(100, (exp / max) * 100);
         this.skillContainer.innerHTML = `
-      <div class="flex-between">
-        <span class="text-muted">Handwerks-Skill:</span>
-        <span class="text-gold text-bold">Stufe ${lvl}</span>
-      </div>
-      <div class="progress-bar-container" style="margin-top: 0.3rem;">
-        <div class="progress-bar-fill" style="width: ${progress}%;"></div>
-        <div class="progress-text">${Math.floor(progress)}%</div>
-      </div>
-    `;
+            <div class="glass-inner-panel crafting-skill-panel">
+                <div class="crafting-skill-header">
+                    <span class="text-muted">🛠️ Handwerks-Skill:</span>
+                    <span class="text-gold text-bold cinzel">Stufe ${lvl}</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${progress}%;"></div>
+                    <div class="progress-text">${Math.floor(progress)}%</div>
+                </div>
+            </div>
+        `;
     }
 
     _renderRecipes() {
@@ -77,9 +77,18 @@ export default class CraftingUI extends BaseModalUI {
         this.recipesContainer.innerHTML = '';
         const fragment = document.createDocumentFragment();
 
+        if (recipes.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'crafting-empty-state';
+            emptyMsg.innerHTML = '🔒 Noch keine Rezepte freigeschaltet.<br><span class="text-sm">Besiege Bosse, um neue Rezepte zu erhalten.</span>';
+            this.recipesContainer.appendChild(emptyMsg);
+            return;
+        }
+
         recipes.forEach(recipe => {
             const div = document.createElement('div');
-            div.className = 'ui-card craft-recipe-card';
+            div.className = 'crafting-recipe-card glass-inner-panel';
+
             const cost = this.craftingManager.getRecipeCost(recipe);
             let costStr = [];
             for (const [res, amount] of Object.entries(cost)) {
@@ -87,23 +96,29 @@ export default class CraftingUI extends BaseModalUI {
             }
 
             div.innerHTML = `
-        <div>
-          <div class="ui-card-title">${recipe.name}</div>
-          <div class="ui-card-desc">${recipe.desc}</div>
-          <div class="ui-card-meta text-muted">Kosten: ${costStr.join(' | ')}</div>
-          ${recipe.unlockBoss ? `<div class="ui-card-meta text-sm text-muted">🔓 Freischaltung: Boss ${recipe.unlockBoss}</div>` : ''}
-        </div>
-        <button class="ui-btn ui-btn-gold craft-btn" data-id="${recipe.id}">Herstellen</button>
-      `;
+                <div class="crafting-recipe-info">
+                    <div class="crafting-recipe-name">${recipe.name} ${recipe.isResourceRecipe ? '<span class="text-sm text-muted">(Ressource)</span>' : ''}</div>
+                    <div class="crafting-recipe-desc">${recipe.desc}</div>
+                    <div class="crafting-recipe-cost">Kosten: ${costStr.join(' | ')}</div>
+                    ${recipe.unlockBoss ? `<div class="crafting-recipe-unlock">🔓 Freischaltung: Boss ${recipe.unlockBoss}</div>` : ''}
+                </div>
+                <button class="glass-btn primary btn-small craft-btn" data-id="${recipe.id}">
+                    ${recipe.isResourceRecipe ? '⚗️ Herstellen' : '🔨 Herstellen'}
+                </button>
+            `;
 
             const btn = div.querySelector('.craft-btn');
             btn.addEventListener('click', () => {
                 const result = this.craftingManager.craftMasterRecipe(recipe.id);
                 if (result.success) {
-                    this.resultContainer.innerHTML = `<span style="color: var(--color-gold);">${result.message}</span>`;
-                    // Optional: Item im Inventar anzeigen?
+                    this.resultContainer.innerHTML = `
+                        <div class="crafting-result-success">
+                            <span class="text-gold glow-text">✦ ${result.message} ✦</span>
+                            ${result.item ? `<br><span class="text-muted text-sm">Qualität: ${result.quality}%</span>` : ''}
+                        </div>
+                    `;
                 } else {
-                    this.resultContainer.innerHTML = `<span class="text-danger">${result.message}</span>`;
+                    this.resultContainer.innerHTML = `<div class="crafting-result-error">❌ ${result.message}</div>`;
                 }
                 this._updateRecipeButtons();
             });

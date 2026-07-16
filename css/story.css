@@ -1,0 +1,369 @@
+/* ==========================================================================
+   STORY UI - Story & Bosse (AAA)
+   ========================================================================== */
+
+/* ---- MODAL HEADER ---- */
+.story-modal-title {
+  font-family: var(--font-header);
+  font-size: 1.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  color: var(--color-gold);
+  text-shadow: 0 0 20px var(--color-gold-glow);
+  border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+  padding-bottom: 0.8rem;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.story-modal-subtitle {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+/* ---- KAPITEL-NAVIGATION ---- */
+.story-chapter-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(197, 160, 89, 0.08);
+  border-left: 3px solid var(--color-gold);
+  border-radius: 2px;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.story-chapter-nav .glass-btn {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  min-width: 40px;
+}
+
+.story-chapter-nav .chapter-title {
+  font-family: var(--font-header);
+  font-size: 1.1rem;
+  color: var(--color-gold);
+  text-shadow: 0 0 10px var(--color-gold-glow);
+  letter-spacing: 1px;
+}
+
+.story-chapter-nav .glass-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ---- BOSS-LISTE ---- */
+.story-boss-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a35 #0a0a0c;
+}
+
+.story-boss-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.story-boss-list::-webkit-scrollbar-track {
+  background: #0a0a0c;
+}
+
+.story-boss-list::-webkit-scrollbar-thumb {
+  background: #2a2a35;
+  border-radius: 2px;
+}
+
+.story-boss-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold);
+}
+
+/* ---- BOSS-KARTEN ---- */
+.story-boss-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(197, 160, 89, 0.06);
+  border-left: 3px solid var(--color-text-muted);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.story-boss-entry:hover {
+  background: rgba(197, 160, 89, 0.04);
+  border-color: rgba(197, 160, 89, 0.15);
+}
+
+.story-boss-entry .boss-name {
+  font-family: var(--font-header);
+  font-size: 0.9rem;
+  color: var(--color-text-main);
+}
+
+.story-boss-entry .boss-name .boss-crown {
+  margin-left: 0.3rem;
+  font-size: 0.8rem;
+}
+
+/* ---- STATUS-FARBEN ---- */
+.story-boss-entry .boss-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.15rem 0.6rem;
+  border-radius: 2px;
+}
+
+.story-boss-entry .boss-status.defeated {
+  color: var(--color-success);
+  background: rgba(58, 122, 69, 0.1);
+}
+
+.story-boss-entry .boss-status.current {
+  color: var(--color-danger);
+  background: rgba(139, 28, 28, 0.1);
+  text-shadow: 0 0 10px var(--color-danger-glow);
+}
+
+.story-boss-entry .boss-status.pending {
+  color: var(--color-text-muted);
+}
+
+/* ---- BOSS ANZEIGEN (VERSCHLOSSEN / ENTSCHLOSSEN) ---- */
+.story-boss-entry.defeated {
+  border-left-color: var(--color-success);
+}
+
+.story-boss-entry.current {
+  border-left-color: var(--color-danger);
+  background: rgba(139, 28, 28, 0.04);
+}
+
+.story-boss-entry.pending {
+  border-left-color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+/* ---- LOCKED OVERLAY ---- */
+.story-locked-overlay {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  border-radius: 2px;
+  border: 1px solid rgba(197, 160, 89, 0.05);
+}
+
+.story-locked-overlay .lock-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.story-locked-overlay .lock-title {
+  font-family: var(--font-header);
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  letter-spacing: 2px;
+}
+
+.story-locked-overlay .lock-hint {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+/* ---- AKTUELLER BOSS (Kampf-Bereich) ---- */
+.story-current-boss {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(197, 160, 89, 0.08);
+  border-left: 3px solid var(--color-danger);
+  border-radius: 2px;
+  padding: 1rem 1.2rem;
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+}
+
+.story-current-boss .boss-header {
+  text-align: center;
+  font-family: var(--font-header);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+
+.story-current-boss .boss-name-display {
+  font-family: var(--font-header);
+  font-size: 1.3rem;
+  color: var(--color-danger);
+  text-shadow: 0 0 15px var(--color-danger-glow);
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+
+.story-current-boss .boss-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.story-current-boss .boss-stat {
+  text-align: center;
+  padding: 0.4rem 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  border: 1px solid rgba(197, 160, 89, 0.05);
+}
+
+.story-current-boss .boss-stat .stat-label {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.story-current-boss .boss-stat .stat-value {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-text-main);
+}
+
+.story-current-boss .boss-stat .stat-value.hp {
+  color: var(--color-danger);
+}
+.story-current-boss .boss-stat .stat-value.atk {
+  color: #ff8a5c;
+}
+.story-current-boss .boss-stat .stat-value.def {
+  color: var(--color-blue);
+}
+
+/* ---- KAMPF-ERGEBNIS ---- */
+.story-fight-result {
+  text-align: center;
+  min-height: 2.5rem;
+  margin-top: 0.5rem;
+}
+
+.story-fight-result .result-box {
+  padding: 0.6rem 1rem;
+  border-radius: 2px;
+  font-weight: 700;
+  font-family: var(--font-header);
+  letter-spacing: 0.5px;
+}
+
+.story-fight-result .result-box.victory {
+  color: var(--color-gold);
+  background: rgba(197, 160, 89, 0.08);
+  border: 1px solid var(--color-gold);
+  text-shadow: 0 0 15px var(--color-gold-glow);
+}
+
+.story-fight-result .result-box.defeat {
+  color: var(--color-danger);
+  background: rgba(139, 28, 28, 0.08);
+  border: 1px solid var(--color-danger);
+  text-shadow: 0 0 15px var(--color-danger-glow);
+}
+
+/* ---- KAMPF-BUTTON ---- */
+.story-fight-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  margin-top: 0.5rem;
+  font-family: var(--font-header);
+  text-transform: uppercase;
+}
+
+.story-fight-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 768px) {
+  .story-modal-title {
+    font-size: 1.4rem;
+  }
+
+  .story-chapter-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .story-chapter-nav .chapter-title {
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .story-current-boss .boss-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .story-current-boss .boss-name-display {
+    font-size: 1.1rem;
+  }
+
+  .story-boss-entry {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .story-boss-entry .boss-status {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .story-modal-title {
+    font-size: 1.2rem;
+  }
+
+  .story-chapter-nav .glass-btn {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    min-width: 30px;
+  }
+
+  .story-current-boss .boss-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem;
+  }
+
+  .story-current-boss .boss-stat .stat-value {
+    font-size: 0.9rem;
+  }
+
+  .story-fight-btn {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .story-locked-overlay .lock-icon {
+    font-size: 2.2rem;
+  }
+}

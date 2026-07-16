@@ -24,7 +24,6 @@ export default class GatherController {
         const cost = this.getUpgradeCost();
         if (this.resourceManager.removeParticles(cost)) {
           this.hero.clickPowerLevel = (this.hero.clickPowerLevel || 0) + 1;
-          // Veröffentlicht das Event NACH dem Stufenaufstieg, um Quests & UI korrekt zu aktualisieren
           this.eventBus.publish(EVENTS.HERO_UPDATED);
           this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `✨ Klick-Stärke erhöht auf Stufe ${this.hero.clickPowerLevel}!`, type: 'event' });
           this.updateUI();

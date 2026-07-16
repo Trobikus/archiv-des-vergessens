@@ -1,3 +1,5 @@
+// --- START OF FILE ui/expeditionui.js ---
+
 import { ROLES } from '../models/clanmember.js';
 import { EVENTS } from '../core/events.js';
 import BaseModalUI from './basemodal.js';
@@ -24,11 +26,25 @@ export default class ExpeditionUI extends BaseModalUI {
     this.modalProgressText = document.getElementById('expedition-progress-text');
     this.modalResult = document.getElementById('expedition-result');
 
-    this.modalStartBtn.addEventListener('click', () => this._startExpedition());
+    // ---------- FIX: Bindung der Event-Listener ----------
+    this._boundStartExpedition = this._startExpedition.bind(this);
+    this._boundOnMemberClicked = this._onMemberClicked.bind(this);
+    this._boundOnExpeditionComplete = this._onExpeditionComplete.bind(this);
+    this._boundOnTick = this._onTick.bind(this);
 
-    this.eventBus.subscribe(EVENTS.UI_MEMBER_CLICKED, this._onMemberClicked.bind(this));
-    this.eventBus.subscribe(EVENTS.EXPEDITION_COMPLETE, this._onExpeditionComplete.bind(this));
-    this.eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, this._onTick.bind(this));
+    this.modalStartBtn.addEventListener('click', this._boundStartExpedition);
+
+    this.eventBus.subscribe(EVENTS.UI_MEMBER_CLICKED, this._boundOnMemberClicked);
+    this.eventBus.subscribe(EVENTS.EXPEDITION_COMPLETE, this._boundOnExpeditionComplete);
+    this.eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, this._boundOnTick);
+  }
+
+  // ---------- FIX: Cleanup bei Zerstörung ----------
+  destroy() {
+    this.modalStartBtn.removeEventListener('click', this._boundStartExpedition);
+    this.eventBus.unsubscribe(this._boundOnMemberClicked);
+    this.eventBus.unsubscribe(this._boundOnExpeditionComplete);
+    this.eventBus.unsubscribe(this._boundOnTick);
   }
 
   _onMemberClicked(data) {
@@ -140,7 +156,8 @@ export default class ExpeditionUI extends BaseModalUI {
     const remaining = this.expeditionManager.getRemainingTime(this.currentMemberId);
     const total = this.currentDurationSec * 1000;
     
-    const progress = Math.max(0, (1 - remaining / total) * 100);
+    // ---------- FIX: Korrekte Progress-Berechnung ----------
+    const progress = total > 0 ? Math.max(0, (1 - remaining / total) * 100) : 0;
     
     this.modalProgressFill.style.width = Math.min(100, progress) + '%';
     this.modalProgressText.textContent = Math.floor(Math.min(100, progress)) + '%';

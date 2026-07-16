@@ -47,18 +47,22 @@ export default class ChatUI extends BaseModalUI {
 
         const messages = this.chatManager.getGlobalMessages(100);
         let html = '';
-        for (const msg of messages) {
-            const time = new Date(msg.timestamp).toLocaleTimeString();
-            const isSelf = msg.player === this.hero.name;
-            html += `
-        <div style="display: flex; gap: 0.5rem; padding: 0.2rem 0; border-bottom: 1px solid rgba(255,255,255,0.02);">
-          <span class="text-muted text-sm" style="min-width: 60px;">${time}</span>
-          <span class="${isSelf ? 'text-gold' : 'text-highlight'} text-bold">${msg.player}:</span>
-          <span class="text-sm">${msg.message}</span>
-        </div>
-      `;
+        if (messages.length === 0) {
+            html = '<div class="chat-empty">Keine Nachrichten.</div>';
+        } else {
+            for (const msg of messages) {
+                const time = new Date(msg.timestamp).toLocaleTimeString();
+                const isSelf = msg.player === this.hero.name;
+                html += `
+                    <div class="chat-message ${isSelf ? 'self' : 'other'} glass-inner-panel">
+                        <span class="chat-time">${time}</span>
+                        <span class="chat-player">${msg.player}:</span>
+                        <span class="chat-text">${msg.message}</span>
+                    </div>
+                `;
+            }
         }
-        this.chatContainer.innerHTML = html || '<div class="text-muted text-sm text-italic">Keine Nachrichten.</div>';
+        this.chatContainer.innerHTML = html;
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
     }
 

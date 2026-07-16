@@ -1,0 +1,59 @@
+/* ==========================================================================
+   LIBRARY UI - Bibliothek (AAA)
+   ========================================================================== */
+
+/* ---- LIBRARY CARDS ---- */
+.library-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.library-card:hover {
+  background: rgba(197, 160, 89, 0.05);
+}
+
+.library-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.library-name {
+  font-family: var(--font-header);
+  font-size: 1.05rem;
+}
+
+.library-desc {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.library-cost {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+
+.library-action {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  min-width: 100px;
+  text-align: center;
+}
+
+.library-maxed {
+  color: var(--color-success);
+  font-weight: bold;
+}
+
+/* ---- EMPTY STATE ---- */
+.library-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}

@@ -1,0 +1,133 @@
+/* ==========================================================================
+   FORGE UI - Artefakt-Schmiede (AAA)
+   ========================================================================== */
+
+/* ---- RESOURCE GRID ---- */
+.forge-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.resource-chip {
+  text-align: center;
+  padding: 0.5rem 0.8rem;
+  border-left: 2px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.resource-chip .text-muted {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.resource-chip .text-bold {
+  font-size: 1.1rem;
+}
+
+/* ---- RECIPE CARDS ---- */
+.forge-recipe-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.6rem;
+  border-left: 3px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.forge-recipe-card:hover {
+  background: rgba(197, 160, 89, 0.05);
+  border-left-color: var(--color-gold-hover);
+}
+
+.forge-recipe-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.forge-recipe-name {
+  font-family: var(--font-header);
+  font-size: 1.05rem;
+  color: var(--color-gold);
+}
+
+.forge-recipe-desc {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.forge-recipe-cost {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+
+.forge-craft-btn {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  min-width: 100px;
+}
+
+/* ---- UPGRADE CARDS ---- */
+.forge-upgrade-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.2rem;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.forge-upgrade-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.forge-upgrade-name {
+  font-family: var(--font-header);
+  font-size: 1rem;
+}
+
+.forge-upgrade-cost {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+/* ---- RESULT MESSAGES ---- */
+.forge-result-success {
+  text-align: center;
+  padding: 0.8rem;
+  border: 1px solid var(--color-gold);
+  border-radius: 2px;
+  background: rgba(197, 160, 89, 0.05);
+  margin-top: 0.8rem;
+}
+
+.forge-result-error {
+  text-align: center;
+  padding: 0.8rem;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: 2px;
+  background: rgba(139, 28, 28, 0.05);
+  margin-top: 0.8rem;
+}
+
+.forge-empty-state {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.forge-empty-state .text-sm {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+}

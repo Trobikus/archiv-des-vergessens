@@ -1,4 +1,4 @@
-// --- START OF FILE achievementui.js ---
+// --- START OF FILE ui/achievementui.js ---
 
 import { html, useState, useEventBus } from './preact-setup.js';
 import { EVENTS } from '../core/events.js';
@@ -38,41 +38,86 @@ export default function AchievementUI({ context }) {
 
   if (!isOpen) return null;
 
+  // Fortschrittsbalken für eine Errungenschaft rendern
+  const renderProgress = (ach) => {
+    const progressPercent = Math.min(100, (ach.progress / ach.target) * 100);
+    const isComplete = ach.progress >= ach.target;
+
+    return html`
+      <div class="achievement-progress">
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: ${progressPercent}%; background: ${isComplete ? 'var(--color-gold)' : 'var(--color-text-muted)'};"></div>
+          <div class="progress-text">${Math.round(progressPercent)}%</div>
+        </div>
+      </div>
+    `;
+  };
+
   return html`
     <div class="modal-overlay" style="display: flex;" onClick=${() => setIsOpen(false)}>
       <div class="modal-content glass-panel" onClick=${(e) => e.stopPropagation()}>
         <button class="modal-close glass-btn" onClick=${() => setIsOpen(false)} aria-label="Schließen">×</button>
-        <h2 class="modal-title glow-text">Erfolge & Meilensteine</h2>
-        <div class="hub-subtitle mb-1">Erreiche Ziele, um seltene Titel und Belohnungen freizuschalten.</div>
+        <h2 class="achievement-modal-title">🏆 Erfolge &amp; Meilensteine</h2>
+        <div class="achievement-modal-subtitle">Erreiche Ziele, um seltene Titel und Belohnungen freizuschalten.</div>
         
         <div class="modal-scroll-area">
           ${achievements.length === 0 ? html`
-            <div style="color: #5a5a6a; font-style: italic;">Keine Erfolge verfügbar.</div>
+            <div class="achievement-empty-state">
+              <span class="achievement-empty-icon">📜</span>
+              <div class="achievement-empty-text">Keine Erfolge verfügbar.</div>
+              <div class="achievement-empty-hint">Mehr Erfolge werden mit dem Fortschritt freigeschaltet.</div>
+            </div>
           ` : achievements.map(ach => {
+            const rewards = [];
+            if (ach.reward.particles) rewards.push(`${ach.reward.particles} Partikel`);
+            if (ach.reward.relics) rewards.push(`${ach.reward.relics} Relikte`);
+            if (ach.reward.artifacts) rewards.push(`${ach.reward.artifacts} Artefakte`);
+            if (ach.reward.title) rewards.push(`📛 Titel: ${ach.reward.title}`);
 
-    const rewards = [];
-    if (ach.reward.particles) rewards.push(`${ach.reward.particles} Partikel`);
-    if (ach.reward.relics) rewards.push(`${ach.reward.relics} Relikte`);
-    if (ach.reward.artifacts) rewards.push(`${ach.reward.artifacts} Artefakte`);
-    if (ach.reward.title) rewards.push(`Titel: ${ach.reward.title}`);
+            // Status-Klasse bestimmen
+            let statusClass = 'locked';
+            let statusText = '🔒 Gesperrt';
+            let actionHtml = '';
 
-    const statusClass = ach.claimed ? 'claimed' : ach.achieved ? 'achieved' : 'locked';
+            if (ach.claimed) {
+              statusClass = 'claimed';
+              statusText = '✅ Abgeholt';
+              actionHtml = html`<span class="achievement-status-text claimed">${statusText}</span>`;
+            } else if (ach.achieved) {
+              statusClass = 'achieved';
+              statusText = '🎯 Bereit';
+              actionHtml = html`
+                <button class="glass-btn primary btn-small" onClick=${(e) => handleClaim(e, ach.id)}>
+                  🎁 Abholen
+                </button>
+              `;
+            } else {
+              statusClass = 'locked';
+              statusText = '🔒 Gesperrt';
+              actionHtml = html`<span class="achievement-status-text locked">${statusText}</span>`;
+            }
 
-    return html`
-              <div class="ui-card achievement-card ${statusClass}" key=${ach.id}>
-                <div>
-                  <div class="ui-card-title ach-title" style="color: ${ach.achieved && !ach.claimed ? 'var(--color-gold)' : 'var(--color-text-main)'}">${ach.label}</div>
-                  <div class="ui-card-desc ach-desc">Belohnung: ${rewards.join(' | ')}</div>
-                  <div class="ui-card-meta ach-meta">Fortschritt: ${ach.progress} / ${ach.target}</div>
+            const titleColor = ach.achieved && !ach.claimed ? 'var(--color-gold)' : 
+                              ach.claimed ? 'var(--color-success)' : 
+                              'var(--color-text-muted)';
+
+            return html`
+              <div class="achievement-card ${statusClass}" key=${ach.id}>
+                <div class="achievement-info">
+                  <div class="achievement-title" style="color: ${titleColor}">
+                    ${ach.claimed ? '✅ ' : ach.achieved ? '✨ ' : '🔒 '} ${ach.label}
+                  </div>
+                  <div class="achievement-reward">
+                    🎁 Belohnung: <span class="text-gold">${rewards.join(' | ')}</span>
+                  </div>
+                  ${renderProgress(ach)}
                 </div>
-                <div class="ach-action">
-                  ${ach.claimed ? html`<span style="color:#8a7a5a;">✅ Abgeholt</span>`
-        : ach.achieved ? html`<button class="ui-btn ui-btn-gold" onClick=${(e) => handleClaim(e, ach.id)}>Abholen</button>`
-          : html`<span style="color:#5a5a6a;">🔒 Gesperrt</span>`}
+                <div class="achievement-action">
+                  ${actionHtml}
                 </div>
               </div>
             `;
-  })}
+          })}
         </div>
       </div>
     </div>

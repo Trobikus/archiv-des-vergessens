@@ -1,0 +1,128 @@
+/* ==========================================================================
+   CRAFTING UI - Meisterwerkstatt (AAA)
+   ========================================================================== */
+
+/* ---- RESOURCE GRID ---- */
+.crafting-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.resource-chip {
+  text-align: center;
+  padding: 0.4rem 0.6rem;
+  border-left: 2px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.resource-chip .text-muted {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.resource-chip .text-bold {
+  font-size: 1rem;
+}
+
+/* ---- SKILL PANEL ---- */
+.crafting-skill-panel {
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--color-dust);
+}
+
+.crafting-skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+/* ---- RECIPE CARDS ---- */
+.crafting-recipe-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.6rem;
+  border-left: 3px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.crafting-recipe-card:hover {
+  background: rgba(197, 160, 89, 0.05);
+  border-left-color: var(--color-gold-hover);
+}
+
+.crafting-recipe-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.crafting-recipe-name {
+  font-family: var(--font-header);
+  font-size: 1.05rem;
+  color: var(--color-gold);
+}
+
+.crafting-recipe-desc {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.crafting-recipe-cost {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+
+.crafting-recipe-unlock {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  margin-top: 0.1rem;
+}
+
+.craft-btn {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  min-width: 100px;
+}
+
+/* ---- EMPTY STATE ---- */
+.crafting-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.crafting-empty-state .text-sm {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+}
+
+/* ---- RESULT MESSAGES ---- */
+.crafting-result-success {
+  text-align: center;
+  padding: 0.8rem;
+  border: 1px solid var(--color-gold);
+  border-radius: 2px;
+  background: rgba(197, 160, 89, 0.05);
+  margin-top: 0.8rem;
+}
+
+.crafting-result-error {
+  text-align: center;
+  padding: 0.8rem;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  border-radius: 2px;
+  background: rgba(139, 28, 28, 0.05);
+  margin-top: 0.8rem;
+}

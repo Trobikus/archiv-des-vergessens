@@ -1,0 +1,144 @@
+/* ==========================================================================
+   GUILD UI - Gilde (AAA)
+   ========================================================================== */
+
+/* ---- NO GUILD ---- */
+.guild-no-guild {
+  text-align: center;
+  padding: 1rem;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+}
+
+.guild-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.guild-list-container {
+  margin-top: 0.5rem;
+}
+
+.guild-list-title {
+  font-family: var(--font-header);
+  color: var(--color-gold);
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.1);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.guild-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  margin-bottom: 0.5rem;
+  border-left: 2px solid var(--color-gold);
+}
+
+/* ---- GUILD HEADER ---- */
+.guild-header {
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.guild-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.guild-name {
+  font-family: var(--font-header);
+  font-size: 1.3rem;
+  color: var(--color-gold);
+}
+
+.guild-desc {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.guild-header-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.guild-level {
+  color: var(--color-gold);
+  font-weight: bold;
+}
+
+.guild-member-count {
+  color: var(--color-text-muted);
+}
+
+.guild-bonus {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.guild-progress {
+  margin-top: 0.5rem;
+}
+
+.guild-exp-text {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 0.1rem;
+}
+
+/* ---- ACTIONS BAR ---- */
+.guild-actions-bar {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* ---- SECTIONS ---- */
+.guild-section {
+  margin-top: 1rem;
+}
+
+.guild-section-title {
+  font-family: var(--font-header);
+  color: var(--color-gold);
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.1);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ---- MEMBERS ---- */
+.guild-member-item {
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+/* ---- CHAT ---- */
+.guild-chat-message {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.guild-chat-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.guild-chat-input-row .ui-select {
+  flex: 1;
+  padding: 0.5rem;
+}

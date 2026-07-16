@@ -1,3 +1,7 @@
+// ============================================================
+// FILE: audio/AudioManager.js
+// ============================================================
+
 export default class AudioManager {
     constructor(eventBus) {
         this.eventBus = eventBus;
@@ -150,7 +154,7 @@ export default class AudioManager {
             if (buffer) {
                 const pool = this.soundPool.get(name);
                 if (pool && pool.length > 0) {
-                    pool[0] = buffer; // Ersten Slot belegen
+                    pool[0] = buffer;
                 }
             }
         }
@@ -372,5 +376,34 @@ export default class AudioManager {
             this.sfxGain?.gain.linearRampToValueAtTime(this.sfxVolume, this.ctx.currentTime + 0.3);
         }
         return this.isMuted;
+    }
+
+    // ============================================================
+    // PHASE 1: toJSON / fromJSON für SaveGameManager
+    // ============================================================
+
+    toJSON() {
+        return {
+            musicVolume: this.musicVolume,
+            sfxVolume: this.sfxVolume,
+            isMuted: this.isMuted,
+            isInitialized: this.isInitialized,
+            currentZone: this.currentZone
+        };
+    }
+
+    fromJSON(data) {
+        if (!data) return;
+        this.musicVolume = data.musicVolume !== undefined ? data.musicVolume : this.musicVolume;
+        this.sfxVolume = data.sfxVolume !== undefined ? data.sfxVolume : this.sfxVolume;
+        this.isMuted = data.isMuted !== undefined ? data.isMuted : this.isMuted;
+        this.isInitialized = data.isInitialized !== undefined ? data.isInitialized : this.isInitialized;
+        this.currentZone = data.currentZone || this.currentZone;
+
+        // Volume-Werte anwenden, falls Initialisierung bereits erfolgt ist
+        if (this.isInitialized) {
+            if (this.musicGain) this.musicGain.gain.value = this.musicVolume;
+            if (this.sfxGain) this.sfxGain.gain.value = this.sfxVolume;
+        }
     }
 }

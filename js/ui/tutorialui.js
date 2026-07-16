@@ -1,3 +1,7 @@
+// --- START OF FILE ui/tutorialui.js ---
+
+import { EVENTS } from '../core/events.js';
+
 export default class TutorialUI {
   constructor(context) {
     this.eventBus = context.eventBus;
@@ -54,8 +58,9 @@ export default class TutorialUI {
     this.eventBus.subscribe('tutorial:step', (step) => this.renderStep(step));
     this.eventBus.subscribe('tutorial:end', () => this.hide());
 
-    this.eventBus.subscribeAll((eventName) => {
-      this.checkCondition(eventName);
+    // ---------- FIX: Korrekte Event-Überprüfung ----------
+    this.eventBus.subscribeAll((eventName, data) => {
+      this.checkCondition(eventName, data);
     });
 
     window.addEventListener('resize', () => {
@@ -66,7 +71,7 @@ export default class TutorialUI {
     });
   }
 
-  checkCondition(eventName) {
+  checkCondition(eventName, data) {
     if (!this.tutorialManager.isActive) return;
     const step = this.tutorialManager.getCurrentStep();
 

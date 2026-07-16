@@ -19,18 +19,20 @@ export default class ClanUI {
     this._rewardGiven100 = false;
     this._rewardGiven50 = false;
 
+    // Cache für DOM-Elemente
     this._rowCache = new Map();
-    this._lastUpdate = 0;
 
     this.eventBus.subscribe(EVENTS.CLAN_MEMBERS_UPDATED, this._onMembersUpdated.bind(this));
     this.eventBus.subscribe(EVENTS.RESOURCES_UPDATED, this._updateResources.bind(this));
-    this.eventBus.subscribe(EVENTS.GAME_RENDER_TICK, this._onRenderTick.bind(this));
+
+    // ---------- Logik-Tick für Fortschrittsbalken ----------
+    this.eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, this._onLogicTick.bind(this));
   }
 
   _onMembersUpdated(data) {
     const members = data.members;
 
-    // Ungenutzte Zeilen bereinigen
+    // Ungenutzte Zeilen entfernen
     for (const [id, rowObj] of this._rowCache.entries()) {
       if (!members.find(m => m.id === id)) {
         rowObj.tr.remove();
@@ -46,6 +48,7 @@ export default class ClanUI {
 
       if (!rowObj) {
         const tr = document.createElement('tr');
+        tr.dataset.memberId = member.id;
         tr.addEventListener('click', () => {
           this.eventBus.publish(EVENTS.UI_MEMBER_CLICKED, { memberId: member.id });
         });
@@ -83,6 +86,9 @@ export default class ClanUI {
       rowObj.tdName.textContent = member.name;
       rowObj.tdRole.textContent = this._roleName(member.role);
       rowObj.tdLevel.textContent = member.level;
+
+      // Fortschritt sofort setzen
+      this._updateProgressBar(rowObj, member.progress);
     }
 
     if (fragment.children.length > 0) {
@@ -90,27 +96,31 @@ export default class ClanUI {
     }
   }
 
-  _onRenderTick(data) {
-    const now = data.timestamp;
-    // Drosselt DOM-Updates der Fortschrittsbalken auf maximal 30 FPS (alle 33ms) zur CPU-Entlastung
-    if (now - this._lastUpdate < 33) return;
-    this._lastUpdate = now;
-
+  // ---------- Logik-Tick: Fortschritt + Expedition-Status für ALLE Zeilen ----------
+  _onLogicTick() {
     const members = this.clanManager.members;
     for (let i = 0; i < members.length; i++) {
       const member = members[i];
       const rowObj = this._rowCache.get(member.id);
       if (!rowObj) continue;
 
-      const visualProgress = Math.min(100, Math.max(0, member.progress));
-      rowObj.progFill.style.transform = `scaleX(${visualProgress / 100})`;
-      rowObj.progFill.style.transformOrigin = 'left';
-      rowObj.progText.textContent = `${Math.floor(visualProgress)}%`;
+      // 1. Fortschrittsbalken aktualisieren (immer)
+      this._updateProgressBar(rowObj, member.progress);
 
+      // 2. Expedition-Status aktualisieren (immer)
       const isOnExp = this.expeditionManager.isOnExpedition(member.id);
       rowObj.tr.style.opacity = isOnExp ? '0.6' : '1';
       rowObj.tr.style.backgroundColor = isOnExp ? '#1a1a28' : '';
     }
+  }
+
+  // ---------- Zentrale Methode zum Aktualisieren eines Balkens ----------
+  _updateProgressBar(rowObj, progress) {
+    const clamped = Math.min(100, Math.max(0, progress));
+    const scale = clamped / 100;
+    rowObj.progFill.style.transform = `scaleX(${scale})`;
+    rowObj.progFill.style.transformOrigin = 'left';
+    rowObj.progText.textContent = `${Math.floor(clamped)}%`;
   }
 
   _updateResources(data) {
@@ -162,5 +172,9 @@ export default class ClanUI {
       case ROLES.GUARDIAN: return 'Vergessenswächter';
       default: return role;
     }
+  }
+
+  destroy() {
+    this._rowCache.clear();
   }
 }

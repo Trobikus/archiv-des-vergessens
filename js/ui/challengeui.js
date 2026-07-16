@@ -1,3 +1,5 @@
+// --- START OF FILE ui/challengeui.js ---
+
 import { EVENTS } from '../core/events.js';
 import BaseModalUI from './basemodal.js';
 
@@ -20,9 +22,17 @@ export default class ChallengeUI extends BaseModalUI {
   }
 
   render() {
-    this.container.replaceChildren(); // DOM Optimierung
+    this.container.innerHTML = '';
     const fragment = document.createDocumentFragment();
     const challenges = this.challengeManager.getChallenges();
+
+    if (challenges.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.className = 'challenges-empty-state';
+      emptyMsg.textContent = 'Keine Anomalien verfügbar.';
+      this.container.appendChild(emptyMsg);
+      return;
+    }
 
     challenges.forEach(challenge => {
       const isCompleted = this.challengeManager.completedChallenges.includes(challenge.id);
@@ -30,46 +40,45 @@ export default class ChallengeUI extends BaseModalUI {
       const canStart = !isCompleted && !this.challengeManager.activeChallenge && this.hero.bossProgress === 0;
 
       const div = document.createElement('div');
-      div.className = `ui-card challenge-card ${isCompleted ? 'completed' : isActive ? 'active' : ''}`;
+      div.className = 'challenge-card glass-inner-panel';
+      div.dataset.status = isCompleted ? 'completed' : isActive ? 'active' : 'locked';
+      div.style.borderLeft = `3px solid ${isCompleted ? 'var(--color-success)' : isActive ? 'var(--color-danger)' : 'var(--color-text-muted)'}`;
+      div.style.opacity = isCompleted || isActive ? '1' : '0.6';
 
       div.innerHTML = `
-        <div>
-          <div class="ui-card-title">${challenge.name}</div>
-          <div class="ui-card-desc">${challenge.desc}</div>
-          <div class="ui-card-meta" style="color: #9acd9a;">🎁 Belohnung: ${challenge.rewardDesc}</div>
+        <div class="challenge-info">
+          <div class="challenge-name" style="color: ${isCompleted ? 'var(--color-success)' : isActive ? 'var(--color-danger)' : 'var(--color-text-muted)'};">
+            ${isCompleted ? '✅ ' : isActive ? '🔥 ' : '🔒 '} ${challenge.name}
+          </div>
+          <div class="challenge-desc">${challenge.desc}</div>
+          <div class="challenge-reward">🎁 Belohnung: ${challenge.rewardDesc}</div>
+        </div>
+        <div class="challenge-action">
+          ${isCompleted ? 
+            `<span class="challenge-completed">✅ Gemeistert</span>` :
+            isActive ? 
+              `<button class="glass-btn btn-danger btn-small abort-btn">❌ Abbrechen</button>` :
+              `<button class="glass-btn ${canStart ? 'primary' : ''} btn-small start-btn" ${!canStart ? 'disabled' : ''} data-id="${challenge.id}">⚔️ Starten</button>`
+          }
+          ${!isActive && !isCompleted && this.hero.bossProgress > 0 ? 
+            `<div class="challenge-hint">(Nur direkt nach Prestige)</div>` : ''
+          }
         </div>
       `;
 
-      const btnContainer = document.createElement('div');
-
-      if (isCompleted) {
-        btnContainer.innerHTML = `<span style="color:#d4af37;">✅ Gemeistert</span>`;
-      } else if (isActive) {
-        const abortBtn = document.createElement('button');
-        abortBtn.textContent = 'Abbrechen';
-        abortBtn.className = 'ui-btn ui-btn-red';
+      const abortBtn = div.querySelector('.abort-btn');
+      if (abortBtn) {
         abortBtn.addEventListener('click', () => this.challengeManager.abortChallenge());
-        btnContainer.appendChild(abortBtn);
-      } else {
-        const startBtn = document.createElement('button');
-        startBtn.textContent = 'Starten';
-        startBtn.disabled = !canStart;
-        startBtn.className = 'ui-btn ui-btn-gold';
+      }
+
+      const startBtn = div.querySelector('.start-btn');
+      if (startBtn) {
         startBtn.addEventListener('click', () => {
           const res = this.challengeManager.startChallenge(challenge.id);
           if (!res.success) alert(res.message);
         });
-        btnContainer.appendChild(startBtn);
-
-        if (this.hero.bossProgress > 0 && !this.challengeManager.activeChallenge) {
-          const hint = document.createElement('div');
-          hint.textContent = '(Nur direkt nach Prestige möglich)';
-          hint.style.cssText = 'color: #e0a080; font-size: 0.7rem; margin-top: 0.3rem; text-align: center;';
-          btnContainer.appendChild(hint);
-        }
       }
 
-      div.appendChild(btnContainer);
       fragment.appendChild(div);
     });
     

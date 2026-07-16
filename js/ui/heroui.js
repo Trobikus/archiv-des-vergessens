@@ -1,5 +1,5 @@
 // ============================================================
-// ui/heroui.js – FIXED: Tooltip-Leaks und Event-Leaks
+// ui/heroui.js – FIXED: 13 Equipment-Slots (AAA-RPG)
 // ============================================================
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
@@ -32,11 +32,20 @@ export default class HeroUI extends BaseModalUI {
     this.prestigeButton = document.getElementById('hero-prestige-btn');
     this.dailyButton = document.getElementById('hero-daily-btn');
 
-    this.nodeWeapon = document.getElementById('node-weapon');
-    this.nodeArmor = document.getElementById('node-armor');
+    // ---------- 13 SLOTS ----------
+    this.nodeHelmet = document.getElementById('node-helmet');
     this.nodeAmulet = document.getElementById('node-amulet');
+    this.nodeShouldersL = document.getElementById('node-shoulders-l');
+    this.nodeShouldersR = document.getElementById('node-shoulders-r');
+    this.nodeArmor = document.getElementById('node-armor');
+    this.nodeWeapon = document.getElementById('node-weapon');
+    this.nodeShield = document.getElementById('node-shield');
+    this.nodeGlovesL = document.getElementById('node-gloves-l');
+    this.nodeGlovesR = document.getElementById('node-gloves-r');
+    this.nodeBelt = document.getElementById('node-belt');
     this.nodeRing = document.getElementById('node-ring');
     this.nodeRing2 = document.getElementById('node-ring2');
+    this.nodeBoots = document.getElementById('node-boots');
 
     this.tabResources = document.getElementById('hero-tab-resources');
     this.tabEquipment = document.getElementById('hero-tab-equipment');
@@ -96,7 +105,6 @@ export default class HeroUI extends BaseModalUI {
     this._cleanupTooltips();
   }
 
-  // ---------- FIX: Tooltip-Cleanup ----------
   _cleanupTooltips() {
     for (const cleanup of this._tooltipCleanup) {
       cleanup();
@@ -104,7 +112,6 @@ export default class HeroUI extends BaseModalUI {
     this._tooltipCleanup = [];
   }
 
-  // --- TOOLTIP LOGIK ---
   _showTooltip(item, e) {
     if (!item || !this.tooltipEl) return;
 
@@ -158,7 +165,6 @@ export default class HeroUI extends BaseModalUI {
     element.addEventListener('mousemove', onMove);
     element.addEventListener('mouseleave', onLeave);
 
-    // Cleanup-Funktion speichern
     this._tooltipCleanup.push(() => {
       element.removeEventListener('mouseenter', onEnter);
       element.removeEventListener('mousemove', onMove);
@@ -258,8 +264,6 @@ export default class HeroUI extends BaseModalUI {
                </div>`;
     }
 
-    html += `<div class="border-t-light pt-1 mt-1 mb-1"></div>`;
-
     const combatConfig = [
       { key: 'maxHp', label: 'Max Leben', format: (v) => formatNumber(v) },
       { key: 'damageReduction', label: 'Schadensreduktion', format: (v) => (v * 100).toFixed(1) + '%' },
@@ -293,21 +297,30 @@ export default class HeroUI extends BaseModalUI {
     });
   }
 
+  // ---------- RENDER 13 SLOTS ----------
   _renderAvatarNodes() {
-    // Cleanup alte Tooltips
     this._cleanupTooltips();
 
     const slots = [
-      { key: 'weapon', node: this.nodeWeapon, icon: '🗡️' },
-      { key: 'armor', node: this.nodeArmor, icon: '🛡️' },
-      { key: 'amulet', node: this.nodeAmulet, icon: '📿' },
-      { key: 'ring', node: this.nodeRing, icon: '💍' },
-      { key: 'ring2', node: this.nodeRing2, icon: '💍' }
+      { key: 'helmet', node: this.nodeHelmet, icon: '⛑️', label: 'Helm' },
+      { key: 'amulet', node: this.nodeAmulet, icon: '📿', label: 'Amulett' },
+      { key: 'shoulders-l', node: this.nodeShouldersL, icon: '🪄', label: 'Schultern (links)' },
+      { key: 'shoulders-r', node: this.nodeShouldersR, icon: '🪄', label: 'Schultern (rechts)' },
+      { key: 'armor', node: this.nodeArmor, icon: '🛡️', label: 'Rüstung' },
+      { key: 'weapon', node: this.nodeWeapon, icon: '🗡️', label: 'Waffe' },
+      { key: 'shield', node: this.nodeShield, icon: '🛡️', label: 'Schild' },
+      { key: 'gloves-l', node: this.nodeGlovesL, icon: '🧤', label: 'Handschuhe (links)' },
+      { key: 'gloves-r', node: this.nodeGlovesR, icon: '🧤', label: 'Handschuhe (rechts)' },
+      { key: 'belt', node: this.nodeBelt, icon: '🔗', label: 'Gürtel' },
+      { key: 'ring', node: this.nodeRing, icon: '💍', label: 'Ring (links)' },
+      { key: 'ring2', node: this.nodeRing2, icon: '💍', label: 'Ring (rechts)' },
+      { key: 'boots', node: this.nodeBoots, icon: '👢', label: 'Stiefel' }
     ];
 
     slots.forEach(s => {
       if (!s.node) return;
 
+      // Besonderheit: Ring2 nur anzeigen, wenn Pazifist abgeschlossen (optional)
       if (s.key === 'ring2' && !this.challengeManager.completedChallenges.includes('pacifist')) {
         s.node.style.display = 'none';
         return;
@@ -319,17 +332,27 @@ export default class HeroUI extends BaseModalUI {
       const clone = s.node.cloneNode(true);
       s.node.parentNode.replaceChild(clone, s.node);
 
-      if (s.key === 'weapon') this.nodeWeapon = clone;
-      if (s.key === 'armor') this.nodeArmor = clone;
-      if (s.key === 'amulet') this.nodeAmulet = clone;
-      if (s.key === 'ring') this.nodeRing = clone;
-      if (s.key === 'ring2') this.nodeRing2 = clone;
+      // Referenzen aktualisieren
+      if (s.key === 'helmet') this.nodeHelmet = clone;
+      else if (s.key === 'amulet') this.nodeAmulet = clone;
+      else if (s.key === 'shoulders-l') this.nodeShouldersL = clone;
+      else if (s.key === 'shoulders-r') this.nodeShouldersR = clone;
+      else if (s.key === 'armor') this.nodeArmor = clone;
+      else if (s.key === 'weapon') this.nodeWeapon = clone;
+      else if (s.key === 'shield') this.nodeShield = clone;
+      else if (s.key === 'gloves-l') this.nodeGlovesL = clone;
+      else if (s.key === 'gloves-r') this.nodeGlovesR = clone;
+      else if (s.key === 'belt') this.nodeBelt = clone;
+      else if (s.key === 'ring') this.nodeRing = clone;
+      else if (s.key === 'ring2') this.nodeRing2 = clone;
+      else if (s.key === 'boots') this.nodeBoots = clone;
 
       if (item) {
         clone.classList.remove('empty');
         clone.style.borderColor = item.getColor();
         clone.style.color = item.getColor();
         clone.innerHTML = s.icon;
+        clone.title = `${item.name} (${item.getRarityLabel()})`;
 
         this._bindTooltipEvents(clone, item);
 
@@ -343,6 +366,7 @@ export default class HeroUI extends BaseModalUI {
         clone.style.borderColor = '#3a3a4a';
         clone.style.color = '#5a5a6a';
         clone.innerHTML = s.icon;
+        clone.title = `${s.label} – leer`;
       }
     });
   }
@@ -446,32 +470,106 @@ export default class HeroUI extends BaseModalUI {
 
     filterEl.style.display = 'block';
     sortEl.style.display = 'block';
-    btnWrapper.innerHTML = `<button class="glass-btn btn-danger btn-small" id="bulk-salvage-btn">Gewöhnliche zerlegen</button>`;
+
+    // Bulk-Salvage Dropdown
+    const rarityMap = {
+      'common': 'Gewöhnlich',
+      'uncommon': 'Ungewöhnlich',
+      'rare': 'Selten',
+      'epic': 'Episch',
+      'legendary': 'Legendär'
+    };
+
+    const raritySelect = document.createElement('select');
+    raritySelect.id = 'bulk-rarity-select';
+    raritySelect.className = 'ui-select';
+    raritySelect.style.cssText = 'padding: 0.2rem 0.6rem; font-size: 0.75rem; min-width: 120px; background: #0a0a0c; border: 1px solid #222; border-bottom: 1px solid var(--color-gold); color: var(--color-gold); border-radius: var(--border-radius-sm); font-family: var(--font-header);';
+
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = '✦ Alle';
+    raritySelect.appendChild(allOption);
+
+    for (const [key, label] of Object.entries(rarityMap)) {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = label;
+      raritySelect.appendChild(option);
+    }
+
+    raritySelect.value = 'common';
+
+    const salvageBtn = document.createElement('button');
+    salvageBtn.id = 'bulk-salvage-btn';
+    salvageBtn.className = 'glass-btn btn-danger btn-small';
+    salvageBtn.textContent = '🧹 Zerlegen';
+    salvageBtn.style.cssText = 'padding: 0.2rem 0.8rem; font-size: 0.7rem;';
+
+    btnWrapper.innerHTML = '';
+    btnWrapper.appendChild(raritySelect);
+    btnWrapper.appendChild(salvageBtn);
+
+    salvageBtn.addEventListener('click', () => {
+      const selectedRarity = raritySelect.value;
+      const rarityLabel = selectedRarity === 'all' ? 'aller' : rarityMap[selectedRarity] || selectedRarity;
+
+      if (items.length === 0) {
+        this.eventBus.publish(EVENTS.UI_ADD_LOG, {
+          text: 'Keine Ausrüstung im Inventar.',
+          type: 'system'
+        });
+        return;
+      }
+
+      const itemsToSalvage = selectedRarity === 'all'
+        ? items
+        : items.filter(item => item.rarity === selectedRarity);
+
+      if (itemsToSalvage.length === 0) {
+        this.eventBus.publish(EVENTS.UI_ADD_LOG, {
+          text: `Keine ${rarityLabel} Items im Inventar.`,
+          type: 'system'
+        });
+        return;
+      }
+
+      if (!confirm(`Möchtest du wirklich alle ${itemsToSalvage.length} ${rarityLabel} Item(s) zerlegen?`)) return;
+
+      let salvaged = 0;
+      let dustGained = 0;
+
+      for (let i = this.hero.inventory.equipment.length - 1; i >= 0; i--) {
+        const item = this.hero.inventory.equipment[i];
+        const shouldSalvage = selectedRarity === 'all' || item.rarity === selectedRarity;
+
+        if (shouldSalvage) {
+          const removedItem = this.hero.removeEquipmentItem(i);
+          if (removedItem) {
+            const dustAmounts = { common: 1, uncommon: 3, rare: 10, epic: 25, legendary: 100 };
+            const amount = (dustAmounts[removedItem.rarity] || 1) * removedItem.level;
+            this.resourceManager.addMemoryDust(amount);
+            dustGained += amount;
+            salvaged++;
+          }
+        }
+      }
+
+      if (salvaged > 0) {
+        this.eventBus.publish(EVENTS.UI_ADD_LOG, {
+          text: `${salvaged} ${rarityLabel} Item(s) verwertet. +${dustGained} Staub.`,
+          type: 'event'
+        });
+        this.eventBus.publish(EVENTS.HERO_UPDATED);
+        this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
+        this.render();
+      }
+    });
 
     if (!this._filterBound) {
       filterEl.addEventListener('change', () => this.render());
       sortEl.addEventListener('change', () => this.render());
       this._filterBound = true;
     }
-
-    document.getElementById('bulk-salvage-btn').addEventListener('click', () => {
-      if (confirm('Alle gewöhnlichen (grauen) Items zerlegen?')) {
-        let salvaged = 0;
-        let dustGained = 0;
-        for (let i = this.hero.inventory.equipment.length - 1; i >= 0; i--) {
-          if (this.hero.inventory.equipment[i].rarity === 'common') {
-            const item = this.hero.removeEquipmentItem(i);
-            dustGained += 1 * item.level;
-            salvaged++;
-          }
-        }
-        if (salvaged > 0) {
-          this.resourceManager.addMemoryDust(dustGained);
-          this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${salvaged} Items verwertet. +${dustGained} Staub.`, type: 'event' });
-          this.eventBus.publish(EVENTS.HERO_UPDATED);
-        }
-      }
-    });
 
     if (filterEl.value !== 'all') {
       items = items.filter(i => i.slot === filterEl.value);
@@ -499,24 +597,18 @@ export default class HeroUI extends BaseModalUI {
 
     items.forEach((item) => {
       const row = document.createElement('div');
-      row.className = 'ui-card flex-between';
+      row.className = 'inventory-item-card';
       row.style.borderLeft = `3px solid ${item.getColor()}`;
-      row.style.background = 'rgba(255, 255, 255, 0.02)';
-      row.style.padding = '0.8rem 1.2rem';
-      row.style.marginBottom = '0.6rem';
-      row.style.borderRadius = 'var(--border-radius-sm)';
 
       row.innerHTML = `
-        <div class="item-name-span flex-1" style="color: ${item.getColor()}; cursor: help; font-weight: 600;">
-          ${item.name} <span class="text-muted text-sm" style="font-weight: normal; margin-left: 5px;">Lv.${item.level}</span>
-        </div>
-        <div class="flex-row gap-sm">
-          <button class="inv-equip-btn glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);">Anlegen</button>
-          <button class="inv-salvage-btn glass-btn btn-small" style="border-color: var(--color-danger); color: var(--color-danger);">Zerlegen</button>
+        <div class="item-name" style="color: ${item.getColor()};">${item.name} <span class="text-muted text-sm">Lv.${item.level}</span></div>
+        <div class="item-actions">
+          <button class="glass-btn btn-small inv-equip-btn" style="border-color: var(--color-blue); color: var(--color-blue);">Anlegen</button>
+          <button class="glass-btn btn-danger btn-small inv-salvage-btn">Zerlegen</button>
         </div>
       `;
 
-      this._bindTooltipEvents(row.querySelector('.item-name-span'), item);
+      this._bindTooltipEvents(row.querySelector('.item-name'), item);
       row.addEventListener('mouseenter', () => this._renderStats(item));
       row.addEventListener('mouseleave', () => this._renderStats(null));
 
@@ -543,6 +635,7 @@ export default class HeroUI extends BaseModalUI {
             this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${removedItem.name} zerlegt. +${amount} Staub.`, type: 'event' });
             this.eventBus.publish(EVENTS.HERO_UPDATED);
             this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
+            this.render();
           }
         }
       });
@@ -573,6 +666,7 @@ export default class HeroUI extends BaseModalUI {
         this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Gesamten Loot für ${formatNumber(totalValue)} Partikel verkauft.`, type: 'event' });
         this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
         this.eventBus.publish(EVENTS.HERO_UPDATED);
+        this.render();
       }
     });
 
@@ -586,27 +680,21 @@ export default class HeroUI extends BaseModalUI {
 
     items.forEach((item) => {
       const row = document.createElement('div');
-      row.className = 'ui-card flex-between';
+      row.className = 'inventory-item-card';
       row.style.borderLeft = `3px solid ${item.getColor()}`;
-      row.style.background = 'rgba(255, 255, 255, 0.02)';
-      row.style.padding = '0.8rem 1.2rem';
-      row.style.marginBottom = '0.6rem';
-      row.style.borderRadius = 'var(--border-radius-sm)';
 
       const value = 5 + ({ common: 0, uncommon: 5, rare: 10, epic: 20, legendary: 50 }[item.rarity] || 0);
 
       row.innerHTML = `
-        <div class="item-name-span flex-1" style="color: ${item.getColor()}; cursor: help; font-weight: 600;">
-          ${item.name} <span class="text-muted text-sm" style="font-weight: normal; margin-left: 5px;">(${item.getRarityLabel()})</span>
-        </div>
-        <div class="flex-row gap-sm align-center">
-          <span class="item-value-span text-muted text-sm" style="margin-right: 10px;">+${formatNumber(value)} Partikel</span>
-          <button class="inv-sell-btn glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);">Verkaufen</button>
-          <button class="inv-salvage-btn glass-btn btn-small" style="border-color: var(--color-danger); color: var(--color-danger);">Zerlegen</button>
+        <div class="item-name" style="color: ${item.getColor()};">${item.name} <span class="text-muted text-sm">(${item.getRarityLabel()})</span></div>
+        <div class="item-actions">
+          <span class="text-muted text-sm" style="margin-right: 8px;">+${formatNumber(value)} Partikel</span>
+          <button class="glass-btn btn-small inv-sell-btn" style="border-color: var(--color-blue); color: var(--color-blue);">Verkaufen</button>
+          <button class="glass-btn btn-danger btn-small inv-salvage-btn">Zerlegen</button>
         </div>
       `;
 
-      this._bindTooltipEvents(row.querySelector('.item-name-span'), item);
+      this._bindTooltipEvents(row.querySelector('.item-name'), item);
 
       row.querySelector('.inv-sell-btn').addEventListener('click', () => {
         const removedItem = this.hero.removeLootItemByRef(item);
@@ -616,6 +704,7 @@ export default class HeroUI extends BaseModalUI {
           this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Loot verkauft für ${formatNumber(value)} Partikel.`, type: 'event' });
           this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
           this.eventBus.publish(EVENTS.HERO_UPDATED);
+          this.render();
         }
       });
 
@@ -629,6 +718,7 @@ export default class HeroUI extends BaseModalUI {
           this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${removedItem.name} zerlegt. +${amount} Staub.`, type: 'event' });
           this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
           this.eventBus.publish(EVENTS.HERO_UPDATED);
+          this.render();
         }
       });
 

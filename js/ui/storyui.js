@@ -1,4 +1,4 @@
-// --- START OF FILE storyui.js ---
+// --- START OF FILE ui/storyui.js ---
 
 import { generateStoryBosses } from '../data/bosses.js';
 import { EVENTS } from '../core/events.js';
@@ -47,7 +47,6 @@ export default class StoryUI extends BaseModalUI {
       if (this.isOpen) this.render();
     });
 
-    // Präziser Timer direkt aus der Spiel-Logik
     this.eventBus.subscribe(EVENTS.GAME_RENDER_TICK, () => {
       if (this.isOpen && this.storyManager.battleInProgress) {
         const timeLeft = Math.max(0, this.storyManager.battleTimer / 1000);
@@ -63,14 +62,17 @@ export default class StoryUI extends BaseModalUI {
     this.eventBus.subscribe(EVENTS.STORY_BATTLE_RESULT, (data) => {
       if (this.isOpen && this.fightResult) {
         if (data.victory) {
-          this.fightResult.innerHTML = `<div class="boss-result-box boss-result-victory">🏆 SIEG! ${data.boss.name} besiegt!</div>`;
+          this.fightResult.innerHTML = `
+            <div class="result-box victory">🏆 SIEG! ${data.boss.name} besiegt!</div>
+          `;
           document.body.classList.add('boss-defeat-flash');
           setTimeout(() => document.body.classList.remove('boss-defeat-flash'), 600);
         } else {
-          this.fightResult.innerHTML = `<div class="boss-result-box boss-result-defeat">💀 NIEDERLAGE! Du warst zu schwach.</div>`;
+          this.fightResult.innerHTML = `
+            <div class="result-box defeat">💀 NIEDERLAGE! Du warst zu schwach.</div>
+          `;
         }
 
-        // Kampf-Button zurücksetzen, aber erst nach kurzer Verzögerung
         setTimeout(() => {
           this.fightBtn.disabled = false;
           this.fightBtn.textContent = '⚔️ Bosskampf starten';
@@ -85,7 +87,6 @@ export default class StoryUI extends BaseModalUI {
     this.currentViewChapter = this.maxUnlockedChapter;
     if (this.fightResult) this.fightResult.innerHTML = '';
 
-    // Kampf-Button zurücksetzen, falls kein Kampf läuft
     if (!this.storyManager.battleInProgress) {
       this.fightBtn.disabled = false;
       this.fightBtn.textContent = '⚔️ Bosskampf starten';
@@ -167,53 +168,66 @@ export default class StoryUI extends BaseModalUI {
   }
 
   _renderBossList(chapterBosses) {
-    // Entferne überschüssige Einträge
-    while (this.bossList.children.length > chapterBosses.length) {
-      this.bossList.removeChild(this.bossList.lastChild);
+    // Container leeren
+    this.bossList.innerHTML = '';
+
+    if (chapterBosses.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'text-muted text-italic text-center';
+      emptyDiv.style.padding = '1rem';
+      emptyDiv.textContent = 'Keine Bosse in diesem Kapitel.';
+      this.bossList.appendChild(emptyDiv);
+      return;
     }
 
-    chapterBosses.forEach((boss, index) => {
-      let div = this.bossList.children[index];
-      if (!div) {
-        div = document.createElement('div');
-        div.className = 'story-boss-entry ui-card';
-        div.innerHTML = `
-          <span class="boss-name" style="font-family: var(--font-header); font-size: 0.95rem;"></span>
-          <span class="boss-status"></span>
-        `;
-        this.bossList.appendChild(div);
-      }
+    const fragment = document.createDocumentFragment();
 
-      const nameSpan = div.querySelector('.boss-name');
-      const statusSpan = div.querySelector('.boss-status');
+    chapterBosses.forEach((boss, index) => {
+      const isDefeated = this.hero.defeatedBosses.includes(boss.id);
+      const isCurrent = this.storyManager.getCurrentBoss() && this.storyManager.getCurrentBoss().id === boss.id;
       const isChapterBoss = index === chapterBosses.length - 1;
 
-      nameSpan.textContent = `${index + 1}. ${boss.name} ${isChapterBoss ? '👑' : ''}`;
+      const div = document.createElement('div');
+      div.className = `story-boss-entry ${isDefeated ? 'defeated' : isCurrent ? 'current' : 'pending'}`;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'boss-name';
+      nameSpan.innerHTML = `${index + 1}. ${boss.name} ${isChapterBoss ? '<span class="boss-crown">👑</span>' : ''}`;
+
+      const statusSpan = document.createElement('span');
       statusSpan.className = 'boss-status';
 
-      if (this.hero.defeatedBosses.includes(boss.id)) {
+      if (isDefeated) {
         statusSpan.textContent = '✅ Besiegt';
         statusSpan.classList.add('defeated');
-        div.style.borderLeft = '3px solid var(--color-success)';
-      } else if (this.storyManager.getCurrentBoss() && this.storyManager.getCurrentBoss().id === boss.id) {
+      } else if (isCurrent) {
         statusSpan.textContent = '⚔️ Aktiv';
         statusSpan.classList.add('current');
-        div.style.borderLeft = '3px solid var(--color-danger)';
-        div.style.background = 'rgba(248, 113, 113, 0.04)';
       } else {
         statusSpan.textContent = '🔒 Ausstehend';
         statusSpan.classList.add('pending');
-        div.style.borderLeft = '3px solid rgba(255,255,255,0.05)';
-        div.style.background = 'transparent';
       }
+
+      div.appendChild(nameSpan);
+      div.appendChild(statusSpan);
+      fragment.appendChild(div);
     });
+
+    this.bossList.appendChild(fragment);
   }
 
   _getChapterName(chapter) {
     const names = {
-      1: 'Die Erwachenden', 2: 'Die Flüsternden', 3: 'Die Schattenwächter',
-      4: 'Die Vergessenen', 5: 'Die Hüter des Archivs', 6: 'Die Mneme-Wächter',
-      7: 'Die Alten', 8: 'Die Zeitlosen', 9: 'Die Schöpfer', 10: 'Das Ende aller Erinnerungen'
+      1: 'Die Erwachenden',
+      2: 'Die Flüsternden',
+      3: 'Die Schattenwächter',
+      4: 'Die Vergessenen',
+      5: 'Die Hüter des Archivs',
+      6: 'Die Mneme-Wächter',
+      7: 'Die Alten',
+      8: 'Die Zeitlosen',
+      9: 'Die Schöpfer',
+      10: 'Das Ende aller Erinnerungen'
     };
     return names[chapter] || `Kapitel ${chapter}`;
   }

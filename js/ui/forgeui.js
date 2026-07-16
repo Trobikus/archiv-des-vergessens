@@ -1,4 +1,4 @@
-// --- START OF FILE forgeui.js ---
+// --- START OF FILE ui/forgeui.js ---
 
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
@@ -36,22 +36,38 @@ export default class ForgeUI extends BaseModalUI {
   _renderResources() {
     const res = this.resourceManager.getResources();
     this.resourcesContainer.innerHTML = `
-      <div><span class="text-muted">Partikel:</span> <span class="text-gold">${formatNumber(res.particles)}</span></div>
-      <div><span class="text-muted">Relikte:</span> <span class="text-gold">${formatNumber(res.relics)}</span></div>
-      <div><span class="text-muted">Artefakte:</span> <span class="text-gold">${formatNumber(res.artifacts)}</span></div>
-      <div><span class="text-muted">Staub:</span> <span class="text-dust">${formatNumber(res.memoryDust)}</span></div>
+      <div class="forge-resource-grid">
+        <div class="glass-inner-panel resource-chip">
+          <span class="text-muted text-sm">Partikel</span>
+          <span class="text-gold text-bold">${formatNumber(res.particles)}</span>
+        </div>
+        <div class="glass-inner-panel resource-chip">
+          <span class="text-muted text-sm">Relikte</span>
+          <span class="text-gold text-bold">${formatNumber(res.relics)}</span>
+        </div>
+        <div class="glass-inner-panel resource-chip">
+          <span class="text-muted text-sm">Artefakte</span>
+          <span class="text-gold text-bold">${formatNumber(res.artifacts)}</span>
+        </div>
+        <div class="glass-inner-panel resource-chip">
+          <span class="text-muted text-sm">Staub</span>
+          <span class="text-dust text-bold">${formatNumber(res.memoryDust)}</span>
+        </div>
+      </div>
     `;
   }
 
   _renderRecipes() {
     const recipes = this.forgeManager.getRecipes();
 
+    // Nur einmal rendern, dann nur Buttons aktualisieren
     if (this.recipesContainer.children.length === 0) {
       const fragment = document.createDocumentFragment();
       
       recipes.forEach(recipe => {
         const div = document.createElement('div');
-        div.className = 'ui-card forge-recipe-card';
+        div.className = 'forge-recipe-card glass-inner-panel';
+        div.dataset.recipeId = recipe.id;
 
         const cost = this.forgeManager.getRecipeCost(recipe);
         let costStr = [];
@@ -59,30 +75,33 @@ export default class ForgeUI extends BaseModalUI {
         if (cost.relics) costStr.push(`${formatNumber(cost.relics)} Relikte`);
         if (cost.artifacts) costStr.push(`${formatNumber(cost.artifacts)} Artefakte`);
 
-        const infoDiv = document.createElement('div');
-        infoDiv.innerHTML = `
-          <div class="ui-card-title">${recipe.name}</div>
-          <div class="ui-card-desc">${recipe.desc}</div>
-          <div class="ui-card-meta text-muted">Kosten: ${costStr.join(' | ')}</div>
+        div.innerHTML = `
+          <div class="forge-recipe-info">
+            <div class="forge-recipe-name">${recipe.name}</div>
+            <div class="forge-recipe-desc">${recipe.desc}</div>
+            <div class="forge-recipe-cost">Kosten: ${costStr.join(' | ')}</div>
+          </div>
+          <button class="glass-btn primary btn-small forge-craft-btn" data-id="${recipe.id}">⚒️ Schmieden</button>
         `;
 
-        const craftBtn = document.createElement('button');
-        craftBtn.textContent = 'Schmieden';
-        craftBtn.className = 'ui-btn ui-btn-gold forge-craft-btn';
-        craftBtn.dataset.id = recipe.id;
-
-        craftBtn.addEventListener('click', () => {
+        div.querySelector('.forge-craft-btn').addEventListener('click', () => {
           const result = this.forgeManager.craft(recipe.id);
           if (result.success) {
-            this.resultContainer.innerHTML = `<span style="color: ${result.item.getColor()}; text-shadow: 0 0 10px ${result.item.getColor()}80;">${result.message}</span><br><span class="text-muted text-sm">(Wurde dem Inventar hinzugefügt)</span>`;
-            this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `  Schmiede: ${result.item.name} (${result.item.getRarityLabel()}) hergestellt!`, type: 'event' });
+            this.resultContainer.innerHTML = `
+              <div class="forge-result-success">
+                <span style="color: ${result.item.getColor()};">✦ ${result.message} ✦</span>
+                <span class="text-muted text-sm">(Wurde dem Inventar hinzugefügt)</span>
+              </div>
+            `;
+            this.eventBus.publish(EVENTS.UI_ADD_LOG, { 
+              text: `  Schmiede: ${result.item.name} (${result.item.getRarityLabel()}) hergestellt!`, 
+              type: 'event' 
+            });
           } else {
-            this.resultContainer.innerHTML = `<span class="text-danger">${result.message}</span>`;
+            this.resultContainer.innerHTML = `<div class="forge-result-error">❌ ${result.message}</div>`;
           }
         });
 
-        div.appendChild(infoDiv);
-        div.appendChild(craftBtn);
         fragment.appendChild(div);
       });
       this.recipesContainer.appendChild(fragment);
@@ -95,7 +114,12 @@ export default class ForgeUI extends BaseModalUI {
     const equippedItems = slots.map(s => ({ slot: s, item: this.forgeManager.hero.equipment[s] })).filter(x => x.item);
 
     if (equippedItems.length === 0) {
-      this.upgradesContainer.innerHTML = '<div class="text-disabled text-italic">Keine Ausrüstung angelegt.</div>';
+      this.upgradesContainer.innerHTML = `
+        <div class="forge-empty-state">
+          <span class="text-muted">Keine Ausrüstung angelegt.</span>
+          <span class="text-sm text-muted">Schmiede zuerst Gegenstände im Rezeptbereich.</span>
+        </div>
+      `;
       return;
     }
 
@@ -105,25 +129,31 @@ export default class ForgeUI extends BaseModalUI {
     equippedItems.forEach((data) => {
       const { slot, item } = data;
       const div = document.createElement('div');
-      div.className = 'ui-card forge-upgrade-card';
+      div.className = 'forge-upgrade-card glass-inner-panel';
       div.dataset.slot = slot;
       
       const cost = item.level * 10 * (item.rarity === 'legendary' ? 5 : item.rarity === 'epic' ? 3 : item.rarity === 'rare' ? 2 : 1);
       const canAfford = this.resourceManager.memoryDust >= cost && item.level < 10;
 
       div.innerHTML = `
-        <div>
-          <div class="ui-card-title item-title" style="color: ${item.getColor()}">${item.name} (Lv. ${item.level})</div>
-          <div class="ui-card-desc item-desc">${item.level < 10 ? `Kosten: ${formatNumber(cost)} Staub` : 'Maximales Level'}</div>
+        <div class="forge-upgrade-info">
+          <div class="forge-upgrade-name" style="color: ${item.getColor()};">${item.name} <span class="text-muted text-sm">(Lv. ${item.level})</span></div>
+          <div class="forge-upgrade-cost">${item.level < 10 ? `Kosten: <span class="text-dust">${formatNumber(cost)} Staub</span>` : 'Maximales Level erreicht'}</div>
         </div>
-        <button class="ui-btn ui-btn-blue upgrade-btn" ${!canAfford ? 'disabled' : ''}>Aufwerten</button>
+        <button class="glass-btn btn-small ${canAfford ? 'primary' : ''}" ${!canAfford ? 'disabled' : ''}>
+          ⬆ Aufwerten
+        </button>
       `;
 
-      div.querySelector('.upgrade-btn').addEventListener('click', () => {
+      div.querySelector('.glass-btn').addEventListener('click', () => {
         const currentSlot = div.dataset.slot;
         const res = this.forgeManager.upgradeEquipped(currentSlot);
         if (res.success) {
-          this.resultContainer.innerHTML = `<span class="text-dust">${res.message}</span>`;
+          this.resultContainer.innerHTML = `
+            <div class="forge-result-success" style="border-color: var(--color-dust);">
+              <span class="text-dust">✦ ${res.message} ✦</span>
+            </div>
+          `;
           this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `✨ ${res.message}`, type: 'event' });
         }
       });

@@ -13,6 +13,7 @@ import { DIContainer } from './core/di.js';
 import { EVENTS } from './core/events.js';
 import { CONFIG } from './core/config.js';
 import { formatNumber } from './utils/format.js';
+import Logger from './core/Logger.js';
 
 // --- MODELS ---
 import Hero from './models/hero.js';
@@ -73,6 +74,11 @@ import FriendUI from './ui/FriendUI.js';
 import ChatUI from './ui/ChatUI.js';
 import { safeAddEventListener } from './ui/errorHandler.js';
 
+// --- UI HELPER ---
+import ToastManager from './ui/ToastManager.js';
+import ConfirmDialog from './ui/ConfirmDialog.js';
+import LoadingUI from './ui/LoadingUI.js';
+
 // --- PREACT IMPORTS ---
 import { html, render } from './ui/preact-setup.js';
 import AchievementUI from './ui/achievementui.js';
@@ -84,11 +90,25 @@ import GatherController from './controllers/gather.js';
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[main] DOM bereit, initialisiere Spielkomponenten...');
 
+  // ============================================================
+  // LOGGER INTEGRATION
+  // ============================================================
+  const logger = new Logger();
+  logger.level = 'info';
+
   const container = new DIContainer();
 
-  // Registrierung der Kernkomponenten im DI-Container
   container.register('eventBus', () => new EventBus());
   const eventBus = container.get('eventBus');
+
+  logger.setEventBus(eventBus);
+
+  window.addEventListener('error', (e) => {
+    logger.error('Globaler Fehler', { message: e.message, stack: e.error?.stack, filename: e.filename });
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    logger.error('Unbehandelte Promise-Ablehnung', { reason: e.reason });
+  });
 
   container.register('settingsManager', () => new SettingsManager(eventBus));
   container.register('gameLoop', (c) => new GameLoop({ eventBus, resourceManager: c.get('resourceManager') }));
@@ -152,10 +172,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   container.register('friendManager', (c) => new FriendManager(eventBus, c.get('hero')));
   container.register('chatManager', (c) => new ChatManager(eventBus, c.get('hero'), c.get('guildManager')));
 
-  // Kontext für einheitliche Referenzierung
   const context = {
     eventBus,
     container,
+    logger,
     get settingsManager() { return container.get('settingsManager'); },
     get gameLoop() { return container.get('gameLoop'); },
     get gameStateManager() { return container.get('gameStateManager'); },
@@ -186,7 +206,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     get chatManager() { return container.get('chatManager'); }
   };
 
-  // DOMPool für Floating-Ressourcen-Texte
+  logger.info('Spiel-Bootstrapping gestartet', { version: '1.5' });
+
+  // ============================================================
+  // TOAST MANAGER
+  // ============================================================
+  const toastManager = new ToastManager();
+  toastManager.setEventBus(eventBus);
+
+  // ============================================================
+  // LOADING UI
+  // ============================================================
+  const loadingUI = new LoadingUI();
+  eventBus.subscribe('ui:showLoading', (data) => {
+    if (data.show) {
+      loadingUI.show(data.text || 'Lade...', data.progress || 0);
+    } else {
+      loadingUI.hide();
+    }
+  });
+
+  // ============================================================
+  // DOMPool für Floating-Text
+  // ============================================================
   const floatTextPool = new DOMPool(() => {
     const el = document.createElement('div');
     el.className = 'float-text';
@@ -212,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => floatTextPool.release(el), 1200);
   });
 
-  // Benutzerinteraktion zum Aktivieren des AudioContexts registrieren
+  // Audio-Context aktivieren
   const handleUserGestureAudio = () => {
     const audio = context.audioManager;
     if (!audio.isInitialized) {
@@ -223,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   document.addEventListener('click', handleUserGestureAudio);
 
-  // Zuweisung der SaveGame-Schnittstellen
+  // SaveGame-Schnittstellen
   SaveGameManager.register('hero', context.hero);
   SaveGameManager.register('clan', context.clanManager);
   SaveGameManager.register('expedition', context.expeditionManager);
@@ -244,7 +286,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   SaveGameManager.register('friends', context.friendManager);
   SaveGameManager.register('chat', context.chatManager);
 
-  // Instanziierung aller UI Controller und Panels
+  // UI-Instanzen
   let heroUI, storyUI, forgeUI, libraryUI, relicHuntUI, skillTreeUI, challengeUI;
   try {
     new ClanUI(context);
@@ -274,7 +316,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       render(html`<${AchievementUI} context=${context} />`, preactRoot);
     }
 
-    // Sichere Registrierung der UI-Öffnungs-Events
     safeAddEventListener(document.getElementById('open-achievements-btn'), 'click', () => {
       eventBus.publish('ui:openAchievements');
     });
@@ -301,12 +342,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
   } catch (e) {
-    console.error("Kritischer Fehler bei der Initialisierung des UI-Systems:", e);
+    logger.error('Kritischer Fehler bei UI-Initialisierung', { error: e.message, stack: e.stack });
   }
 
   initParticles();
 
-  // Save-System-Definitionen
+  // Save-System
   let saveTimer = null;
   async function saveGame() {
     if (context.storyManager.battleInProgress) return false;
@@ -321,9 +362,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const interval = parseInt(context.settingsManager.get('autosave'), 10);
     if (saveTimer) clearInterval(saveTimer);
     if (interval > 0) saveTimer = setInterval(() => saveGame(), interval);
+    logger.debug('Autosave-Intervall gesetzt', { interval });
   }
 
-  // Automatisierte Speicherereignisse abonnieren
+  // Events für automatisches Speichern
   eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, () => saveGame());
   eventBus.subscribe(EVENTS.FORGE_CRAFTED, () => saveGame());
   eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, () => saveGame());
@@ -342,7 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   eventBus.subscribe('friend:accepted', () => saveGame());
   eventBus.subscribe('friend:removed', () => saveGame());
 
-  // Übermittlung von Leistungsdaten an das lokale Leaderboard
+  // Leaderboard-Update
   eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
     if (context.leaderboardManager) {
       context.leaderboardManager.addEntry({
@@ -360,9 +402,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const speedIndicator = document.getElementById('speed-indicator');
     if (speedIndicator) speedIndicator.style.display = 'none';
     eventBus.publish(EVENTS.UI_REFRESH_QUEST);
+    logger.info('Catchup-Modus beendet');
   });
 
-  // --- OPTIONEN: AUDIO & CLOUD-STEUERUNG ---
+  // --- OPTIONEN ---
   const audioToggleBtn = document.getElementById('opt-audio-toggle');
   safeAddEventListener(audioToggleBtn, 'click', () => {
     const muted = context.audioManager.toggleMute();
@@ -371,6 +414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       text: muted ? '🔇 Audio stummgeschaltet' : '🔊 Audio aktiviert',
       type: 'system'
     });
+    logger.info(`Audio ${muted ? 'stummgeschaltet' : 'aktiviert'}`);
   });
   if (context.audioManager.isMuted && audioToggleBtn) {
     audioToggleBtn.textContent = '🔇 Stumm';
@@ -446,7 +490,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateCloudLastSync();
   eventBus.subscribe('cloud:synced', updateCloudLastSync);
 
-  // Grafische Feineinstellungen
   const optParticles = document.getElementById('opt-particles');
   if (optParticles) {
     optParticles.addEventListener('change', (e) => {
@@ -474,7 +517,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const optHardReset = document.getElementById('opt-hard-reset');
   if (optHardReset) {
     optHardReset.addEventListener('click', async () => {
-      if (confirm('WARNUNG! Möchtest du deinen kompletten Spielstand UNWIDERRUFLICH löschen?')) {
+      const confirmed = await ConfirmDialog.ask(
+        '🧨 Spielstand unwiderruflich löschen?',
+        'Alle Fortschritte, Erfolge, Ausrüstung und Ressourcen werden dauerhaft gelöscht.',
+        'Diese Aktion kann nicht rückgängig gemacht werden!',
+        'Ja, löschen',
+        'Abbrechen'
+      );
+      if (confirmed) {
+        logger.warn('Hard-Reset durchgeführt');
         if (saveTimer) clearInterval(saveTimer);
         if (context.gameLoop.isRunning()) context.gameLoop.stop();
         await SaveGameManager.deleteSaveGame();
@@ -485,10 +536,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // --- NAVIGATION & SPEICHER-EINGANG ---
+  // --- NAVIGATION & SPEICHER-ENGINE ---
   async function loadGameData() {
+    loadingUI.show('Archiv wird geladen...', 20);
+
     const saveData = await SaveGameManager.loadGame();
-    if (!saveData) return false;
+    if (!saveData) {
+      loadingUI.hide();
+      logger.info('Kein Spielstand gefunden – neues Spiel wird gestartet');
+      return false;
+    }
+
+    loadingUI.setProgress(50, 'Erinnerungen werden entfaltet...');
 
     try {
       eventBus.publish(EVENTS.HERO_UPDATED);
@@ -509,6 +568,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           const offlineSeconds = clampedOfflineMs / 1000;
 
           context.resourceManager.timeBank = (context.resourceManager.timeBank || 0) + offlineSeconds;
+          logger.info('Offline-Catchup aktiv', { offlineSeconds, clampedOfflineMs });
+
+          loadingUI.setProgress(80, `Offline-Zeit: ${formatOfflineTime(clampedOfflineMs)} – 4× Geschwindigkeit`);
 
           const timeEl = document.getElementById('offline-time-val');
           if (timeEl) timeEl.textContent = formatOfflineTime(clampedOfflineMs);
@@ -542,17 +604,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (context.resourceManager.timeBank > 0) {
                   context.gameLoop._catchupActive = true;
                 }
+                loadingUI.hide();
               }, { once: true });
             }
+          } else {
+            loadingUI.hide();
           }
+        } else {
+          loadingUI.hide();
         }
+      } else {
+        loadingUI.hide();
       }
 
       eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Spielstand erfolgreich geladen!`, type: 'system' });
+      logger.info('Spielstand geladen', { timestamp: saveData.timestamp });
       startAutosave();
+
+      setTimeout(() => {
+        const offlineOverlay = document.getElementById('offline-modal-overlay');
+        if (!offlineOverlay || offlineOverlay.style.display === 'none') {
+          loadingUI.hide();
+        }
+      }, 500);
+
       return true;
     } catch (error) {
-      console.error('[LoadGame] Kritischer Import-Fehler:', error);
+      logger.error('Fehler beim Laden des Spielstands', { error: error.message, stack: error.stack });
+      loadingUI.hide();
       return false;
     }
   }
@@ -609,9 +688,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     onLoad: async () => {
       const success = await loadGameData();
       if (success) navController.showHub();
-      else alert('Der lokale Spielstand konnte nicht fehlerfrei dekomprimiert werden.');
+      else {
+        loadingUI.hide();
+        alert('Der lokale Spielstand konnte nicht fehlerfrei dekomprimiert werden.');
+      }
     },
     onNewGame: async (heroName) => {
+      logger.info('Neues Spiel gestartet', { heroName });
       const hasSave = await SaveGameManager.hasSaveGame();
       if (hasSave) await SaveGameManager.deleteSaveGame();
 
@@ -628,14 +711,31 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.questManager.fromJSON({ questIndex: 0, dailyQuests: { date: '', gatherClicks: 0, expeditions: 0, craftedItems: 0, claimed: [] } });
       context.tutorialManager.fromJSON({ completed: false });
       context.craftingManager.fromJSON({});
-      context.audioManager.fromJSON({});
-      context.cloudSaveManager.fromJSON({});
-      context.leaderboardManager.fromJSON({});
-      context.storyBranchManager.fromJSON({});
-      context.codexManager.fromJSON({});
-      context.guildManager.fromJSON({});
-      context.friendManager.fromJSON({});
-      context.chatManager.fromJSON({});
+      
+      if (context.audioManager && typeof context.audioManager.fromJSON === 'function') {
+        context.audioManager.fromJSON({});
+      }
+      if (context.cloudSaveManager && typeof context.cloudSaveManager.fromJSON === 'function') {
+        context.cloudSaveManager.fromJSON({});
+      }
+      if (context.leaderboardManager && typeof context.leaderboardManager.fromJSON === 'function') {
+        context.leaderboardManager.fromJSON({});
+      }
+      if (context.storyBranchManager && typeof context.storyBranchManager.fromJSON === 'function') {
+        context.storyBranchManager.fromJSON({});
+      }
+      if (context.codexManager && typeof context.codexManager.fromJSON === 'function') {
+        context.codexManager.fromJSON({});
+      }
+      if (context.guildManager && typeof context.guildManager.fromJSON === 'function') {
+        context.guildManager.fromJSON({});
+      }
+      if (context.friendManager && typeof context.friendManager.fromJSON === 'function') {
+        context.friendManager.fromJSON({});
+      }
+      if (context.chatManager && typeof context.chatManager.fromJSON === 'function') {
+        context.chatManager.fromJSON({});
+      }
 
       eventBus.publish(EVENTS.HERO_UPDATED);
 
@@ -663,6 +763,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (context.audioManager.isInitialized) {
         context.audioManager.playMusic('game');
       }
+      logger.info('Spiel gestartet (Game-View)');
     }
   });
 
@@ -700,7 +801,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await navController.updateMenuButtons();
   navController.showMenu();
 
-  // --- REGISTRIERUNG DER HUB-KATEGORIEN (TABS) ---
+  // --- HUB TABS ---
   const tabButtons = document.querySelectorAll('.hub-tab-btn');
   const categories = {
     core: document.getElementById('hub-category-core'),
@@ -728,7 +829,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Spieler-Kopfdaten im Hub aktualisieren
+  // --- HUB PLAYER INFO ---
   function updateHubPlayerInfo() {
     const hero = context.hero;
     if (!hero) return;
@@ -743,7 +844,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   eventBus.subscribe(EVENTS.HERO_UPDATED, updateHubPlayerInfo);
   setTimeout(updateHubPlayerInfo, 100);
 
-  // Indikator für aktive Missionen aktualisieren
+  // --- QUEST INDICATOR ---
   function updateQuestIndicator() {
     const indicator = document.getElementById('hub-quest-indicator');
     if (!indicator) return;
@@ -767,5 +868,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   eventBus.subscribe(EVENTS.UI_REFRESH_QUEST, updateQuestIndicator);
   setTimeout(updateQuestIndicator, 200);
 
+  logger.info('Bootstrapping abgeschlossen – Spiel bereit');
   console.log('[main] Bootstrapping abgeschlossen.');
 });

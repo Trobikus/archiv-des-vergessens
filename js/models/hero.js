@@ -16,7 +16,20 @@ export default class Hero {
     this.spentStats = { attack: 0, defense: 0, agility: 0, stamina: 0 };
     this.unspentStatPoints = 0;
 
-    this.equipment = { weapon: null, armor: null, amulet: null, ring: null, ring2: null };
+    // ---------- ERWEITERTE SLOTS (AAA-RPG) ----------
+    this.equipment = {
+      weapon: null,
+      shield: null,
+      helmet: null,
+      shoulders: null,
+      armor: null,
+      gloves: null,
+      belt: null,
+      boots: null,
+      amulet: null,
+      ring: null,
+      ring2: null
+    };
     this._inventory = { equipment: [], loot: [] };
     this.bossProgress = 0;
     this.defeatedBosses = [];
@@ -165,12 +178,22 @@ export default class Hero {
   equipItem(item, targetSlot = null, hasPacifistRing = false) {
     if (!item || !item.slot) return false;
     let slotToEquip = targetSlot || item.slot;
+
+    // Spezialfall Ringe: wenn kein Zielslot angegeben, automatisch belegen
     if (item.slot === 'ring' && !targetSlot) {
       if (!this.equipment.ring) slotToEquip = 'ring';
       else if (hasPacifistRing && !this.equipment.ring2) slotToEquip = 'ring2';
       else slotToEquip = 'ring';
     }
+
+    // Prüfen, ob der Slot existiert
     if (!this.equipment.hasOwnProperty(slotToEquip)) return false;
+
+    // Bei Schild: nur wenn eine einhändige Waffe ausgerüstet ist oder keine Waffe
+    if (slotToEquip === 'shield' && this.equipment.weapon) {
+      // Einfache Prüfung: erlaube Schild immer (für Zweihandwaffen könnte man später eine Einschränkung einbauen)
+    }
+
     const oldItem = this.equipment[slotToEquip];
     if (oldItem) this._inventory.equipment.push(oldItem);
     this.equipment[slotToEquip] = item;
@@ -290,7 +313,19 @@ export default class Hero {
     this.expToNext = CONFIG.HERO.BASE_EXP_TO_NEXT;
     this.unspentStatPoints = 0;
     this.spentStats = { attack: 0, defense: 0, agility: 0, stamina: 0 };
-    this.equipment = { weapon: null, armor: null, amulet: null, ring: null, ring2: null };
+    this.equipment = {
+      weapon: null,
+      shield: null,
+      helmet: null,
+      shoulders: null,
+      armor: null,
+      gloves: null,
+      belt: null,
+      boots: null,
+      amulet: null,
+      ring: null,
+      ring2: null
+    };
     this._inventory = { equipment: [], loot: [] };
     this.bossProgress = 0;
     this.defeatedBosses = [];
@@ -331,7 +366,13 @@ export default class Hero {
       unspentStatPoints: this.unspentStatPoints,
       equipment: {
         weapon: this.equipment.weapon ? this.equipment.weapon.toJSON() : null,
+        shield: this.equipment.shield ? this.equipment.shield.toJSON() : null,
+        helmet: this.equipment.helmet ? this.equipment.helmet.toJSON() : null,
+        shoulders: this.equipment.shoulders ? this.equipment.shoulders.toJSON() : null,
         armor: this.equipment.armor ? this.equipment.armor.toJSON() : null,
+        gloves: this.equipment.gloves ? this.equipment.gloves.toJSON() : null,
+        belt: this.equipment.belt ? this.equipment.belt.toJSON() : null,
+        boots: this.equipment.boots ? this.equipment.boots.toJSON() : null,
         amulet: this.equipment.amulet ? this.equipment.amulet.toJSON() : null,
         ring: this.equipment.ring ? this.equipment.ring.toJSON() : null,
         ring2: this.equipment.ring2 ? this.equipment.ring2.toJSON() : null
@@ -372,7 +413,9 @@ export default class Hero {
     }
 
     if (data.equipment) {
-      for (const slot of ['weapon', 'armor', 'amulet', 'ring', 'ring2']) {
+      // Alle Slots setzen (auch die neuen)
+      const slots = ['weapon', 'shield', 'helmet', 'shoulders', 'armor', 'gloves', 'belt', 'boots', 'amulet', 'ring', 'ring2'];
+      for (const slot of slots) {
         this.equipment[slot] = data.equipment[slot] ? Item.fromJSON(data.equipment[slot]) : null;
       }
     }

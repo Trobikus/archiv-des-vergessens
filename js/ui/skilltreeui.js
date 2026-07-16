@@ -1,3 +1,5 @@
+// --- START OF FILE ui/skilltreeui.js ---
+
 import { EVENTS } from '../core/events.js';
 import BaseModalUI from './basemodal.js';
 
@@ -24,44 +26,59 @@ export default class SkillTreeUI extends BaseModalUI {
     this.pointsDisplay.textContent = this.hero.prestigePoints;
     const skills = this.skillTreeManager.getSkills();
 
-    while (this.container.children.length > skills.length) {
-      this.container.removeChild(this.container.lastChild);
+    // Container leeren, aber mit Fragment neu aufbauen für Konsistenz
+    this.container.innerHTML = '';
+
+    if (skills.length === 0) {
+      this.container.innerHTML = `
+        <div class="skilltree-empty-state">
+          <span class="text-muted">Keine Talente verfügbar.</span>
+        </div>
+      `;
+      return;
     }
 
-    skills.forEach((skill, index) => {
+    const fragment = document.createDocumentFragment();
+
+    skills.forEach((skill) => {
       const isUnlocked = this.hero.unlockedSkills.includes(skill.id);
       const canUnlock = !isUnlocked && skill.req.every(r => this.hero.unlockedSkills.includes(r)) && this.hero.prestigePoints >= skill.cost;
 
-      let div = this.container.children[index];
-      if (!div) {
-        div = document.createElement('div');
-        div.innerHTML = `
-          <div>
-            <div class="ui-card-title skill-title"></div>
-            <div class="ui-card-desc skill-desc"></div>
+      const div = document.createElement('div');
+      div.className = 'skilltree-card glass-inner-panel';
+      div.dataset.status = isUnlocked ? 'unlocked' : canUnlock ? 'available' : 'locked';
+      div.style.borderLeft = `3px solid ${isUnlocked ? 'var(--color-success)' : canUnlock ? 'var(--color-gold)' : 'var(--color-text-muted)'}`;
+      div.style.opacity = isUnlocked || canUnlock ? '1' : '0.5';
+
+      div.innerHTML = `
+        <div class="skilltree-info">
+          <div class="skilltree-name" style="color: ${isUnlocked ? 'var(--color-success)' : canUnlock ? 'var(--color-gold)' : 'var(--color-text-muted)'};">
+            ${isUnlocked ? '✅ ' : ''}${skill.name}
           </div>
-          <div class="skill-action"></div>
-        `;
-        this.container.appendChild(div);
+          <div class="skilltree-desc">${skill.desc}</div>
+          <div class="skilltree-reqs">Voraussetzungen: ${skill.req.length === 0 ? 'Keine' : skill.req.map(r => {
+            const s = this.skillTreeManager.skills[r];
+            return s ? s.name : r;
+          }).join(', ')}</div>
+        </div>
+        <div class="skilltree-action">
+          ${!isUnlocked ? 
+            `<button class="glass-btn primary btn-small unlock-btn" ${!canUnlock ? 'disabled' : ''} data-id="${skill.id}">
+              ${skill.cost} PP
+            </button>` :
+            `<span class="skilltree-unlocked">✅ Aktiv</span>`
+          }
+        </div>
+      `;
+
+      const btn = div.querySelector('.unlock-btn');
+      if (btn) {
+        btn.addEventListener('click', () => this.skillTreeManager.unlockSkill(skill.id));
       }
 
-      div.className = `ui-card skill-card ${isUnlocked ? 'achieved' : canUnlock ? 'can-unlock' : 'locked'}`;
-      div.querySelector('.skill-title').textContent = skill.name;
-      div.querySelector('.skill-desc').textContent = skill.desc;
-
-      const actionContainer = div.querySelector('.skill-action');
-
-      if (!isUnlocked) {
-        if (!actionContainer.querySelector('button')) {
-          actionContainer.innerHTML = `<button class="ui-btn ui-btn-gold"></button>`;
-          actionContainer.querySelector('button').addEventListener('click', () => this.skillTreeManager.unlockSkill(skill.id));
-        }
-        const btn = actionContainer.querySelector('button');
-        btn.textContent = `${skill.cost} PP`;
-        btn.disabled = !canUnlock;
-      } else {
-        actionContainer.innerHTML = `<span style="color:#9acd9a;">✅ Aktiv</span>`;
-      }
+      fragment.appendChild(div);
     });
+
+    this.container.appendChild(fragment);
   }
 }

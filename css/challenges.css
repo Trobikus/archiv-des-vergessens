@@ -1,0 +1,65 @@
+/* ==========================================================================
+   CHALLENGES UI - Anomalien (AAA)
+   ========================================================================== */
+
+/* ---- CHALLENGE CARDS ---- */
+.challenge-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.challenge-card:hover {
+  background: rgba(197, 160, 89, 0.05);
+}
+
+.challenge-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.challenge-name {
+  font-family: var(--font-header);
+  font-size: 1.05rem;
+}
+
+.challenge-desc {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.challenge-reward {
+  color: #9acd9a;
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+
+.challenge-action {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  min-width: 100px;
+  text-align: center;
+}
+
+.challenge-completed {
+  color: var(--color-success);
+  font-weight: bold;
+}
+
+.challenge-hint {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  margin-top: 0.2rem;
+}
+
+/* ---- EMPTY STATE ---- */
+.challenges-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}

@@ -1,4 +1,4 @@
-// --- START OF FILE libraryui.js ---
+// --- START OF FILE ui/libraryui.js ---
 
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
@@ -27,32 +27,20 @@ export default class LibraryUI extends BaseModalUI {
     const upgrades = this.libraryManager.getUpgrades();
     const res = this.resourceManager.getResources();
 
-    while (this.container.children.length > upgrades.length) {
-      this.container.removeChild(this.container.lastChild);
+    this.container.innerHTML = '';
+
+    if (upgrades.length === 0) {
+      this.container.innerHTML = `
+        <div class="library-empty-state">
+          <span class="text-muted">Keine Forschungen verfügbar.</span>
+        </div>
+      `;
+      return;
     }
 
-    upgrades.forEach((upg, index) => {
-      let div = this.container.children[index];
-      if (!div) {
-        div = document.createElement('div');
-        div.className = 'ui-card flex-between';
-        div.innerHTML = `
-          <div>
-            <div class="text-highlight text-bold upg-title"></div>
-            <div class="text-muted text-sm upg-desc"></div>
-            <div class="text-sm mt-1 upg-cost"></div>
-          </div>
-          <div><button class="ui-btn ui-btn-gold upg-btn">Forschen</button></div>
-        `;
-        
-        div.querySelector('.upg-btn').addEventListener('click', () => {
-          this.libraryManager.buyUpgrade(upg.id);
-          this.render();
-        });
-        
-        this.container.appendChild(div);
-      }
+    const fragment = document.createDocumentFragment();
 
+    upgrades.forEach((upg) => {
       const cost = this.libraryManager.getUpgradeCost(upg.id);
       let costStr = [];
       if (cost.particles) costStr.push(`${formatNumber(cost.particles)} Partikel`);
@@ -62,19 +50,45 @@ export default class LibraryUI extends BaseModalUI {
       const canAfford = (!cost.particles || res.particles >= cost.particles) &&
                         (!cost.relics || res.relics >= cost.relics) &&
                         (!cost.artifacts || res.artifacts >= cost.artifacts);
+      const isMaxed = upg.level >= upg.maxLevel;
 
-      div.querySelector('.upg-title').textContent = `${upg.name} (Stufe ${upg.level})`;
-      div.querySelector('.upg-desc').textContent = upg.desc;
-      
-      const costDiv = div.querySelector('.upg-cost');
-      if (upg.level < upg.maxLevel) {
-          costDiv.innerHTML = `Kosten: <span class="${canAfford ? 'text-dust' : 'text-danger'}">${costStr.join(' | ')}</span>`;
-          div.querySelector('.upg-btn').style.display = 'block';
-          div.querySelector('.upg-btn').disabled = !canAfford;
-      } else {
-          costDiv.innerHTML = `<span class="text-success">Maximalstufe erreicht</span>`;
-          div.querySelector('.upg-btn').style.display = 'none';
+      const div = document.createElement('div');
+      div.className = 'library-card glass-inner-panel';
+      div.style.borderLeft = `3px solid ${isMaxed ? 'var(--color-success)' : canAfford ? 'var(--color-dust)' : 'var(--color-text-muted)'}`;
+      div.style.opacity = isMaxed ? '1' : canAfford ? '1' : '0.6';
+
+      div.innerHTML = `
+        <div class="library-info">
+          <div class="library-name" style="color: ${isMaxed ? 'var(--color-success)' : 'var(--color-highlight)'};">
+            ${upg.name} <span class="text-muted text-sm">(Stufe ${upg.level})</span>
+          </div>
+          <div class="library-desc">${upg.desc}</div>
+          <div class="library-cost">
+            ${isMaxed ? 
+              `<span class="text-success">✦ Maximalstufe erreicht ✦</span>` :
+              `Kosten: <span class="${canAfford ? 'text-dust' : 'text-danger'}">${costStr.join(' | ')}</span>`
+            }
+          </div>
+        </div>
+        <div class="library-action">
+          ${!isMaxed ? 
+            `<button class="glass-btn primary btn-small research-btn" ${!canAfford ? 'disabled' : ''} data-id="${upg.id}">📚 Forschen</button>` :
+            `<span class="library-maxed">✦ Max</span>`
+          }
+        </div>
+      `;
+
+      const btn = div.querySelector('.research-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          this.libraryManager.buyUpgrade(upg.id);
+          this.render();
+        });
       }
+
+      fragment.appendChild(div);
     });
+
+    this.container.appendChild(fragment);
   }
 }

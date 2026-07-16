@@ -12,22 +12,11 @@ export default class FriendUI extends BaseModalUI {
         this.hero = context.hero;
 
         this.container = document.getElementById('friend-container');
-        this.addInput = document.getElementById('friend-add-input');
-        this.addBtn = document.getElementById('friend-add-btn');
 
         this.eventBus.subscribe('ui:openFriends', () => this.open());
         this.eventBus.subscribe('friend:accepted', () => this.render());
         this.eventBus.subscribe('friend:removed', () => this.render());
         this.eventBus.subscribe('friend:requestSent', () => this.render());
-
-        if (this.addBtn) {
-            this.addBtn.addEventListener('click', () => this._addFriend());
-        }
-        if (this.addInput) {
-            this.addInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this._addFriend();
-            });
-        }
     }
 
     onOpen() {
@@ -40,57 +29,51 @@ export default class FriendUI extends BaseModalUI {
         const sent = this.friendManager.getSentRequests();
 
         let html = `
-      <div class="flex-row gap-sm mb-1">
-        <input id="friend-add-input" type="text" placeholder="Spielername..." class="ui-select" style="flex: 1; padding: 0.5rem;" />
-        <button class="glass-btn primary btn-small" id="friend-add-btn">➕ Hinzufügen</button>
-      </div>
-    `;
+            <div class="friend-add-row">
+                <input id="friend-add-input" type="text" placeholder="Spielername..." class="ui-select" />
+                <button class="glass-btn primary btn-small" id="friend-add-btn">➕ Hinzufügen</button>
+            </div>
+        `;
 
-        // Anfragen
         if (pending.length > 0) {
-            html += `<h4 class="text-gold cinzel text-sm mb-1">📩 Anfragen</h4>`;
+            html += `<h4 class="friend-section-title">📩 Anfragen</h4>`;
             for (const req of pending) {
                 html += `
-          <div class="ui-card flex-between" style="padding: 0.5rem 1rem; margin-bottom: 0.5rem;">
-            <span>${req.from}</span>
-            <div class="flex-row gap-sm">
-              <button class="glass-btn btn-small accept-friend-btn" data-name="${req.from}">✅ Annehmen</button>
-            </div>
-          </div>
-        `;
+                    <div class="friend-item pending glass-inner-panel">
+                        <span>${req.from}</span>
+                        <button class="glass-btn btn-small primary accept-friend-btn" data-name="${req.from}">✅ Annehmen</button>
+                    </div>
+                `;
             }
         }
 
-        // Freunde
         if (friends.length === 0) {
-            html += `<div class="text-muted text-sm text-italic">Keine Freunde.</div>`;
+            html += `<div class="friend-empty">Keine Freunde.</div>`;
         } else {
-            html += `<h4 class="text-gold cinzel text-sm mb-1">👥 Freunde (${friends.length})</h4>`;
+            html += `<h4 class="friend-section-title">👥 Freunde (${friends.length})</h4>`;
             for (const friend of friends) {
                 html += `
-          <div class="ui-card flex-between" style="padding: 0.5rem 1rem; margin-bottom: 0.5rem;">
-            <span>${friend.name}</span>
-            <button class="glass-btn btn-danger btn-small remove-friend-btn" data-name="${friend.name}">✕ Entfernen</button>
-          </div>
-        `;
+                    <div class="friend-item active glass-inner-panel">
+                        <span>${friend.name}</span>
+                        <button class="glass-btn btn-danger btn-small remove-friend-btn" data-name="${friend.name}">✕ Entfernen</button>
+                    </div>
+                `;
             }
         }
 
-        // Gesendete Anfragen
         if (sent.length > 0) {
-            html += `<h4 class="text-muted cinzel text-sm mb-1">📤 Gesendet</h4>`;
+            html += `<h4 class="friend-section-title muted">📤 Gesendet</h4>`;
             for (const req of sent) {
                 html += `
-          <div class="ui-card" style="padding: 0.5rem 1rem; margin-bottom: 0.5rem; opacity: 0.5;">
-            <span>${req.to} (wartet)</span>
-          </div>
-        `;
+                    <div class="friend-item sent glass-inner-panel">
+                        <span>${req.to} (wartet)</span>
+                    </div>
+                `;
             }
         }
 
         this.container.innerHTML = html;
 
-        // Events binden
         this.container.querySelectorAll('.accept-friend-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const name = btn.dataset.name;
@@ -117,7 +100,6 @@ export default class FriendUI extends BaseModalUI {
             });
         });
 
-        // Add-Button neu binden
         const addBtn = document.getElementById('friend-add-btn');
         if (addBtn) {
             addBtn.addEventListener('click', () => this._addFriend());

@@ -18,21 +18,18 @@ export default class DialogUI extends BaseModalUI {
         this.currentDialogId = null;
         this.dialogHistory = [];
 
-        // DOM-Elemente
         this.npcNameEl = document.getElementById('dialog-npc-name');
         this.npcTitleEl = document.getElementById('dialog-npc-title');
         this.npcPortraitEl = document.getElementById('dialog-npc-portrait');
         this.dialogTextEl = document.getElementById('dialog-text');
         this.optionsContainer = document.getElementById('dialog-options');
 
-        // Event-Bus abonnieren
         this.eventBus.subscribe('ui:openDialog', (data) => {
             if (data && data.npcId) {
                 this.openWithNPC(data.npcId);
             }
         });
 
-        // Close-Event
         if (this.closeBtn) {
             this.closeBtn.addEventListener('click', () => this.close());
         }
@@ -47,7 +44,6 @@ export default class DialogUI extends BaseModalUI {
             return;
         }
 
-        // Ersten Dialog laden
         const firstDialogId = npc.defaultDialog || npc.dialogs[0]?.id;
         if (firstDialogId) {
             this.currentDialogId = firstDialogId;
@@ -73,15 +69,12 @@ export default class DialogUI extends BaseModalUI {
         const npc = getNPC(this.currentNpcId);
         if (!npc) return;
 
-        // NPC-Info anzeigen
         if (this.npcNameEl) this.npcNameEl.textContent = npc.name;
         if (this.npcTitleEl) this.npcTitleEl.textContent = npc.title || '';
         if (this.npcPortraitEl) this.npcPortraitEl.textContent = npc.portrait || '👤';
 
-        // Dialog laden
         const dialog = getDialog(this.currentNpcId, this.currentDialogId);
         if (!dialog) {
-            // Fallback: ersten Dialog laden
             const firstDialog = npc.dialogs[0];
             if (firstDialog) {
                 this.currentDialogId = firstDialog.id;
@@ -91,18 +84,17 @@ export default class DialogUI extends BaseModalUI {
             return;
         }
 
-        // Text anzeigen
-        if (this.dialogTextEl) {
-            this.dialogTextEl.innerHTML = dialog.text;
-        }
+        this.dialogTextEl.innerHTML = `
+            <div class="dialog-text-content">
+                ${dialog.text}
+            </div>
+        `;
 
-        // Optionen anzeigen
         this.optionsContainer.innerHTML = '';
 
         if (dialog.isEnding || dialog.options.length === 0) {
-            // Schließen-Button
             const closeBtn = document.createElement('button');
-            closeBtn.className = 'glass-btn primary w-100';
+            closeBtn.className = 'glass-btn primary dialog-close-btn';
             closeBtn.textContent = '✕ Schließen';
             closeBtn.addEventListener('click', () => this.close());
             this.optionsContainer.appendChild(closeBtn);
@@ -111,16 +103,14 @@ export default class DialogUI extends BaseModalUI {
 
         for (const option of dialog.options) {
             const btn = document.createElement('button');
-            btn.className = 'glass-btn w-100 mb-1';
+            btn.className = 'glass-btn dialog-option-btn';
             btn.textContent = option.text;
 
             btn.addEventListener('click', () => {
-                // Prüfe, ob die Option eine Aktion hat
                 if (option.action) {
                     this._executeAction(option.action);
                 }
 
-                // Nächsten Dialog laden
                 const nextDialogId = option.next;
                 if (nextDialogId) {
                     const nextDialog = getDialog(this.currentNpcId, nextDialogId);
@@ -133,7 +123,6 @@ export default class DialogUI extends BaseModalUI {
                         });
                         this.render();
 
-                        // Codex-Einträge durch Dialog freischalten
                         if (this.codexManager) {
                             this.codexManager.unlockFromNPC(this.currentNpcId);
                         }
@@ -141,7 +130,6 @@ export default class DialogUI extends BaseModalUI {
                     }
                 }
 
-                // Falls kein nächster Dialog: schließen
                 this.close();
             });
 
@@ -174,12 +162,10 @@ export default class DialogUI extends BaseModalUI {
         }
     }
 
-    // Externe Methode: Dialog mit NPC starten
     startDialog(npcId) {
         this.openWithNPC(npcId);
     }
 
-    // Externe Methode: Dialog schließen
     closeDialog() {
         this.close();
     }

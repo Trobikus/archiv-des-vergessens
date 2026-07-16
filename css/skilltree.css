@@ -1,0 +1,76 @@
+/* ==========================================================================
+   SKILLTREE UI - Talentbaum (AAA)
+   ========================================================================== */
+
+/* ---- POINTS DISPLAY ---- */
+.skilltree-points-display {
+  text-align: center;
+  padding: 0.6rem 1.2rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.skilltree-points-display .text-muted {
+  font-size: 0.9rem;
+}
+
+.skilltree-points-display .text-gold {
+  font-size: 1.3rem;
+}
+
+/* ---- SKILL CARDS ---- */
+.skilltree-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.skilltree-card:hover {
+  background: rgba(197, 160, 89, 0.05);
+}
+
+.skilltree-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.skilltree-name {
+  font-family: var(--font-header);
+  font-size: 1.05rem;
+}
+
+.skilltree-desc {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.skilltree-reqs {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  margin-top: 0.1rem;
+}
+
+.skilltree-action {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  min-width: 70px;
+  text-align: center;
+}
+
+.skilltree-unlocked {
+  color: var(--color-success);
+  font-weight: bold;
+}
+
+/* ---- EMPTY STATE ---- */
+.skilltree-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}

@@ -1,0 +1,50 @@
+/* ==========================================================================
+   MAIN MENU
+   ========================================================================== */
+
+#menu-container h1 {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  color: #fff;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  background: linear-gradient(to bottom, #ffffff, var(--color-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
+  text-align: center;
+  line-height: 1.2;
+}
+
+#menu-container .subtitle {
+  font-family: var(--font-header);
+  color: var(--color-danger);
+  font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+  letter-spacing: 6px;
+  margin-bottom: 4rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px var(--color-danger-glow);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 320px;
+  align-items: stretch;
+}
+
+.menu-btn {
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+}
+
+.menu-footer {
+  position: absolute;
+  bottom: 2rem;
+  font-size: 0.75rem;
+  color: #555;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}

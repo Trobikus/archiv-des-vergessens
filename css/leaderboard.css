@@ -1,0 +1,54 @@
+/* ==========================================================================
+   LEADERBOARD UI - Bestenliste (AAA)
+   ========================================================================== */
+
+/* ---- STATS GRID ---- */
+.leaderboard-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.leaderboard-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.9rem;
+  border-left: 2px solid var(--color-gold);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.leaderboard-stat .text-muted {
+  font-size: 0.8rem;
+}
+
+.leaderboard-stat .text-gold {
+  font-size: 1rem;
+}
+
+/* ---- FOOTER ---- */
+.leaderboard-footer {
+  text-align: center;
+  padding: 0.8rem 0;
+  border-top: 1px solid rgba(197, 160, 89, 0.1);
+}
+
+/* ---- META INFO ---- */
+.leaderboard-meta {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid rgba(197, 160, 89, 0.05);
+}
+
+.leaderboard-meta .text-muted {
+  font-size: 0.75rem;
+}
+
+.leaderboard-meta .text-highlight {
+  font-weight: bold;
+}

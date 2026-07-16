@@ -1,0 +1,64 @@
+/* ==========================================================================
+   FRIEND UI - Freunde (AAA)
+   ========================================================================== */
+
+/* ---- ADD ROW ---- */
+.friend-add-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  margin-bottom: 1rem;
+}
+
+.friend-add-row .ui-select {
+  flex: 1;
+  padding: 0.5rem;
+}
+
+/* ---- SECTION TITLE ---- */
+.friend-section-title {
+  font-family: var(--font-header);
+  color: var(--color-gold);
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.1);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.friend-section-title.muted {
+  color: var(--color-text-muted);
+  border-bottom-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ---- FRIEND ITEMS ---- */
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  border-left: 2px solid var(--color-gold);
+}
+
+.friend-item.pending {
+  border-left-color: var(--color-gold);
+}
+
+.friend-item.active {
+  border-left-color: var(--color-success);
+}
+
+.friend-item.sent {
+  border-left-color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+/* ---- EMPTY STATE ---- */
+.friend-empty {
+  padding: 1rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+}

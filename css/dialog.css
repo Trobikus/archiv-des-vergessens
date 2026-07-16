@@ -1,0 +1,67 @@
+/* ==========================================================================
+   DIALOG UI - NPC-Dialoge (AAA)
+   ========================================================================== */
+
+/* ---- NPC HEADER ---- */
+.dialog-npc-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.1);
+}
+
+.dialog-npc-portrait {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 0 10px var(--color-gold-glow));
+}
+
+.dialog-npc-info {
+  flex: 1;
+}
+
+.dialog-npc-name {
+  font-family: var(--font-header);
+  font-size: 1.2rem;
+  color: var(--color-gold);
+}
+
+.dialog-npc-title {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ---- TEXT CONTENT ---- */
+.dialog-text-content {
+  padding: 1rem 1.2rem;
+  min-height: 80px;
+  line-height: 1.8;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid var(--color-gold);
+  border-radius: 2px;
+}
+
+/* ---- OPTION BUTTONS ---- */
+.dialog-option-btn {
+  width: 100%;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 0.5rem;
+  justify-content: flex-start;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 2px solid var(--color-text-muted);
+  transition: all 0.2s ease;
+}
+
+.dialog-option-btn:hover {
+  border-left-color: var(--color-gold);
+  background: rgba(197, 160, 89, 0.05);
+}
+
+.dialog-close-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+}

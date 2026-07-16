@@ -1,0 +1,171 @@
+/* ==========================================================================
+   RESPONSIVE - Media Queries
+   ========================================================================== */
+
+/* ---- TABLETS & KLEINE BILDSCHIRME ---- */
+@media (max-width: 1024px) {
+  #game-header { grid-template-columns: 1fr; gap: 1rem; text-align: center; }
+  #game-header .header-left { display: flex; justify-content: center; }
+
+  .hub-grid { grid-template-columns: repeat(2, 1fr); }
+  .hub-grid .span-2 { grid-column: span 2; }
+
+  #hub-header { flex-direction: column; gap: 1.5rem; text-align: center; padding: 1.5rem; }
+  .hub-title-group { flex-direction: column; }
+  .hub-player-card { flex-wrap: wrap; justify-content: center; }
+  .hub-player-info { text-align: center; }
+
+  .quest-tracker-container {
+    bottom: 25px;
+    right: 25px;
+  }
+
+  #hub-container { margin: 1.5rem auto; }
+}
+
+/* ---- MOBILE LANDSCAPE & TABLET PORTRAIT ---- */
+@media (max-width: 900px) {
+  .panels-grid { grid-template-columns: 1fr; }
+  .hero-split-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .hero-avatar-panel { margin-bottom: 1.5rem; }
+
+  .hub-tab-btn { padding: 0.7rem 1.2rem; font-size: 0.75rem; }
+  .hub-tab-btn .tab-label { display: none; }
+  .hub-tab-btn .tab-icon { font-size: 1.3rem; }
+
+  .quest-tracker-btn {
+    width: 56px;
+    height: 56px;
+  }
+  .quest-tracker-btn::before { font-size: 1.5rem; }
+  .quest-tracker-btn .quest-badge {
+    min-width: 20px;
+    height: 20px;
+    font-size: 0.55rem;
+  }
+}
+
+/* ---- KLEINE TABLETS & GROSSE SMARTPHONES ---- */
+@media (max-width: 800px) {
+  .forge-split-layout { grid-template-columns: 1fr !important; gap: 1.5rem !important; }
+  #codex-modal > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 220px 1fr !important;
+    height: auto !important;
+    max-height: 70vh !important;
+  }
+
+  .quest-tracker-container {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* ---- SMARTPHONES ---- */
+@media (max-width: 768px) {
+  .resource-group { justify-content: center; gap: 0.5rem; }
+  .resource-item { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+  .hub-grid { grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .hub-btn { padding: 2rem 1rem; }
+  .hub-btn .icon { font-size: 2.4rem; }
+  .hub-btn .cinzel { font-size: 0.9rem; }
+
+  .quest-tracker-btn {
+    width: 52px;
+    height: 52px;
+  }
+  .quest-tracker-btn::before { font-size: 1.4rem; }
+  .quest-tracker-btn .quest-badge {
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.5rem;
+    top: -3px;
+    right: -3px;
+  }
+
+  /* Verhindert Überlappung mit der Resource-Bar */
+  #game-container.active .quest-tracker-container {
+    bottom: 80px;
+  }
+}
+
+/* ---- KLEINE SMARTPHONES ---- */
+@media (max-width: 600px) {
+  .hub-grid { grid-template-columns: 1fr; }
+  .hub-grid .span-2 { grid-column: span 1; }
+  #manual-gather-btn { padding: 1.2rem 2.5rem; font-size: 1.1rem; }
+
+  #hub-header { padding: 1rem; }
+  .hub-title { font-size: 1.5rem; }
+  .hub-icon { width: 48px; height: 48px; font-size: 1.8rem; }
+  .hub-level-ring { width: 40px; height: 40px; font-size: 1rem; }
+  .hub-player-name { font-size: 1rem; }
+
+  .modal-content { padding: 1.5rem; }
+  .modal-content-wide { padding: 1.5rem; }
+  .hero-modal-wide { padding: 1.5rem; }
+
+  .quest-tracker-btn {
+    width: 48px;
+    height: 48px;
+  }
+  .quest-tracker-btn::before { font-size: 1.3rem; }
+  .quest-tracker-btn .quest-badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.45rem;
+    top: -2px;
+    right: -2px;
+  }
+  .quest-tracker-btn .quest-tooltip {
+    font-size: 0.7rem;
+    padding: 0.4rem 0.8rem;
+    bottom: 56px;
+    white-space: normal;
+    max-width: 180px;
+  }
+
+  .quest-tracker-container {
+    bottom: 15px;
+    right: 15px;
+  }
+
+  #game-container.active .quest-tracker-container {
+    bottom: 70px;
+  }
+}
+
+/* ---- EXTRA KLEINE GERÄTE ---- */
+@media (max-width: 400px) {
+  .quest-tracker-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .quest-tracker-btn::before { font-size: 1.1rem; }
+  .quest-tracker-btn .quest-badge {
+    min-width: 14px;
+    height: 14px;
+    font-size: 0.4rem;
+    top: -2px;
+    right: -2px;
+  }
+  .quest-tracker-container {
+    bottom: 12px;
+    right: 12px;
+  }
+  #game-container.active .quest-tracker-container {
+    bottom: 60px;
+  }
+}
+
+/* ---- RESOURCE GRID FÜR CRAFTING ---- */
+.resource-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
+  gap: 0.5rem;
+}
