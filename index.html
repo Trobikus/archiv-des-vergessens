@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Archiv des Vergessens - Der Mneme-Bund</title>
-  
-  <!-- NEU: Hochwertige Fonts für eine epische RPG-Atmosphäre -->
+
+  <!-- Hochwertige Fonts für eine epische RPG-Atmosphäre -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+    rel="stylesheet">
+
   <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
   <div id="app-container">
-    
+
     <!-- Kino-Vignette für mehr Tiefe -->
     <div class="vignette-overlay"></div>
 
@@ -36,10 +39,10 @@
 
     <!-- ACHIEVEMENT TOAST CONTAINER -->
     <div id="achievement-toast-container"></div>
-    
+
     <!-- CUSTOM TOOLTIP -->
     <div id="custom-tooltip" class="custom-tooltip glass-panel"></div>
-    
+
     <!-- ===== HAUPTMENÜ ===== -->
     <div id="menu-container" class="center-layout fade-in">
       <h1 class="glow-text">ARCHIV DES VERGESSENS</h1>
@@ -53,12 +56,12 @@
       </div>
       <div class="menu-footer">Version 1.5 - Visual Overhaul Update</div>
     </div>
-    
+
     <!-- ===== OPTIONEN ===== -->
     <div id="options-container" class="center-layout glass-panel fade-in" style="display: none;">
       <h2 class="glow-text">EINSTELLUNGEN</h2>
       <div class="hub-subtitle">Passe das Archiv an deine Bedürfnisse an</div>
-      
+
       <div class="options-panel">
         <h3 class="options-header">Grafik & UI</h3>
         <div class="option-row">
@@ -90,7 +93,7 @@
         <button class="hub-back-btn glass-btn" id="options-back-btn">« Zurück zum Hauptmenü</button>
       </div>
     </div>
-    
+
     <!-- ===== HUB ===== -->
     <div id="hub-container" class="center-layout fade-in" style="display: none;">
       <h2 class="glow-text">WÄHLE DEINE MISSION</h2>
@@ -123,7 +126,7 @@
       </div>
       <button class="hub-back-btn glass-btn mt-2" id="hub-back-to-menu">« Zurück zum Hauptmenü</button>
     </div>
-    
+
     <!-- ===== SPIEL ===== -->
     <div id="game-container" class="fade-in" style="display: none;">
       <button id="back-to-hub-btn" class="glass-btn" title="Zurück zur Übersicht">« Hub</button>
@@ -131,32 +134,45 @@
         <h1 class="glow-text">ARCHIV DES VERGESSENS</h1>
         <div class="subtitle">Der Mneme-Bund</div>
       </div>
-      
+
       <div id="resource-bar" class="resource-bar-flex glass-panel">
         <div class="resource-group">
-          <div class="resource-item" id="res-particle"><span class="resource-label">Partikel:</span><span class="resource-value text-gold glow-text" id="particle-display">0</span></div>
-          <div class="resource-item" id="res-relic"><span class="resource-label">Relikte:</span><span class="resource-value text-gold glow-text" id="relic-display">0</span></div>
-          <div class="resource-item" id="res-artifact"><span class="resource-label">Artefakte:</span><span class="resource-value text-gold glow-text" id="artifact-display">0</span></div>
+          <div class="resource-item" id="res-particle"><span class="resource-label">Partikel:</span><span
+              class="resource-value text-gold glow-text" id="particle-display">0</span></div>
+          <div class="resource-item" id="res-relic"><span class="resource-label">Relikte:</span><span
+              class="resource-value text-gold glow-text" id="relic-display">0</span></div>
+          <div class="resource-item" id="res-artifact"><span class="resource-label">Artefakte:</span><span
+              class="resource-value text-gold glow-text" id="artifact-display">0</span></div>
         </div>
         <button id="open-achievements-btn" class="menu-btn btn-small glass-btn">🏆 Erfolge</button>
       </div>
 
       <div class="gather-section">
-        <button id="manual-gather-btn" class="menu-btn primary active-gather-btn glass-btn epic-pulse">✨ Mneme-Partikel extrahieren ✨</button>
-        <button id="upgrade-click-btn" class="upgrade-btn glass-btn">Klick-Stärke verbessern (Kosten: 50 Partikel)</button>
+        <button id="manual-gather-btn" class="menu-btn primary active-gather-btn glass-btn epic-pulse">✨ Mneme-Partikel
+          extrahieren ✨</button>
+        <button id="upgrade-click-btn" class="upgrade-btn glass-btn">Klick-Stärke verbessern (Kosten: 50
+          Partikel)</button>
       </div>
 
       <div class="panels-grid">
         <div id="clan-panel" class="glass-panel">
-          <h3 class="panel-title">Mitglieder des Bundes <span class="text-sm text-muted">(Klick für Expedition)</span></h3>
+          <h3 class="panel-title">Mitglieder des Bundes <span class="text-sm text-muted">(Klick für Expedition)</span>
+          </h3>
           <div class="table-container">
             <table id="clan-members-table">
-              <thead><tr><th>Name</th><th>Beruf</th><th>Stufe</th><th>Fortschritt</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Beruf</th>
+                  <th>Stufe</th>
+                  <th>Fortschritt</th>
+                </tr>
+              </thead>
               <tbody id="members-tbody"></tbody>
             </table>
           </div>
         </div>
-        
+
         <div id="recruitment-panel" class="glass-panel">
           <h3 class="panel-title">Neue Mitglieder anwerben</h3>
           <div class="recruit-buttons">
@@ -166,23 +182,24 @@
           </div>
         </div>
       </div>
-      
+
       <div id="log-panel"></div>
-      
+
       <div id="game-footer" class="glass-panel">
         <span id="status-display">
           <span class="status-indicator"></span>
           <span id="game-state-text">Running</span>
-          <span id="speed-indicator" class="text-highlight glow-text" style="margin-left: 10px; font-weight: bold; display: none;">⚡ 4x Catch-Up</span>
+          <span id="speed-indicator" class="text-highlight glow-text"
+            style="margin-left: 10px; font-weight: bold; display: none;">⚡ 4x Catch-Up</span>
         </span>
         <span id="tick-info" class="text-muted text-sm">Tick: 0 | Δ: 0ms</span>
       </div>
     </div>
-    
+
     <!-- ========================================== -->
     <!-- OVERLAYS (Modals)                          -->
     <!-- ========================================== -->
-    
+
     <div id="quest-modal-overlay" class="modal-overlay" style="display: none;">
       <div id="quest-modal" class="modal-content glass-panel">
         <button class="modal-close glass-btn" id="quest-modal-close" aria-label="Schließen">&times;</button>
@@ -196,24 +213,20 @@
       </div>
     </div>
 
-    <div id="achievement-modal-overlay" class="modal-overlay" style="display: none;">
-      <div id="achievement-modal" class="modal-content glass-panel">
-        <button class="modal-close glass-btn" id="achievement-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text">Erfolge & Meilensteine</h2>
-        <div class="hub-subtitle mb-1">Erreiche Ziele, um seltene Titel und Belohnungen freizuschalten.</div>
-        <div id="achievement-list" class="modal-scroll-area"></div>
-      </div>
-    </div>
-
     <div id="expedition-modal-overlay" class="modal-overlay" style="display: none;">
       <div id="expedition-modal" class="modal-content-small glass-panel">
         <button class="modal-close glass-btn" id="expedition-modal-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text">Expedition</h2>
-        <div class="modal-field"><span class="modal-field-label">Name:</span><span class="modal-field-value text-highlight" id="expedition-member-name"></span></div>
-        <div class="modal-field"><span class="modal-field-label">Beruf:</span><span class="modal-field-value" id="expedition-member-role"></span></div>
-        <div class="modal-field"><span class="modal-field-label">Stufe:</span><span class="modal-field-value" id="expedition-member-level"></span></div>
-        <div class="modal-field"><span class="modal-field-label">Erfolgschance:</span><span class="modal-field-value text-gold" id="expedition-success-chance"></span></div>
-        <div class="modal-field"><span class="modal-field-label">Dauer:</span><span class="modal-field-value" id="expedition-duration"></span></div>
+        <div class="modal-field"><span class="modal-field-label">Name:</span><span class="modal-field-value text-highlight"
+            id="expedition-member-name"></span></div>
+        <div class="modal-field"><span class="modal-field-label">Beruf:</span><span class="modal-field-value"
+            id="expedition-member-role"></span></div>
+        <div class="modal-field"><span class="modal-field-label">Stufe:</span><span class="modal-field-value"
+            id="expedition-member-level"></span></div>
+        <div class="modal-field"><span class="modal-field-label">Erfolgschance:</span><span class="modal-field-value text-gold"
+            id="expedition-success-chance"></span></div>
+        <div class="modal-field"><span class="modal-field-label">Dauer:</span><span class="modal-field-value"
+            id="expedition-duration"></span></div>
         <div id="expedition-progress-container">
           <div class="progress-bar-container h-14 mt-1">
             <div class="progress-bar-fill" id="expedition-progress-fill"></div>
@@ -225,7 +238,7 @@
         <button id="expedition-start-btn" class="glass-btn primary mt-2 w-100">Expedition starten</button>
       </div>
     </div>
-    
+
     <div id="hero-overlay" class="modal-overlay" style="display: none;">
       <div id="hero-modal" class="hero-modal-wide glass-panel">
         <button class="modal-close glass-btn" id="hero-close" aria-label="Schließen">&times;</button>
@@ -238,7 +251,13 @@
             <div class="avatar-container">
               <svg class="silhouette-svg" viewBox="0 0 100 200">
                 <defs>
-                  <filter id="hero-glow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                  <filter id="hero-glow">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
                 <g filter="url(#hero-glow)" opacity="0.6" fill="#d4af37">
                   <circle cx="50" cy="25" r="14" />
@@ -256,13 +275,13 @@
               <div class="equip-node glass-btn" id="node-ring2" style="top: 75%; left: 88%; display:none;">💍</div>
             </div>
             <div id="hero-exp" class="hero-exp-display text-sm text-center mt-1"></div>
-            
+
             <h3 class="options-header mt-1" style="width: 100%; text-align: center;">Attribute</h3>
             <div class="stats-scroll-area">
               <div id="hero-stats" class="stats-grid"></div>
             </div>
           </div>
-          
+
           <!-- RECHTE SEITE: Inventar & Aktionen -->
           <div class="hero-details-panel">
             <div class="hero-action-buttons">
@@ -275,8 +294,9 @@
               <button id="hero-tab-equipment" class="inv-tab-btn glass-btn">Ausrüstung</button>
               <button id="hero-tab-loot" class="inv-tab-btn glass-btn">Loot</button>
             </div>
-            
-            <div id="hero-bulk-actions" class="bulk-actions-container glass-inner-panel" style="display: none; align-items: center; flex-wrap: wrap;">
+
+            <div id="hero-bulk-actions" class="bulk-actions-container glass-inner-panel"
+              style="display: none; align-items: center; flex-wrap: wrap;">
               <select id="inv-filter" class="ui-select">
                 <option value="all">Alle Slots</option>
                 <option value="weapon">Waffen</option>
@@ -292,7 +312,7 @@
               <div style="flex: 1;"></div>
               <div id="bulk-btn-wrapper"></div>
             </div>
-            
+
             <div id="hero-inventory-resources" class="modal-scroll-area"></div>
             <div id="hero-inventory-equipment" class="modal-scroll-area" style="display: none;"></div>
             <div id="hero-inventory-loot" class="modal-scroll-area" style="display: none;"></div>
@@ -300,7 +320,7 @@
         </div>
       </div>
     </div>
-    
+
     <div id="story-overlay" class="modal-overlay" style="display: none;">
       <div id="story-modal" class="modal-content glass-panel">
         <button class="modal-close glass-btn" id="story-close" aria-label="Schließen">&times;</button>
@@ -346,12 +366,13 @@
         <div id="forge-result" class="forge-result-display text-center mt-1"></div>
       </div>
     </div>
-    
+
     <div id="new-game-modal-overlay" class="modal-overlay" style="display: none;">
       <div id="new-game-modal" class="modal-content-small glass-panel">
         <h2 class="glow-text text-gold">NEUES ARCHIV ÖFFNEN</h2>
         <div class="hub-subtitle mb-2">Wie lautet der Name deines Helden?</div>
-        <input type="text" id="new-game-hero-name" class="hero-name-input ui-select w-100 mb-2" value="Der Mneme-Bund" autocomplete="off" spellcheck="false" />
+        <input type="text" id="new-game-hero-name" class="hero-name-input ui-select w-100 mb-2" value="Der Mneme-Bund"
+          autocomplete="off" spellcheck="false" />
         <div class="flex-row gap-md">
           <button id="new-game-cancel-btn" class="glass-btn flex-1">Abbrechen</button>
           <button id="new-game-start-btn" class="glass-btn primary flex-1-5">Reise beginnen</button>
@@ -367,8 +388,10 @@
         <div id="relic-hunt-status-area" class="relic-status-panel glass-inner-panel text-center mt-2 mb-2">
           <div class="text-muted text-sm">Kosten pro Suche</div>
           <div class="relic-cost-display text-gold text-lg glow-text">25 <span class="text-sm">Partikel</span></div>
-          <div class="text-sm text-muted mt-1">Erfolgschance: <span id="relic-hunt-chance" class="text-light">50%</span></div>
-          <div class="text-sm text-muted">Kampfkraft des Helden: <span id="relic-hunt-power" class="text-light">0</span></div>
+          <div class="text-sm text-muted mt-1">Erfolgschance: <span id="relic-hunt-chance" class="text-light">50%</span>
+          </div>
+          <div class="text-sm text-muted">Kampfkraft des Helden: <span id="relic-hunt-power" class="text-light">0</span>
+          </div>
         </div>
         <div id="relic-hunt-cooldown" class="cooldown-panel glass-inner-panel mb-2" style="display: none;">
           <div id="relic-hunt-cooldown-text" class="text-center text-sm text-muted">Wartezeit: 5s</div>
@@ -387,7 +410,8 @@
       <div id="skilltree-modal" class="modal-content glass-panel">
         <button class="modal-close glass-btn" id="skilltree-close" aria-label="Schließen">&times;</button>
         <h2 class="modal-title glow-text text-success">Talentbaum der Erinnerung</h2>
-        <div class="text-muted mb-1 text-center glass-inner-panel">Verfügbare Prestige-Punkte: <span id="skilltree-points" class="text-gold text-bold text-lg glow-text">0</span></div>
+        <div class="text-muted mb-1 text-center glass-inner-panel">Verfügbare Prestige-Punkte: <span id="skilltree-points"
+            class="text-gold text-bold text-lg glow-text">0</span></div>
         <div id="skilltree-container" class="modal-scroll-area pr-1 mt-1"></div>
       </div>
     </div>
@@ -396,16 +420,18 @@
       <div id="challenges-modal" class="modal-content glass-panel">
         <button class="modal-close glass-btn" id="challenges-close" aria-label="Schließen">&times;</button>
         <h2 class="modal-title-orange glow-text text-danger">Erinnerungs-Anomalien</h2>
-        <div class="text-muted text-sm mb-1 glass-inner-panel text-center">Meistere extreme Herausforderungen für permanente Belohnungen.<br>Anomalien können nur direkt nach einem Prestige gestartet werden.</div>
+        <div class="text-muted text-sm mb-1 glass-inner-panel text-center">Meistere extreme Herausforderungen für
+          permanente Belohnungen.<br>Anomalien können nur direkt nach einem Prestige gestartet werden.</div>
         <div id="challenges-container" class="modal-scroll-area pr-1 mt-1"></div>
       </div>
     </div>
-    
+
     <div id="library-overlay" class="modal-overlay" style="display: none;">
       <div id="library-modal" class="modal-content glass-panel">
         <button class="modal-close glass-btn" id="library-close" aria-label="Schließen">&times;</button>
         <h2 class="modal-title-purple glow-text text-highlight">Die Archiv-Bibliothek</h2>
-        <div class="text-muted text-sm mb-1 glass-inner-panel text-center">Erweitere dein Wissen für permanente Boni.<br>Forschungen können unbegrenzt aufgewertet werden.</div>
+        <div class="text-muted text-sm mb-1 glass-inner-panel text-center">Erweitere dein Wissen für permanente
+          Boni.<br>Forschungen können unbegrenzt aufgewertet werden.</div>
         <div id="library-container" class="modal-scroll-area pr-1 mt-1"></div>
       </div>
     </div>
@@ -415,16 +441,25 @@
         <h2 class="glow-text text-gold">WILLKOMMEN ZURÜCK!</h2>
         <div class="hub-subtitle mb-1">Das Archiv ruhte nie, während du fort warst.</div>
         <div class="offline-stats-panel glass-inner-panel mb-2">
-          <div class="offline-row flex-between"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val" class="text-bold text-light">0s</span></div>
-          <div class="offline-row flex-between"><span class="text-muted">+ Mneme-Partikel:</span><span id="offline-particles-val" class="text-gold text-bold">0</span></div>
-          <div class="offline-row flex-between"><span class="text-muted">+ Mneme-Relikte:</span><span id="offline-relics-val" class="text-gold text-bold">0</span></div>
-          <div class="offline-row flex-between"><span class="text-muted">+ Mneme-Artefakte:</span><span id="offline-artifacts-val" class="text-gold text-bold">0</span></div>
-          <div class="offline-row flex-between"><span class="text-muted">+ Stufenaufstiege:</span><span id="offline-levels-val" class="text-success text-bold">0</span></div>
+          <div class="offline-row flex-between"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val"
+              class="text-bold text-light">0s</span></div>
+          <div class="offline-row flex-between"><span class="text-muted">+ Mneme-Partikel:</span><span id="offline-particles-val"
+              class="text-gold text-bold">0</span></div>
+          <div class="offline-row flex-between"><span class="text-muted">+ Mneme-Relikte:</span><span id="offline-relics-val"
+              class="text-gold text-bold">0</span></div>
+          <div class="offline-row flex-between"><span class="text-muted">+ Mneme-Artefakte:</span><span id="offline-artifacts-val"
+              class="text-gold text-bold">0</span></div>
+          <div class="offline-row flex-between"><span class="text-muted">+ Stufenaufstiege:</span><span id="offline-levels-val"
+              class="text-success text-bold">0</span></div>
         </div>
         <button id="offline-close-btn" class="glass-btn primary w-100">Archiv betreten</button>
       </div>
     </div>
-  </div> 
-  <script type="module" src="./js/main.js"></script>
+<!-- PREACT ROOT CONTAINER -->
+<div id="preact-root"></div>
+
+  </div>
+  <script type="module" src="js/main.js"></script>
 </body>
+
 </html>

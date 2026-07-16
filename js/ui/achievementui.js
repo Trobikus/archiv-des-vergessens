@@ -1,100 +1,78 @@
+import { html, useState, useEventBus } from './preact-setup.js';
 import { EVENTS } from '../core/events.js';
-import BaseModalUI from './basemodal.js';
 
-export default class AchievementUI extends BaseModalUI {
-  constructor(context) {
-    super('achievement-modal-overlay', 'achievement-close');
-    this.eventBus = context.eventBus;
-    this.achievementManager = context.achievementManager;
+export default function AchievementUI({ context }) {
+  const { eventBus, achievementManager } = context;
 
-    this.listContainer = document.getElementById('achievement-list');
-    this.openBtn = document.getElementById('open-achievements-btn');
+  const [isOpen, setIsOpen] = useState(false);
+  const [achievements, setAchievements] = useState([]);
 
-    if (this.openBtn) this.openBtn.addEventListener('click', () => this.open());
+  const refreshAchievements = () => {
+    setAchievements([...achievementManager.getAchievements()]);
+  };
 
-    this.eventBus.subscribe(EVENTS.ACHIEVEMENT_UNLOCKED, () => { if (this.isOpen) this.render(); });
-    this.eventBus.subscribe(EVENTS.ACHIEVEMENT_CLAIMED, () => { if (this.isOpen) this.render(); });
-  }
+  useEventBus(eventBus, 'ui:openAchievements', () => {
+    refreshAchievements();
+    setIsOpen(true);
+  });
+  useEventBus(eventBus, EVENTS.ACHIEVEMENT_UNLOCKED, refreshAchievements);
+  useEventBus(eventBus, EVENTS.ACHIEVEMENT_CLAIMED, refreshAchievements);
 
-  onOpen() {
-    this.render();
-  }
-
-  triggerDopamineExplosion(x, y, rowElement) {
-    rowElement.classList.add('flash-gold');
-    setTimeout(() => rowElement.classList.remove('flash-gold'), 600);
+  const handleClaim = (e, achId) => {
+    const row = e.currentTarget.closest('.achievement-card');
+    row.classList.add('flash-gold');
     document.body.classList.add('screen-shake');
-    setTimeout(() => document.body.classList.remove('screen-shake'), 300);
 
     if (window.spawnClickParticles) {
-        window.spawnClickParticles(x, y);
-        window.spawnClickParticles(x+10, y-10);
-        window.spawnClickParticles(x-10, y+10);
-    }
-  }
-
-  render() {
-    if (!this.listContainer) return;
-    const achievements = this.achievementManager.getAchievements();
-
-    if (achievements.length === 0) {
-      this.listContainer.textContent = 'Keine Erfolge verfügbar.';
-      this.listContainer.style.color = '#5a5a6a';
-      this.listContainer.style.fontStyle = 'italic';
-      return;
+      window.spawnClickParticles(e.clientX, e.clientY);
     }
 
-    this.listContainer.replaceChildren(); // Performance: Besser als innerHTML = ''
-    const fragment = document.createDocumentFragment();
+    setTimeout(() => {
+      row.classList.remove('flash-gold');
+      document.body.classList.remove('screen-shake');
+      achievementManager.claimReward(achId);
+    }, 300);
+  };
 
-    achievements.forEach(ach => {
-      const div = document.createElement('div');
-      div.className = `ui-card achievement-card ${ach.claimed ? 'claimed' : ach.achieved ? 'achieved' : 'locked'}`;
+  if (!isOpen) return null;
 
-      let rewardStr = [];
-      if (ach.reward.particles) rewardStr.push(`${ach.reward.particles} Partikel`);
-      if (ach.reward.relics) rewardStr.push(`${ach.reward.relics} Relikte`);
-      if (ach.reward.artifacts) rewardStr.push(`${ach.reward.artifacts} Artefakte`);
-      if (ach.reward.title) rewardStr.push(`Titel: ${ach.reward.title}`);
+  return html`
+    <div class="modal-overlay" style="display: flex;" onClick=${() => setIsOpen(false)}>
+      <div class="modal-content glass-panel" onClick=${(e) => e.stopPropagation()}>
+        <button class="modal-close glass-btn" onClick=${() => setIsOpen(false)} aria-label="Schließen">×</button>
+        <h2 class="modal-title glow-text">Erfolge & Meilensteine</h2>
+        <div class="hub-subtitle mb-1">Erreiche Ziele, um seltene Titel und Belohnungen freizuschalten.</div>
+        
+        <div class="modal-scroll-area">
+          ${achievements.length === 0 ? html`
+            <div style="color: #5a5a6a; font-style: italic;">Keine Erfolge verfügbar.</div>
+          ` : achievements.map(ach => {
 
-      const infoDiv = document.createElement('div');
-      
-      const titleEl = document.createElement('div');
-      titleEl.className = 'ui-card-title ach-title';
-      titleEl.textContent = ach.label;
-      
-      const descEl = document.createElement('div');
-      descEl.className = 'ui-card-desc ach-desc';
-      descEl.textContent = `Belohnung: ${rewardStr.join(' | ')}`;
-      
-      const metaEl = document.createElement('div');
-      metaEl.className = 'ui-card-meta ach-meta';
-      metaEl.textContent = `Fortschritt: ${ach.progress} / ${ach.target}`;
+            const rewards = [];
+            if (ach.reward.particles) rewards.push(`${ach.reward.particles} Partikel`);
+            if (ach.reward.relics) rewards.push(`${ach.reward.relics} Relikte`);
+            if (ach.reward.artifacts) rewards.push(`${ach.reward.artifacts} Artefakte`);
+            if (ach.reward.title) rewards.push(`Titel: ${ach.reward.title}`);
 
-      infoDiv.append(titleEl, descEl, metaEl);
+            const statusClass = ach.claimed ? 'claimed' : ach.achieved ? 'achieved' : 'locked';
 
-      const actionContainer = document.createElement('div');
-      actionContainer.className = 'ach-action';
-
-      if (ach.claimed) {
-        actionContainer.innerHTML = `<span style="color:#8a7a5a;">✅ Abgeholt</span>`;
-      } else if (ach.achieved) {
-        const btn = document.createElement('button');
-        btn.className = 'ui-btn ui-btn-gold';
-        btn.textContent = 'Abholen';
-        btn.addEventListener('click', (e) => {
-          this.triggerDopamineExplosion(e.clientX, e.clientY, div);
-          setTimeout(() => this.achievementManager.claimReward(ach.id), 300);
-        });
-        actionContainer.appendChild(btn);
-      } else {
-        actionContainer.innerHTML = `<span style="color:#5a5a6a;">🔒 Gesperrt</span>`;
-      }
-
-      div.append(infoDiv, actionContainer);
-      fragment.appendChild(div);
-    });
-
-    this.listContainer.appendChild(fragment);
-  }
+            return html`
+              <div class="ui-card achievement-card ${statusClass}" key=${ach.id}>
+                <div>
+                  <div class="ui-card-title ach-title">${ach.label}</div>
+                  <div class="ui-card-desc ach-desc">Belohnung: ${rewards.join(' | ')}</div>
+                  <div class="ui-card-meta ach-meta">Fortschritt: ${ach.progress} / ${ach.target}</div>
+                </div>
+                <div class="ach-action">
+                  ${ach.claimed ? html`<span style="color:#8a7a5a;">✅ Abgeholt</span>`
+                : ach.achieved ? html`<button class="ui-btn ui-btn-gold" onClick=${(e) => handleClaim(e, ach.id)}>Abholen</button>`
+                  : html`<span style="color:#5a5a6a;">🔒 Gesperrt</span>`}
+                </div>
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    </div>
+  `;
 }

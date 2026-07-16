@@ -7,7 +7,7 @@ import SaveGameManager from './core/savegame.js';
 import DOMPool from './core/pool.js';
 import { EVENTS } from './core/events.js';
 import { CONFIG } from './core/config.js';
-import { formatNumber } from './utils/format.js'; 
+import { formatNumber } from './utils/format.js';
 
 // --- MODELS ---
 import Hero from './models/hero.js';
@@ -40,9 +40,12 @@ import RelicHuntUI from './ui/relicHuntUI.js';
 import SkillTreeUI from './ui/skilltreeui.js';
 import ChallengeUI from './ui/challengeui.js';
 import QuestUI from './ui/questui.js';
-import AchievementUI from './ui/achievementui.js';
 import TutorialUI from './ui/tutorialui.js';
 import LibraryUI from './ui/libraryui.js';
+
+// --- PREACT IMPORTS ---
+import { html, render } from './ui/preact-setup.js';
+import AchievementUI from './ui/achievementui.js';
 
 // --- CONTROLLERS ---
 import NavigationController from './controllers/navigation.js';
@@ -81,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- DEPENDENCY INJECTION / CONTEXT CREATION ---
   const context = { eventBus };
-  
+
   context.settingsManager = new SettingsManager(eventBus);
   context.gameLoop = new GameLoop(context);
   context.gameStateManager = new GameStateManager(eventBus);
@@ -133,9 +136,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     skillTreeUI = new SkillTreeUI(context);
     challengeUI = new ChallengeUI(context);
     new QuestUI(context);
-    new AchievementUI(context);
     new TutorialUI(context);
     new GatherController(context);
+
+    // --- PREACT RENDERING ---
+    const preactRoot = document.getElementById('preact-root');
+    if (preactRoot) {
+      render(html`<${AchievementUI} context=${context} />`, preactRoot);
+    }
+
+    // Event für den "Erfolge" Button im Hub binden
+    const openAchBtn = document.getElementById('open-achievements-btn');
+    if (openAchBtn) {
+      openAchBtn.addEventListener('click', () => {
+        eventBus.publish('ui:openAchievements');
+      });
+    }
+
   } catch (e) {
     console.error("Fehler bei der UI-Initialisierung:", e);
   }
@@ -172,15 +189,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (saveData.timestamp) {
         const now = Date.now();
         const offlineMs = now - saveData.timestamp;
-        
+
         if (offlineMs > 60000) {
-          const clampedOfflineMs = Math.min(offlineMs, CONFIG.SYSTEM.MAX_OFFLINE_MS); 
+          const clampedOfflineMs = Math.min(offlineMs, CONFIG.SYSTEM.MAX_OFFLINE_MS);
           const offlineSeconds = clampedOfflineMs / 1000;
-          
+
           context.resourceManager.timeBank = (context.resourceManager.timeBank || 0) + offlineSeconds;
 
           document.getElementById('offline-time-val').textContent = formatTime(clampedOfflineMs);
-          
+
           document.getElementById('offline-particles-val').parentElement.style.display = 'none';
           document.getElementById('offline-relics-val').parentElement.style.display = 'none';
           document.getElementById('offline-artifacts-val').parentElement.style.display = 'none';
@@ -188,14 +205,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span class="text-muted">Zeitstaub erhalten:</span>
             <span class="text-gold text-bold">${formatTime(clampedOfflineMs)} (4x Speed)</span>
           `;
-          
+
           document.getElementById('offline-modal-overlay').classList.remove('hidden');
           document.getElementById('offline-modal-overlay').style.display = 'flex';
           const offlineCloseBtn = document.getElementById('offline-close-btn');
           if (offlineCloseBtn) offlineCloseBtn.textContent = 'Zum Hub';
         }
       }
-      
+
       eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Spielstand geladen!`, type: 'system' });
       startAutosave();
       return true;
@@ -249,7 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     onSave: () => saveGame(),
     onLoad: async () => {
       const success = await loadGame();
-      if (success) navController.showHub(); 
+      if (success) navController.showHub();
       else alert('Spielstand konnte nicht geladen werden.');
     },
     onNewGame: async (heroName) => {
@@ -267,13 +284,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.dailyRewardManager.fromJSON({ lastClaimDate: null, streak: 0, claimedToday: false, currentBoost: null });
       context.challengeManager.fromJSON({ activeChallenge: null, completedChallenges: [] });
       context.questManager.fromJSON({ questIndex: 0, dailyQuests: { date: '', gatherClicks: 0, expeditions: 0, craftedItems: 0, claimed: [] } });
-      context.tutorialManager.fromJSON({ completed: false }); 
+      context.tutorialManager.fromJSON({ completed: false });
 
       eventBus.publish(EVENTS.HERO_UPDATED);
-      
+
       startAutosave();
       navController.showHub();
-      context.tutorialManager.start(); 
+      context.tutorialManager.start();
     },
     onHardReset: async () => {
       if (saveTimer) clearInterval(saveTimer);
@@ -285,7 +302,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.achievementManager._checkProgress();
     }
   });
-  
+
   navElements.btnHubHero.addEventListener('click', () => heroUI.open());
   navElements.btnHubStory.addEventListener('click', () => storyUI.open());
   navElements.btnHubArtifact.addEventListener('click', () => forgeUI.open());
