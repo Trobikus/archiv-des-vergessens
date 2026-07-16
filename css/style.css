@@ -1,10 +1,13 @@
 /* ==========================================================================
-                                                                 ARCHIV DES VERGESSENS - AAA UI OVERHAUL (DARK FANTASY GLASSMORPHISM)
+     ARCHIV DES VERGESSENS - AAA DARK FANTASY GLASSMORPHISM STYLESHEET
    ========================================================================== */
 
+/* --------------------------------------------------------------------------
+   1. DESIGN TOKENS (CSS VARIABLEN)
+   -------------------------------------------------------------------------- */
 :root {
   /* Farbpalette */
-    --bg-dark: #090a0f;
+  --bg-dark: #090a0f;
     --bg-panel: rgba(18, 20, 28, 0.65);
     --bg-panel-hover: rgba(28, 31, 42, 0.8);
     --bg-inner: rgba(0, 0, 0, 0.4);
@@ -20,22 +23,24 @@
     --color-dust: #c4b5fd;
   
     /* Ränder & Schatten */
-      --border-glass: 1px solid rgba(255, 255, 255, 0.08);
-      --border-glass-light: 1px solid rgba(255, 255, 255, 0.15);
-      --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
-      --shadow-glow: 0 0 15px var(--color-gold-glow);
+    --border-glass: 1px solid rgba(255, 255, 255, 0.08);
+    --border-glass-light: 1px solid rgba(255, 255, 255, 0.15);
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 15px var(--color-gold-glow);
   
     /* Typografie */
-      --font-header: 'Cinzel', serif;
+    --font-header: 'Cinzel', serif;
   --font-body: 'Inter', sans-serif;
-/* Layout */
+/* Layout & Animationen */
   --border-radius: 12px;
   --border-radius-sm: 6px;
   --transition-fast: 0.2s ease;
   --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- RESET & BASICS --- */
+/* --------------------------------------------------------------------------
+   2. BASICS & RESETS
+   -------------------------------------------------------------------------- */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -55,7 +60,37 @@ body {
   line-height: 1.5;
 }
 
-/* --- TYPOGRAFIE --- */
+#app-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
+.fullscreen-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.vignette-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.8) 100%);
+  z-index: -1;
+}
+
+/* --------------------------------------------------------------------------
+   3. TYPOGRAFIE & TEXTFORMATIERUNG
+   -------------------------------------------------------------------------- */
 h1,
 h2,
 h3,
@@ -116,36 +151,72 @@ h3,
   text-align: center;
 }
 
-/* --- CANVAS & VIGNETTE --- */
-.fullscreen-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-    height: 100%;
+.text-italic {
+  font-style: italic;
 }
 
-.vignette-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-    height: 100%;
-  pointer-events: none;
-  background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.8) 100%);
-    z-index: -1;
+.text-disabled {
+  color: #555;
 }
 
-#app-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
+/* --------------------------------------------------------------------------
+   4. LAYOUT-HILFSKLASSEN & POSITIONIERUNG
+   -------------------------------------------------------------------------- */
+.center-layout {
   display: flex;
   flex-direction: column;
-    z-index: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
-/* --- GLASSMORPHISM PANELS --- */
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+    align-items: center;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+}
+
+.gap-sm {
+  gap: 0.5rem;
+}
+
+.gap-md {
+  gap: 1rem;
+}
+
+.mt-1 {
+  margin-top: 1rem;
+}
+
+.mt-2 {
+  margin-top: 2rem;
+}
+
+.mb-1 {
+  margin-bottom: 1rem;
+}
+
+.mb-2 {
+  margin-bottom: 2rem;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. MODULARE GLASSMORPHISM-KOMPONENTEN
+   -------------------------------------------------------------------------- */
 .glass-panel {
   background: var(--bg-panel);
   backdrop-filter: blur(16px);
@@ -163,7 +234,7 @@ h3,
   padding: 1rem;
 }
 
-/* --- BUTTONS --- */
+/* --- BUTTONS & INTERAKTIONEN --- */
 button {
   font-family: var(--font-body);
   border: none;
@@ -181,7 +252,7 @@ button:disabled {
 
 .glass-btn {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.2) 100%);
-    border: var(--border-glass);
+  border: var(--border-glass);
     border-radius: var(--border-radius-sm);
     padding: 0.6rem 1.2rem;
   font-weight: 600;
@@ -220,91 +291,161 @@ button:disabled {
   font-size: 0.85rem;
 }
 
-/* --- ANIMATIONEN --- */
-@keyframes fadeUpIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeUpIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-@keyframes epicPulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--color-gold-glow);
-  }
-
-  70% {
-    box-shadow: 0 0 0 15px rgba(212, 175, 55, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
-  }
-}
-
-.epic-pulse {
-  animation: epicPulse 2s infinite;
-}
-
-/* --- LAYOUTS --- */
-.center-layout {
-  display: flex;
-  flex-direction: column;
+/* --- INTERNATIONALE HOCHWERTIGE GAMING-KNÖPFE (UI-BTN) --- */
+.ui-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.3) 100%);
+  color: var(--color-text-main);
+  backdrop-filter: blur(4px);
+  transition: var(--transition-smooth);
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  gap: 0.5rem;
 }
 
-.flex-between {
+.ui-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+}
+
+.ui-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.ui-btn:not(:disabled):active {
+  transform: translateY(0);
+}
+.ui-btn-gold {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  box-shadow: 0 0 8px var(--color-gold-glow) inset;
+}
+
+.ui-btn-gold:not(:disabled):hover {
+  background: rgba(212, 175, 55, 0.12);
+  box-shadow: 0 0 15px var(--color-gold-glow) inset, 0 4px 12px var(--color-gold-glow);
+  color: #fff;
+}
+
+.ui-btn-blue {
+  border-color: var(--color-blue);
+  color: var(--color-blue);
+  box-shadow: 0 0 8px var(--color-blue-glow) inset;
+}
+
+.ui-btn-blue:not(:disabled):hover {
+  background: rgba(110, 159, 203, 0.12);
+  box-shadow: 0 0 15px var(--color-blue-glow) inset, 0 4px 12px var(--color-blue-glow);
+  color: #fff;
+}
+
+.ui-btn-red {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  box-shadow: 0 0 8px var(--color-danger-glow) inset;
+}
+.ui-btn-red:not(:disabled):hover {
+  background: rgba(248, 113, 113, 0.12);
+  box-shadow: 0 0 15px var(--color-danger-glow) inset, 0 4px 12px var(--color-danger-glow);
+  color: #fff;
+}
+
+/* --- STATI-HIGHLIGHTS DER KARTEN --- */
+.ui-card.achieved,
+.quest-card.ready,
+.challenge-card.completed,
+.skill-card.achieved {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(74, 222, 128, 0.04);
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.12);
+}
+
+.ui-card.achievement-card.achieved {
+  border-color: rgba(212, 175, 55, 0.6);
+  background: rgba(212, 175, 55, 0.04);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+  animation: claimablePulse 2s infinite ease-in-out;
+}
+
+.ui-card.can-unlock {
+  border-color: rgba(110, 159, 203, 0.45);
+  background: rgba(110, 159, 203, 0.04);
+  box-shadow: 0 0 15px rgba(110, 159, 203, 0.12);
+}
+
+.ui-card.locked,
+.quest-card.locked,
+.challenge-card.locked,
+.skill-card.locked {
+  opacity: 0.55;
+  filter: grayscale(60%);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+.ui-card.claimed,
+.quest-card.claimed {
+  opacity: 0.45;
+  border-color: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.ui-card.active,
+.challenge-card.active {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.03);
+  box-shadow: 0 0 15px rgba(248, 113, 113, 0.12);
+}
+
+/* --- UI-KARTEN (UNIVERSAL) --- */
+.ui-card {
+  background: var(--bg-inner);
+  border: var(--border-glass-light);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  margin-bottom: 0.8rem;
+  transition: var(--transition-fast);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.flex-row {
-  display: flex;
-  align-items: center;
+.ui-card:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.gap-sm {
-  gap: 0.5rem;
+.ui-card-title {
+  font-family: var(--font-header);
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--color-gold);
 }
 
-.gap-md {
-  gap: 1rem;
+.ui-card-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0.3rem 0;
 }
 
-.mt-1 {
-  margin-top: 1rem;
+.ui-card-meta {
+  font-size: 0.8rem;
 }
 
-.mt-2 {
-  margin-top: 2rem;
-}
+/* --------------------------------------------------------------------------
+   6. ANSEHEN-LAYOUTS (MENÜ, HUB, GAMEPLAY)
+   -------------------------------------------------------------------------- */
 
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
-.mb-2 {
-  margin-bottom: 2rem;
-}
-
-.w-100 {
-  width: 100%;
-}
-
-/* --- MAIN MENU / HUB --- */
+/* --- TITELMENÜ --- */
 #menu-container h1 {
   font-size: 3.5rem;
   margin-bottom: 0.5rem;
@@ -314,7 +455,7 @@ button:disabled {
 .subtitle {
   font-family: var(--font-body);
   font-size: 1.2rem;
-    color: var(--color-gold);
+  color: var(--color-gold);
     letter-spacing: 4px;
     text-transform: uppercase;
     margin-bottom: 3rem;
@@ -340,20 +481,21 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+/* --- SPIEL-HUB --- */
 #hub-container h2 {
   font-size: 2.5rem;
-    margin-bottom: 0.2rem;
+  margin-bottom: 0.2rem;
 }
 
 .hub-subtitle {
   color: var(--color-text-muted);
-    margin-bottom: 2rem;
+  margin-bottom: 2rem;
 }
 
 .hub-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+  gap: 1rem;
     width: 600px;
     max-width: 90vw;
 }
@@ -362,30 +504,30 @@ button:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
-    justify-content: center;
+  justify-content: center;
     padding: 1.5rem;
     height: 120px;
 }
 
 .hub-btn .icon {
   font-size: 2rem;
-    margin-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .hub-btn .label {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-    margin-top: 0.3rem;
+  margin-top: 0.3rem;
 }
 
 .span-2 {
   grid-column: span 2;
 }
 
-/* --- GAME UI --- */
+/* --- HAUPTSPIEL-OBERFLÄCHE --- */
 #game-container {
   padding: 2rem;
-    max-width: 1400px;
+  max-width: 1400px;
     margin: 0 auto;
     width: 100%;
     height: 100%;
@@ -393,7 +535,6 @@ button:disabled {
   flex-direction: column;
 }
 
-/* HEADER FIX: Sauberes 3-Spalten-Flex-Layout */
 #game-header {
   display: flex;
   justify-content: space-between;
@@ -419,22 +560,22 @@ button:disabled {
 
 #game-header h1 {
   font-size: 2.2rem;
-    margin: 0;
+  margin: 0;
 }
 
 #game-header .subtitle {
   margin-bottom: 0;
-    font-size: 1rem;
+  font-size: 1rem;
     letter-spacing: 3px;
 }
 
-/* Resource Bar */
+/* Ressourcenelemente */
 .resource-bar-flex {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-    margin-bottom: 2rem;
+  margin-bottom: 2rem;
 }
 
 .resource-group {
@@ -446,26 +587,26 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-    font-size: 1.2rem;
+  font-size: 1.2rem;
 }
 
 .resource-label {
   color: var(--color-text-muted);
-    text-transform: uppercase;
+  text-transform: uppercase;
   font-size: 0.8rem;
   letter-spacing: 1px;
 }
 
 .resource-value {
   font-family: var(--font-header);
-    font-size: 1.5rem;
+  font-size: 1.5rem;
     font-weight: bold;
 }
 
-/* Gather Section (Centerpiece) */
+/* Sammelbereich */
 .gather-section {
   display: flex;
-    flex-direction: column;
+  flex-direction: column;
     align-items: center;
     gap: 1rem;
     margin-bottom: 3rem;
@@ -483,27 +624,73 @@ button:disabled {
   background: rgba(212, 175, 55, 0.2);
 }
 
-/* Panels Grid (Clan etc.) */
+/* Bundesmitglieder & Rekrutierung */
 .panels-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-    gap: 2rem;
+  gap: 2rem;
   flex: 1;
   min-height: 0;
 }
 
+#clan-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+#recruitment-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
 .panel-title {
   font-size: 1.2rem;
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
 }
 
-/* Tables */
 .table-container {
   overflow-y: auto;
   max-height: calc(100% - 3rem);
+  padding-right: 0.5rem;
+  flex: 1;
+    min-height: 0;
+  }
+  
+  /* --- EINHEITLICHE SCROLLLEISTE (global) --- */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    transition: background var(--transition-fast);
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gold);
+  }
+  
+  /* --- TABELLEN & SCROLLBARE BEREICHE --- */
+  .modal-scroll-area,
+  .table-container,
+  .forge-scroll-area {
+    overflow-y: auto;
     padding-right: 0.5rem;
+    margin-right: -0.5rem;
+    min-height: 0;
+    flex: 1;
 }
 
 table {
@@ -516,7 +703,7 @@ th {
   color: var(--color-text-muted);
   font-size: 0.8rem;
   text-transform: uppercase;
-    padding: 0.5rem;
+  padding: 0.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -534,22 +721,22 @@ tr:hover td {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Progress Bars */
+/* Fortschrittsbalken */
 .progress-bar-container {
   background: var(--bg-inner);
-    border-radius: 20px;
+  border-radius: 20px;
     height: 14px;
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .progress-bar-fill {
   background: linear-gradient(90deg, var(--color-blue), #8fd3f4);
   height: 100%;
   width: 0%;
-    transition: transform 0.1s linear, width 0.3s ease;
+  transition: transform 0.1s linear, width 0.3s ease;
     box-shadow: 0 0 10px var(--color-blue-glow);
 }
 
@@ -563,11 +750,10 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-    font-weight: bold;
+  font-weight: bold;
     text-shadow: 1px 1px 2px #000;
 }
 
-/* Recruitment */
 .recruit-buttons {
   display: flex;
   flex-direction: column;
@@ -576,17 +762,17 @@ tr:hover td {
 
 .recruit-buttons button {
   display: flex;
-    justify-content: space-between;
+  justify-content: space-between;
 }
 
-/* Footer / Logs */
+/* Statusleiste & Log */
 #game-footer {
   margin-top: 1rem;
-    padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem;
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-    border-radius: 0;
+  border-radius: 0;
     border-left: none;
     border-right: none;
     border-bottom: none;
@@ -594,7 +780,7 @@ tr:hover td {
 
 .status-indicator {
   display: inline-block;
-    width: 8px;
+  width: 8px;
     height: 8px;
   border-radius: 50%;
   margin-right: 5px;
@@ -602,10 +788,12 @@ tr:hover td {
 
 .status-running {
   background: var(--color-success);
-    box-shadow: 0 0 8px var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
 }
 
-/* --- MODALS (AAA Overlays) --- */
+/* --------------------------------------------------------------------------
+   7. MODALS & SPEZIFISCHE OVERLAYS
+   -------------------------------------------------------------------------- */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -613,22 +801,12 @@ tr:hover td {
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
 }
 
 .modal-content {
@@ -658,28 +836,20 @@ tr:hover td {
   flex-direction: column;
 }
 
-.hero-modal-wide {
-  width: 900px;
-  max-width: 95vw;
-  max-height: 85vh;
-  padding: 2rem;
-  position: relative;
-}
-
 .modal-close {
   position: absolute;
   top: 1rem;
-    right: 1rem;
+  right: 1rem;
     width: 32px;
     height: 32px;
   border-radius: 50%;
   display: flex;
-    align-items: center;
+  align-items: center;
     justify-content: center;
     font-size: 1.5rem;
   padding: 0;
   line-height: 1;
-    background: transparent;
+  background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
@@ -691,40 +861,45 @@ tr:hover td {
 
 .modal-title {
   font-size: 1.8rem;
-    margin-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
 }
 
-/* Custom Scrollbar */
-.modal-scroll-area {
+/* --- ARTEfAKT-SCHMIEDE: Feste Höhen für Spalten --- */
+#forge-modal .forge-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  flex: 1;
+  min-height: 0;
+    height: calc(100% - 160px);
+    /* Platz für Titel, Ressourcen, Ergebnis */
+}
+
+#forge-modal .forge-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+#forge-modal .forge-column .modal-scroll-area,
+#forge-modal .forge-column .forge-scroll-area {
   flex: 1;
   overflow-y: auto;
-  padding-right: 1rem;
-    margin-right: -1rem;
+  min-height: 0;
+  padding-right: 0.3rem;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
+#forge-modal .forge-column .modal-scroll-area::-webkit-scrollbar,
+#forge-modal .forge-column .forge-scroll-area::-webkit-scrollbar {
+  width: 4px;
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold);
-}
-
-/* --- QUESTS & DAYLIES (Missionen) AAA Styling --- */
-
-/* 1. HUD Tracker Slide-Out */
+/* --------------------------------------------------------------------------
+   8. MISSIONEN & QUEST-TRACKER (HUD)
+   -------------------------------------------------------------------------- */
 .quest-tracker-container {
   position: fixed;
   top: 100px;
@@ -767,7 +942,6 @@ tr:hover td {
   background: rgba(18, 20, 28, 0.7);
 }
 
-/* HUD Tracker "Ready/Abholbereit" Status */
 .quest-tracker-btn.quest-ready {
   border-color: var(--color-success);
   color: var(--color-success);
@@ -780,7 +954,6 @@ tr:hover td {
   background: rgba(20, 35, 20, 0.85);
 }
 
-/* 2. Quest Cards im Modal-Logbuch */
 .quest-card {
   background: var(--bg-inner);
   border: var(--border-glass-light);
@@ -810,7 +983,6 @@ tr:hover td {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Status: Abholbereit */
 .quest-card.ready {
   border-color: rgba(74, 222, 128, 0.5);
   background: rgba(74, 222, 128, 0.05);
@@ -821,7 +993,6 @@ tr:hover td {
   box-shadow: 0 0 10px var(--color-success);
 }
 
-/* Status: Gesperrt (Zukünftige) */
 .quest-card.locked {
   opacity: 0.6;
   filter: grayscale(80%);
@@ -831,7 +1002,6 @@ tr:hover td {
   background: transparent;
 }
 
-/* Status: Erledigt (Daylies) */
 .quest-card.claimed {
   opacity: 0.5;
 }
@@ -847,7 +1017,6 @@ tr:hover td {
   letter-spacing: 0.5px;
 }
 
-/* Abholen Button in Quests */
 .quest-btn {
   padding: 0.5rem 1.2rem;
   border-radius: var(--border-radius-sm);
@@ -865,81 +1034,43 @@ tr:hover td {
   box-shadow: 0 0 15px var(--color-success);
 }
 
-/* --- UI CARDS (Allgemein für Items, Erfolge etc.) --- */
-.ui-card {
-  background: var(--bg-inner);
-    border: var(--border-glass-light);
-    border-radius: var(--border-radius-sm);
-    padding: 1rem;
-    margin-bottom: 0.8rem;
-    transition: var(--transition-fast);
+/* --------------------------------------------------------------------------
+   9. MEIN HELD & INVENTAR MODAL
+   -------------------------------------------------------------------------- */
+.hero-modal-wide {
+  width: 900px;
+  max-width: 95vw;
+  height: 75vh;
+  max-height: 85vh;
+  padding: 2rem;
+  position: relative;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
 }
 
-.ui-card:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.02);
-}
-.ui-card-title {
-  font-family: var(--font-header);
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: var(--color-gold);
-}
-
-.ui-card-desc {
-  font-size: 0.85rem;
-    color: var(--color-text-muted);
-    margin: 0.3rem 0;
-}
-
-.ui-card-meta {
-  font-size: 0.8rem;
-}
-
-/* --- TABS --- */
-.tab-container {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 0.5rem;
-}
-
-.inv-tab-btn {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0.5rem 1rem;
-  color: var(--color-text-muted);
-}
-
-.inv-tab-btn.active {
-  color: var(--color-gold);
-  border-bottom: 2px solid var(--color-gold);
-  background: rgba(212, 175, 55, 0.05);
-}
-
-/* --- HERO MODAL SPECIFICS --- */
 .hero-split-layout {
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 2rem;
-  height: calc(100% - 60px);
+  flex: 1;
+    min-height: 0;
 }
 
 .hero-avatar-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.5rem;
 }
 
 .hero-details-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 
 .avatar-container {
@@ -964,7 +1095,7 @@ tr:hover td {
   display: flex;
   align-items: center;
   justify-content: center;
-    font-size: 1.2rem;
+  font-size: 1.2rem;
     background: var(--bg-dark);
     border: 2px solid var(--color-gold);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
@@ -993,7 +1124,7 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   line-height: 0;
-    padding-bottom: 2px;
+  padding-bottom: 2px;
 }
 
 .btn-stat-add:hover {
@@ -1004,57 +1135,8 @@ tr:hover td {
 .hero-action-buttons {
   display: flex;
   gap: 1rem;
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
     justify-content: flex-end;
-  }
-  
-  /* Inventory Rows */
-  .inv-item-row {
-    padding: 0.8rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s;
-  }
-  
-  .inv-item-row:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
-  
-  .btn-action {
-    background: transparent;
-    border: 1px solid;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-  }
-  
-  .btn-equip {
-    border-color: var(--color-blue);
-    color: var(--color-blue);
-}
-
-.btn-equip:hover {
-  background: var(--color-blue);
-  color: #000;
-}
-
-.btn-salvage {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
-
-.btn-salvage:hover {
-  background: var(--color-danger);
-  color: #000;
-}
-
-/* Selects */
-.ui-select {
-  background: var(--bg-inner);
-  color: #fff;
-    border: var(--border-glass-light);
-    padding: 0.4rem;
-    border-radius: 4px;
-    outline: none;
 }
 
 .bulk-actions-container {
@@ -1062,40 +1144,9 @@ tr:hover td {
   margin-bottom: 1rem;
 }
 
-/* --- TOOLTIP --- */
-.custom-tooltip {
-  position: fixed;
-  display: none;
-  padding: 1rem;
-  pointer-events: none;
-  z-index: 99999;
-  min-width: 200px;
-    border-color: var(--color-gold);
-}
-
-.tooltip-title {
-  font-family: var(--font-header);
-  font-weight: bold;
-  font-size: 1.1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.2rem;
-}
-
-.tooltip-desc {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  margin-bottom: 0.5rem;
-  font-style: italic;
-}
-
-.tooltip-stat {
-  font-size: 0.85rem;
-  display: flex;
-  justify-content: space-between;
-}
-
-/* --- STORY & FORGE --- */
+/* --------------------------------------------------------------------------
+   10. STORY, BIBLIOTHEK, CHALLENGES
+   -------------------------------------------------------------------------- */
 .chapter-navigation {
   display: flex;
   justify-content: space-between;
@@ -1151,17 +1202,32 @@ tr:hover td {
   color: var(--color-danger);
 }
 
-.forge-split-layout {
+/* ----- ARTEfAKT-SCHMIEDE (FORGE) ----- */
+#forge-modal .forge-split-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
-  height: calc(100% - 120px);
+  flex: 1;
+    min-height: 0;
+    height: calc(100% - 160px);
 }
 
-.forge-column {
+#forge-modal .forge-column {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  }
+  
+  #forge-modal .forge-column .modal-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 0.3rem;
+  }
+  
+  #forge-modal .forge-column .modal-scroll-area::-webkit-scrollbar {
+    width: 4px;
 }
 
 .options-header,
@@ -1178,35 +1244,20 @@ tr:hover td {
   border-bottom-color: rgba(110, 159, 203, 0.3);
 }
 
-/* --- FLOATING TEXT --- */
+/* --------------------------------------------------------------------------
+   11. INTERAKTIVE ELEMENTE, TOOLTIPS & POPUPS
+   -------------------------------------------------------------------------- */
 .float-text {
   position: fixed;
   pointer-events: none;
   z-index: 10000;
   font-weight: bold;
-    font-size: 1.2rem;
+  font-size: 1.2rem;
     color: var(--color-gold);
     text-shadow: 0 0 5px #000, 0 0 10px var(--color-gold);
     animation: floatUpFade 1.2s ease-out forwards;
 }
 
-@keyframes floatUpFade {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
-                                                                50% {
-                                                                  transform: translateY(-30px) scale(1.1);
-                                                                }
-
-                                                                100% {
-                                                                  opacity: 0;
-                                                                  transform: translateY(-50px) scale(1);
-                                                                }
-}
-
-/* Stat Diffs */
 .stat-diff-pos {
   color: var(--color-success);
   margin-left: 5px;
@@ -1219,19 +1270,39 @@ tr:hover td {
   font-size: 0.85em;
 }
 
-/* Misc */
-.text-italic {
+.custom-tooltip {
+  position: fixed;
+  display: none;
+  padding: 1rem;
+  pointer-events: none;
+  z-index: 99999;
+  min-width: 200px;
+  border-color: var(--color-gold);
+}
+
+.tooltip-title {
+  font-family: var(--font-header);
+  font-weight: bold;
+  font-size: 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.2rem;
+}
+
+.tooltip-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
   font-style: italic;
 }
 
-.text-disabled {
-  color: #555;
+.tooltip-stat {
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
 }
 
-/* ==========================================================================
-   TUTORIAL & INTRO AAA STYLING
-   ========================================================================== */
-
+/* --- TUTORIAL --- */
 #tutorial-dialog {
   position: absolute;
   background: var(--bg-panel-hover);
@@ -1257,9 +1328,9 @@ tr:hover td {
   transition: all 0.4s ease;
   z-index: 99998;
   pointer-events: none;
-  /* Wichtig, lässt Klicks zum Game durch */
   animation: epicPulse 2s infinite;
 }
+
 .tutorial-btn {
   background: linear-gradient(180deg, rgba(212, 175, 55, 0.2) 0%, rgba(0, 0, 0, 0.5) 100%);
   border: 1px solid var(--color-gold);
@@ -1274,44 +1345,60 @@ tr:hover td {
   letter-spacing: 1px;
   transition: var(--transition-smooth);
   pointer-events: auto;
-  /* Buttons im Tutorial sind klickbar */
 }
+
 .tutorial-btn:hover {
   background: var(--color-gold);
   color: #000;
   box-shadow: 0 0 15px var(--color-gold-glow);
 }
-/* ==========================================================================
-   KAMPFANIMATION (SIEG)
-   ========================================================================== */
-body.boss-defeat-flash::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(255, 255, 255, 0.8);
-  pointer-events: none;
-  z-index: 999999;
-  animation: whiteFlash 0.6s ease-out forwards;
-}
-@keyframes whiteFlash {
-  0% {
+/* --------------------------------------------------------------------------
+   12. ANIMATIONEN & KEYFRAMES
+   -------------------------------------------------------------------------- */
+@keyframes fadeUpIn {
+  from {
     opacity: 0;
+    transform: translateY(20px);
   }
-15% {
-  opacity: 1;
-  }
-100% {
-  opacity: 0;
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-/* Am Ende von style.css anfügen */
 
-/* --- HILFSKLASSEN & EFFEKTE --- */
-.hidden {
-  display: none !important;
+.fade-in {
+  animation: fadeUpIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes epicPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-gold-glow);
+  }
+70% {
+  box-shadow: 0 0 0 15px rgba(212, 175, 55, 0);
+}
+
+100% {
+  box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+}
+}
+
+.epic-pulse {
+  animation: epicPulse 2s infinite;
+}
+
+@keyframes floatUpFade {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+50% {
+  transform: translateY(-30px) scale(1.1);
+}
+    100% {
+      opacity: 0;
+    transform: translateY(-50px) scale(1);
+  
 }
 
 @keyframes screenShake {
@@ -1364,19 +1451,55 @@ body.boss-defeat-flash::after {
   animation: screenShake 0.4s ease-in-out;
 }
 
-/* Bereinigte Float-Animation */
-@keyframes floatUpFade {
+@keyframes claimablePulse {
   0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
   }
 
   50% {
-    transform: translateY(-30px) scale(1.1);
+    border-color: rgba(212, 175, 55, 0.95);
+      box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+    }
+    
+    100% {
+      border-color: rgba(212, 175, 55, 0.4);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.1);
+    }
+    }
+    
+    body.boss-defeat-flash::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.8);
+      pointer-events: none;
+      z-index: 999999;
+      animation: whiteFlash 0.6s ease-out forwards;
+    }
+    
+    @keyframes whiteFlash {
+      0% {
+        opacity: 0;
+      }
+    
+      15% {
+        opacity: 1;
   }
 
   100% {
     opacity: 0;
-    transform: translateY(-50px) scale(1);
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+  
+    to {
+      opacity: 1;
   }
 }

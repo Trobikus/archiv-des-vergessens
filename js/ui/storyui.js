@@ -1,3 +1,5 @@
+// --- START OF FILE storyui.js ---
+
 import { generateStoryBosses } from '../data/bosses.js';
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
@@ -16,7 +18,9 @@ export default class StoryUI extends BaseModalUI {
     this.bossList = document.getElementById('story-boss-list');
     this.chapterInfo = document.getElementById('story-chapter-info');
     this.currentBossName = document.getElementById('story-current-boss-name');
-    this.currentBossStats = document.getElementById('story-current-boss-stats');
+    this.currentBossHp = document.getElementById('story-boss-hp');
+    this.currentBossAtk = document.getElementById('story-boss-atk');
+    this.currentBossDef = document.getElementById('story-boss-def');
     this.fightResult = document.getElementById('story-fight-result');
     this.fightBtn = document.getElementById('story-fight-btn');
     this.prevBtn = document.getElementById('story-prev-chapter');
@@ -32,6 +36,7 @@ export default class StoryUI extends BaseModalUI {
       if (this.fightResult) this.fightResult.innerHTML = '';
       this.storyManager.startBossFromHub();
       this.fightBtn.disabled = true;
+      this.fightBtn.textContent = '⚔️ Kampf läuft...';
     });
 
     this.eventBus.subscribe(EVENTS.UI_OPEN_STORY, () => this.open());
@@ -42,12 +47,13 @@ export default class StoryUI extends BaseModalUI {
       if (this.isOpen) this.render();
     });
 
-    // NEU: Präziser Timer direkt aus der Spiel-Logik (kein asynchroner Drift mehr)
+    // Präziser Timer direkt aus der Spiel-Logik
     this.eventBus.subscribe(EVENTS.GAME_RENDER_TICK, () => {
       if (this.isOpen && this.storyManager.battleInProgress) {
         const timeLeft = Math.max(0, this.storyManager.battleTimer / 1000);
         if (timeLeft > 0) {
           this.fightBtn.textContent = `⚔️ Kampf läuft... (${timeLeft.toFixed(1)}s)`;
+          this.fightBtn.disabled = true;
         } else {
           this.fightBtn.textContent = '⚔️ Berechne...';
         }
@@ -64,11 +70,12 @@ export default class StoryUI extends BaseModalUI {
           this.fightResult.innerHTML = `<div class="boss-result-box boss-result-defeat">💀 NIEDERLAGE! Du warst zu schwach.</div>`;
         }
 
+        // Kampf-Button zurücksetzen, aber erst nach kurzer Verzögerung
         setTimeout(() => {
-          if (this.fightResult && this.fightResult.innerHTML.includes(data.boss.name || 'NIEDERLAGE')) {
-            this.fightResult.innerHTML = '';
-          }
-        }, 6000);
+          this.fightBtn.disabled = false;
+          this.fightBtn.textContent = '⚔️ Bosskampf starten';
+          this.fightBtn.classList.remove('disabled');
+        }, 800);
       }
     });
   }
@@ -77,6 +84,13 @@ export default class StoryUI extends BaseModalUI {
     this.maxUnlockedChapter = this.hero.getChapter();
     this.currentViewChapter = this.maxUnlockedChapter;
     if (this.fightResult) this.fightResult.innerHTML = '';
+
+    // Kampf-Button zurücksetzen, falls kein Kampf läuft
+    if (!this.storyManager.battleInProgress) {
+      this.fightBtn.disabled = false;
+      this.fightBtn.textContent = '⚔️ Bosskampf starten';
+    }
+
     requestAnimationFrame(() => this.render());
   }
 
@@ -112,7 +126,10 @@ export default class StoryUI extends BaseModalUI {
       this.bossList.style.opacity = '0.05';
       this.bossList.style.pointerEvents = 'none';
       this.currentBossName.textContent = '???';
-      this.currentBossStats.textContent = 'Verborgen in der Dunkelheit';
+      this.currentBossName.style.color = 'var(--color-text-muted)';
+      if (this.currentBossHp) this.currentBossHp.textContent = '???';
+      if (this.currentBossAtk) this.currentBossAtk.textContent = '???';
+      if (this.currentBossDef) this.currentBossDef.textContent = '???';
       this.fightBtn.style.display = 'none';
     } else {
       this.lockedOverlay.style.display = 'none';
@@ -122,15 +139,21 @@ export default class StoryUI extends BaseModalUI {
 
       if (this.currentViewChapter === this.maxUnlockedChapter && currentBoss) {
         this.currentBossName.textContent = currentBoss.name;
-        this.currentBossStats.textContent = `HP: ${formatNumber(currentBoss.hp)} | Stärke: ${formatNumber(currentBoss.attack)} | Zähigkeit: ${formatNumber(currentBoss.defense)}`;
+        this.currentBossName.style.color = 'var(--color-danger)';
+        if (this.currentBossHp) this.currentBossHp.textContent = formatNumber(currentBoss.hp);
+        if (this.currentBossAtk) this.currentBossAtk.textContent = formatNumber(currentBoss.attack);
+        if (this.currentBossDef) this.currentBossDef.textContent = formatNumber(currentBoss.defense);
 
         if (!this.storyManager.battleInProgress) {
           this.fightBtn.disabled = false;
           this.fightBtn.textContent = '⚔️ Bosskampf starten';
         }
       } else if (this.currentViewChapter < this.maxUnlockedChapter) {
-        this.currentBossName.textContent = 'Kapitel Abgeschlossen';
-        this.currentBossStats.textContent = 'Alle Gegner in diesem Bereich wurden besiegt.';
+        this.currentBossName.textContent = '✅ Kapitel abgeschlossen';
+        this.currentBossName.style.color = 'var(--color-success)';
+        if (this.currentBossHp) this.currentBossHp.textContent = '-';
+        if (this.currentBossAtk) this.currentBossAtk.textContent = '-';
+        if (this.currentBossDef) this.currentBossDef.textContent = '-';
         this.fightBtn.disabled = true;
         this.fightBtn.textContent = '✅ Abgeschlossen';
       }
@@ -144,6 +167,7 @@ export default class StoryUI extends BaseModalUI {
   }
 
   _renderBossList(chapterBosses) {
+    // Entferne überschüssige Einträge
     while (this.bossList.children.length > chapterBosses.length) {
       this.bossList.removeChild(this.bossList.lastChild);
     }
@@ -152,8 +176,11 @@ export default class StoryUI extends BaseModalUI {
       let div = this.bossList.children[index];
       if (!div) {
         div = document.createElement('div');
-        div.className = 'story-boss-entry';
-        div.innerHTML = `<span class="boss-name"></span><span class="boss-status"></span>`;
+        div.className = 'story-boss-entry ui-card';
+        div.innerHTML = `
+          <span class="boss-name" style="font-family: var(--font-header); font-size: 0.95rem;"></span>
+          <span class="boss-status"></span>
+        `;
         this.bossList.appendChild(div);
       }
 
@@ -167,12 +194,17 @@ export default class StoryUI extends BaseModalUI {
       if (this.hero.defeatedBosses.includes(boss.id)) {
         statusSpan.textContent = '✅ Besiegt';
         statusSpan.classList.add('defeated');
+        div.style.borderLeft = '3px solid var(--color-success)';
       } else if (this.storyManager.getCurrentBoss() && this.storyManager.getCurrentBoss().id === boss.id) {
         statusSpan.textContent = '⚔️ Aktiv';
         statusSpan.classList.add('current');
+        div.style.borderLeft = '3px solid var(--color-danger)';
+        div.style.background = 'rgba(248, 113, 113, 0.04)';
       } else {
         statusSpan.textContent = '🔒 Ausstehend';
         statusSpan.classList.add('pending');
+        div.style.borderLeft = '3px solid rgba(255,255,255,0.05)';
+        div.style.background = 'transparent';
       }
     });
   }

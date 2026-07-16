@@ -1,4 +1,4 @@
-// --- START OF FILE resourcemanager.js ---
+// --- START OF FILE managers/resourcemanager.js ---
 
 import { EVENTS } from '../core/events.js';
 
@@ -12,6 +12,11 @@ export default class ResourceManager {
     this.timeBank = 0;
     this.totalParticles = 0;
     this.totalRelics = 0;
+    this.catalyst = 0;
+    this.essence = 0;
+
+    // Binde _publishUpdate an diese Instanz, damit sie immer verfügbar ist
+    this._publishUpdate = this._publishUpdate.bind(this);
   }
 
   addParticles(amount) {
@@ -72,8 +77,38 @@ export default class ResourceManager {
     return true;
   }
 
+  addCatalyst(amount) {
+    if (amount <= 0) return this.catalyst;
+    this.catalyst += amount;
+    this._publishUpdate();
+    return this.catalyst;
+  }
+
+  removeCatalyst(amount) {
+    if (amount <= 0 || this.catalyst < amount) return false;
+    this.catalyst -= amount;
+    this._publishUpdate();
+    return true;
+  }
+
+  addEssence(amount) {
+    if (amount <= 0) return this.essence;
+    this.essence += amount;
+    this._publishUpdate();
+    return this.essence;
+  }
+
+  removeEssence(amount) {
+    if (amount <= 0 || this.essence < amount) return false;
+    this.essence -= amount;
+    this._publishUpdate();
+    return true;
+  }
+
   _publishUpdate() {
-    this.eventBus.publish(EVENTS.RESOURCES_UPDATED, this.getResources());
+    if (this.eventBus) {
+      this.eventBus.publish(EVENTS.RESOURCES_UPDATED, this.getResources());
+    }
   }
 
   getResources() {
@@ -84,7 +119,9 @@ export default class ResourceManager {
       memoryDust: this.memoryDust,
       timeBank: this.timeBank,
       totalParticles: this.totalParticles,
-      totalRelics: this.totalRelics
+      totalRelics: this.totalRelics,
+      catalyst: this.catalyst,
+      essence: this.essence
     };
   }
 
@@ -93,6 +130,7 @@ export default class ResourceManager {
   }
 
   fromJSON(data) {
+    if (!data) return;
     this.particles = data.particles || 0;
     this.relics = data.relics || 0;
     this.artifacts = data.artifacts || 0;
@@ -100,6 +138,17 @@ export default class ResourceManager {
     this.timeBank = data.timeBank || 0;
     this.totalParticles = data.totalParticles || this.particles;
     this.totalRelics = data.totalRelics || this.relics;
-    this._publishUpdate();
+    this.catalyst = data.catalyst || 0;
+    this.essence = data.essence || 0;
+
+    // Sicherheitscheck: Falls _publishUpdate nicht existiert (sollte aber nicht vorkommen)
+    if (typeof this._publishUpdate === 'function') {
+      this._publishUpdate();
+    } else {
+      // Fallback: Direktes Event-Publishen
+      if (this.eventBus) {
+        this.eventBus.publish(EVENTS.RESOURCES_UPDATED, this.getResources());
+      }
+    }
   }
 }

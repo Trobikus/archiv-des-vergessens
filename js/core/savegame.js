@@ -1,3 +1,5 @@
+// --- START OF FILE core/savegame.js ---
+
 import RNG from '../utils/rng.js';
 
 export default class SaveGameManager {
@@ -27,16 +29,16 @@ export default class SaveGameManager {
   static async saveGame() {
     try {
       const db = await this._getDB();
-      const saveData = { 
-          timestamp: Date.now(), 
-          version: '1.3',
-          rngSeed: RNG.getSeed()
+      const saveData = {
+        timestamp: Date.now(),
+        version: '1.5',
+        rngSeed: RNG.getSeed()
       };
-      
+
       for (const [key, manager] of Object.entries(this.managers)) {
         if (manager.toJSON) saveData[key] = manager.toJSON();
       }
-      
+
       return new Promise((resolve, reject) => {
         const tx = db.transaction(this.STORE_NAME, 'readwrite');
         const store = tx.objectStore(this.STORE_NAME);
@@ -64,15 +66,21 @@ export default class SaveGameManager {
       if (!saveData) return null;
 
       if (saveData.rngSeed) {
-          RNG.setSeed(saveData.rngSeed);
+        RNG.setSeed(saveData.rngSeed);
       }
 
       for (const [key, manager] of Object.entries(this.managers)) {
         if (saveData[key] && manager.fromJSON) {
           try {
-              manager.fromJSON(saveData[key]);
+            manager.fromJSON(saveData[key]);
           } catch (e) {
-              console.error(`[SaveGame] Fehler beim Parsen von ${key}:`, e);
+            console.error(`[SaveGame] Fehler beim Parsen von ${key}:`, e);
+            // Manager zurücksetzen, falls Fehler auftritt
+            try {
+              if (manager.reset) manager.reset();
+            } catch (resetErr) {
+              console.error(`[SaveGame] Fehler beim Reset von ${key}:`, resetErr);
+            }
           }
         }
       }

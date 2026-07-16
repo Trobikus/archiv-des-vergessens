@@ -1,3 +1,5 @@
+// --- START OF FILE heroui.js ---
+
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
 import BaseModalUI from './basemodal.js';
@@ -26,7 +28,7 @@ export default class HeroUI extends BaseModalUI {
     this.heroStats = document.getElementById('hero-stats');
     this.prestigeButton = document.getElementById('hero-prestige-btn');
     this.dailyButton = document.getElementById('hero-daily-btn');
-    
+
     this.nodeWeapon = document.getElementById('node-weapon');
     this.nodeArmor = document.getElementById('node-armor');
     this.nodeAmulet = document.getElementById('node-amulet');
@@ -37,7 +39,7 @@ export default class HeroUI extends BaseModalUI {
     this.tabEquipment = document.getElementById('hero-tab-equipment');
     this.tabLoot = document.getElementById('hero-tab-loot');
     this.bulkActionsContainer = document.getElementById('hero-bulk-actions');
-    
+
     this.tabContents = {
       resources: document.getElementById('hero-inventory-resources'),
       equipment: document.getElementById('hero-inventory-equipment'),
@@ -93,17 +95,17 @@ export default class HeroUI extends BaseModalUI {
   // --- TOOLTIP LOGIK ---
   _showTooltip(item, e) {
     if (!item || !this.tooltipEl) return;
-    
+
     let html = `<div class="tooltip-title" style="color: ${item.getColor()}">${item.name} (Lv. ${item.level})</div>`;
     html += `<div class="tooltip-desc">${item.getRarityLabel()} ${item.slot.charAt(0).toUpperCase() + item.slot.slice(1)}</div>`;
-    
+
     const statLabels = { attack: 'Stärke', defense: 'Zähigkeit', agility: 'Geschick', stamina: 'Vitalität' };
     for (const [key, val] of Object.entries(item.stats)) {
       if (val > 0) {
         html += `<div class="tooltip-stat"><span>${statLabels[key] || key}:</span> <span class="text-highlight">+${formatNumber(val)}</span></div>`;
       }
     }
-    
+
     if (item.setName) {
       html += `<div class="tooltip-stat mt-1" style="color: #9a9acd;">Set: ${item.setName}</div>`;
     }
@@ -115,18 +117,18 @@ export default class HeroUI extends BaseModalUI {
 
   _updateTooltipPos(e) {
     if (!this.tooltipEl || this.tooltipEl.style.display === 'none') return;
-    
+
     const rect = this.tooltipEl.getBoundingClientRect();
     let left = e.clientX + 15;
     let top = e.clientY + 15;
-    
+
     if (left + rect.width > window.innerWidth) {
       left = e.clientX - rect.width - 15;
     }
     if (top + rect.height > window.innerHeight) {
       top = e.clientY - rect.height - 15;
     }
-    
+
     this.tooltipEl.style.left = `${left}px`;
     this.tooltipEl.style.top = `${top}px`;
   }
@@ -140,7 +142,6 @@ export default class HeroUI extends BaseModalUI {
     element.addEventListener('mousemove', (e) => this._updateTooltipPos(e));
     element.addEventListener('mouseleave', () => this._hideTooltip());
   }
-  // ---------------------
 
   render(previewItem = null) {
     if (!this.hero || !this.isOpen) return;
@@ -148,11 +149,11 @@ export default class HeroUI extends BaseModalUI {
     this.heroName.textContent = this.hero.name;
     this.heroLevel.textContent = `Stufe ${this.hero.level}`;
     this.heroExp.textContent = `Erfahrung: ${formatNumber(this.hero.experience)} / ${formatNumber(this.hero.expToNext)} (${Math.floor(progress)}%)`;
-    
+
     this._renderStats(previewItem);
     this._renderPrestigeSection();
     this._renderAvatarNodes();
-    
+
     if (this._activeTab === 'resources') this._renderResourcesTab();
     else if (this._activeTab === 'equipment') this._renderEquipmentTab();
     else if (this._activeTab === 'loot') this._renderLootTab();
@@ -185,8 +186,8 @@ export default class HeroUI extends BaseModalUI {
     let html = '';
 
     if (this.hero.unspentStatPoints > 0) {
-      html += `<div class="text-gold" style="margin-bottom: 0.5rem; background: rgba(212,175,55,0.1); padding: 0.4rem; border-radius: 4px; text-align: center;">
-          Punkte: <span class="text-highlight text-bold">${this.hero.unspentStatPoints}</span>
+      html += `<div class="text-gold glow-text text-bold mb-1 glass-inner-panel" style="background: rgba(212,175,55,0.08); border-color: var(--color-gold); padding: 0.5rem; text-align: center; font-family: var(--font-header);">
+          ✨ ${this.hero.unspentStatPoints} PUNKTE VERFÜGBAR ✨
       </div>`;
     }
 
@@ -201,18 +202,18 @@ export default class HeroUI extends BaseModalUI {
       const curVal = curAttr[s.key] || 0;
       const simVal = simAttr[s.key] || 0;
       let diffHtml = '';
-      
+
       if (previewItem && simVal !== curVal) {
         const diff = simVal - curVal;
         diffHtml = `<span class="${diff > 0 ? 'stat-diff-pos' : 'stat-diff-neg'}">(${diff > 0 ? '+' : ''}${formatNumber(diff)})</span>`;
       }
 
-      const btnHtml = this.hero.unspentStatPoints > 0 
-        ? `<button class="btn-stat-add" data-stat="${s.key}">+</button>` 
+      const btnHtml = this.hero.unspentStatPoints > 0
+        ? `<button class="btn-stat-add" data-stat="${s.key}">+</button>`
         : '';
 
-      html += `<div class="flex-between">
-                  <span><span class="text-muted">${s.label}:</span> <span class="text-highlight">${formatNumber(curVal)}</span> ${diffHtml}</span>
+      html += `<div class="stat-row glass-inner-panel flex-between mb-1" style="padding: 0.5rem 0.8rem; margin-bottom: 0.5rem;">
+                  <span><span class="text-muted">${s.label}:</span> <span class="text-highlight text-bold" style="font-size: 1.05rem;">${formatNumber(simVal)}</span> ${diffHtml}</span>
                   ${btnHtml}
                </div>`;
     }
@@ -231,14 +232,17 @@ export default class HeroUI extends BaseModalUI {
       const curVal = curCStats[s.key] || 0;
       const simVal = simCStats[s.key] || 0;
       let diffHtml = '';
-      
+
       if (previewItem && simVal !== curVal) {
         const diff = simVal - curVal;
         diffHtml = `<span class="${diff > 0 ? 'stat-diff-pos' : 'stat-diff-neg'}">(${diff > 0 ? '+' : ''}${s.format(diff)})</span>`;
       }
-      html += `<div class="flex-between"><span class="text-muted">${s.label}:</span> <span><span class="text-highlight">${s.format(curVal)}</span> ${diffHtml}</span></div>`;
+      html += `<div class="flex-between mb-1 py-1" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding: 0.2rem 0.5rem;">
+                 <span class="text-muted">${s.label}</span>
+                 <span class="text-bold text-highlight">${s.format(curVal)} ${diffHtml}</span>
+               </div>`;
     }
-    
+
     this.heroStats.innerHTML = html;
 
     this.heroStats.querySelectorAll('.btn-stat-add').forEach(btn => {
@@ -283,9 +287,9 @@ export default class HeroUI extends BaseModalUI {
         clone.style.borderColor = item.getColor();
         clone.style.color = item.getColor();
         clone.innerHTML = s.icon;
-        
+
         this._bindTooltipEvents(clone, item);
-        
+
         clone.addEventListener('click', () => {
           this.hero.unequipItem(s.key);
           this._hideTooltip();
@@ -310,7 +314,7 @@ export default class HeroUI extends BaseModalUI {
     this.tabContents.resources.style.display = tab === 'resources' ? 'block' : 'none';
     this.tabContents.equipment.style.display = tab === 'equipment' ? 'block' : 'none';
     this.tabContents.loot.style.display = tab === 'loot' ? 'block' : 'none';
-    
+
     this.bulkActionsContainer.style.display = (tab === 'equipment' || tab === 'loot') ? 'flex' : 'none';
 
     if (tab === 'resources') this._renderResourcesTab();
@@ -322,28 +326,69 @@ export default class HeroUI extends BaseModalUI {
     const container = this.tabContents.resources;
     const res = this.resourceManager.getResources();
     const prestigeItems = this.hero.getUnlockedPrestigeItems().map(item => item.name).join(', ');
-    const achievementsHtml = this.achievementManager ? this.achievementManager.getAchievements().slice(0, 3).map(a => `<div class="text-sm text-muted">${a.label}: ${formatAchievementState(a)}</div>`).join('') : '';
+    const achievementsHtml = this.achievementManager ? this.achievementManager.getAchievements().slice(0, 3).map(a => `<div class="text-sm text-muted mb-1 flex-between"><span>${a.label}:</span> <span class="text-bold text-highlight">${formatAchievementState(a)}</span></div>`).join('') : '';
     const dailyState = this.dailyRewardManager ? this.dailyRewardManager.getState() : null;
 
     container.innerHTML = `
-      <div class="grid-gap">
-        <div><span class="text-muted">Mneme-Partikel:</span> <span class="text-gold">${formatNumber(res.particles)}</span></div>
-        <div><span class="text-muted">Mneme-Relikte:</span> <span class="text-gold">${formatNumber(res.relics)}</span></div>
-        <div><span class="text-muted">Mneme-Artefakte:</span> <span class="text-gold">${formatNumber(res.artifacts)}</span></div>
-        <div><span class="text-muted">Erinnerungsstaub:</span> <span class="text-dust">${formatNumber(res.memoryDust)}</span></div>
-        
-        <div class="border-t pt-1 mt-1">
-          <span class="text-muted">Prestige:</span> <span class="text-gold">Stufe ${this.hero.prestigeLevel}</span>
+      <div class="glass-inner-panel mb-2">
+        <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Erinnerungsschatz</h3>
+        <div class="flex-between mb-1">
+          <span class="text-muted">Mneme-Partikel:</span>
+          <span class="text-gold text-bold">${formatNumber(res.particles)}</span>
         </div>
-        <div><span class="text-muted">Prestige-Boni:</span> <span class="text-success">+${this.hero.getPrestigeBonus('particleStart')} Startpartikel, +${this.hero.getPrestigeBonus('jobRate')}% Sammelrate, +${this.hero.getPrestigeBonus('relicChance')}% Reliktchance</span></div>
-        <div><span class="text-muted">Exklusive Items:</span> <span class="text-gold">${prestigeItems || 'Noch keine'}</span></div>
-        
-        <div class="border-t pt-1 mt-1">
-          <span class="text-muted">Besiegte Gegner:</span> <span class="text-gold">${this.hero.defeatedBosses.length}</span>
+        <div class="flex-between mb-1">
+          <span class="text-muted">Mneme-Relikte:</span>
+          <span class="text-gold text-bold">${formatNumber(res.relics)}</span>
         </div>
-        
-        ${achievementsHtml ? `<div class="border-t pt-1 mt-1"><div class="text-gold">Erfolge</div>${achievementsHtml}</div>` : ''}
-        ${dailyState ? `<div class="border-t pt-1 mt-1"><div class="text-gold">Tägliche Belohnung</div><div class="text-sm text-muted">Streak: ${dailyState.streak} | ${dailyState.canClaimToday ? 'Jetzt abholbar' : 'Heute schon abgeholt'}</div></div>` : ''}
+        <div class="flex-between mb-1">
+          <span class="text-muted">Mneme-Artefakte:</span>
+          <span class="text-gold text-bold">${formatNumber(res.artifacts)}</span>
+        </div>
+        <div class="flex-between">
+          <span class="text-muted">Erinnerungsstaub:</span>
+          <span class="text-dust text-bold">${formatNumber(res.memoryDust)}</span>
+        </div>
+      </div>
+
+      <div class="glass-inner-panel mb-2">
+        <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Heldentum & Prestige</h3>
+        <div class="flex-between mb-1">
+          <span class="text-muted">Prestige-Stufe:</span>
+          <span class="text-gold text-bold">Stufe ${this.hero.prestigeLevel}</span>
+        </div>
+        <div class="flex-between mb-1">
+          <span class="text-muted">Prestige-Boni:</span>
+          <span class="text-success text-sm" style="text-align: right;">
+            +${this.hero.getPrestigeBonus('particleStart')} Startpartikel<br>
+            +${this.hero.getPrestigeBonus('jobRate')}% Sammelrate<br>
+            +${this.hero.getPrestigeBonus('relicChance')}% Reliktchance
+          </span>
+        </div>
+        <div class="flex-between mt-1 pt-1" style="border-top: 1px solid rgba(255,255,255,0.03);">
+          <span class="text-muted">Exklusive Items:</span>
+          <span class="text-gold text-bold text-sm" style="max-width: 60%; text-align: right;">${prestigeItems || 'Keine'}</span>
+        </div>
+      </div>
+
+      <div class="glass-inner-panel">
+        <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Statistiken & Ziele</h3>
+        <div class="flex-between mb-2">
+          <span class="text-muted">Besiegte Bosse:</span>
+          <span class="text-highlight text-bold">${this.hero.defeatedBosses.length}</span>
+        </div>
+        ${achievementsHtml ? `
+        <div class="border-t-light pt-2 mt-2">
+          <div class="text-gold cinzel text-sm mb-1" style="letter-spacing: 0.5px;">Erfolgsfortschritt</div>
+          ${achievementsHtml}
+        </div>` : ''}
+        ${dailyState ? `
+        <div class="border-t-light pt-2 mt-2">
+          <div class="text-gold cinzel text-sm mb-1" style="letter-spacing: 0.5px;">Tägliche Serie</div>
+          <div class="flex-between text-sm text-muted">
+            <span>Streak-Zähler:</span> 
+            <span class="text-bold text-highlight">${dailyState.streak} Tage</span>
+          </div>
+        </div>` : ''}
       </div>
     `;
   }
@@ -351,15 +396,15 @@ export default class HeroUI extends BaseModalUI {
   _renderEquipmentTab() {
     const container = this.tabContents.equipment;
     let items = [...this.hero.inventory.equipment];
-    
+
     const filterEl = document.getElementById('inv-filter');
     const sortEl = document.getElementById('inv-sort');
     const btnWrapper = document.getElementById('bulk-btn-wrapper');
-    
+
     filterEl.style.display = 'block';
     sortEl.style.display = 'block';
-    btnWrapper.innerHTML = `<button class="ui-btn ui-btn-red btn-small" id="bulk-salvage-btn">Gewöhnliche verwerten</button>`;
-    
+    btnWrapper.innerHTML = `<button class="glass-btn btn-danger btn-small" id="bulk-salvage-btn">Gewöhnliche zerlegen</button>`;
+
     if (!this._filterBound) {
       filterEl.addEventListener('change', () => this.render());
       sortEl.addEventListener('change', () => this.render());
@@ -367,7 +412,7 @@ export default class HeroUI extends BaseModalUI {
     }
 
     document.getElementById('bulk-salvage-btn').addEventListener('click', () => {
-      if (confirm('Alle gewöhnlichen (grauen) Items verwerten?')) {
+      if (confirm('Alle gewöhnlichen (grauen) Items zerlegen?')) {
         let salvaged = 0;
         let dustGained = 0;
         for (let i = this.hero.inventory.equipment.length - 1; i >= 0; i--) {
@@ -388,7 +433,7 @@ export default class HeroUI extends BaseModalUI {
     if (filterEl.value !== 'all') {
       items = items.filter(i => i.slot === filterEl.value);
     }
-    
+
     items.sort((a, b) => {
       if (sortEl.value === 'rarity') {
         const r = { legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
@@ -402,7 +447,7 @@ export default class HeroUI extends BaseModalUI {
     });
 
     if (items.length === 0) {
-      container.innerHTML = `<div class="text-disabled text-italic pt-1">Keine passenden Items gefunden.</div>`;
+      container.innerHTML = `<div class="text-disabled text-italic pt-1 text-center">Keine Ausrüstungsteile im Inventar vorhanden.</div>`;
       return;
     }
 
@@ -411,13 +456,21 @@ export default class HeroUI extends BaseModalUI {
 
     items.forEach((item) => {
       const row = document.createElement('div');
-      row.className = 'inv-item-row flex-between';
+      row.className = 'ui-card flex-between';
+      row.style.borderLeft = `3px solid ${item.getColor()}`;
+      row.style.background = 'rgba(255, 255, 255, 0.02)';
+      row.style.padding = '0.8rem 1.2rem';
+      row.style.marginBottom = '0.6rem';
+      row.style.borderRadius = 'var(--border-radius-sm)';
+
       row.innerHTML = `
-        <span class="item-name-span flex-1" style="color: ${item.getColor()}; cursor: help;">${item.name} Lv.${item.level}</span>
-        <span class="flex-row gap-sm">
-          <button class="inv-equip-btn btn-action btn-equip">Anlegen</button>
-          <button class="inv-salvage-btn btn-action btn-salvage">Verwerten</button>
-        </span>
+        <div class="item-name-span flex-1" style="color: ${item.getColor()}; cursor: help; font-weight: 600;">
+          ${item.name} <span class="text-muted text-sm" style="font-weight: normal; margin-left: 5px;">Lv.${item.level}</span>
+        </div>
+        <div class="flex-row gap-sm">
+          <button class="inv-equip-btn glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);">Anlegen</button>
+          <button class="inv-salvage-btn glass-btn btn-small" style="border-color: var(--color-danger); color: var(--color-danger);">Zerlegen</button>
+        </div>
       `;
 
       this._bindTooltipEvents(row.querySelector('.item-name-span'), item);
@@ -437,14 +490,14 @@ export default class HeroUI extends BaseModalUI {
       });
 
       row.querySelector('.inv-salvage-btn').addEventListener('click', () => {
-        if (confirm('Gegenstand wirklich verwerten?')) {
+        if (confirm('Gegenstand wirklich zerlegen?')) {
           this._hideTooltip();
           const removedItem = this.hero.removeEquipmentItemByRef(item);
           if (removedItem) {
             const dustAmounts = { common: 1, uncommon: 3, rare: 10, epic: 25, legendary: 100 };
             const amount = (dustAmounts[removedItem.rarity] || 1) * removedItem.level;
             this.resourceManager.addMemoryDust(amount);
-            this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${removedItem.name} verwertet. +${amount} Staub.`, type: 'event' });
+            this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${removedItem.name} zerlegt. +${amount} Staub.`, type: 'event' });
             this.eventBus.publish(EVENTS.HERO_UPDATED);
             this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
           }
@@ -462,10 +515,10 @@ export default class HeroUI extends BaseModalUI {
 
     document.getElementById('inv-filter').style.display = 'none';
     document.getElementById('inv-sort').style.display = 'none';
-    
+
     const btnWrapper = document.getElementById('bulk-btn-wrapper');
-    btnWrapper.innerHTML = `<button class="ui-btn ui-btn-gold btn-small" id="bulk-sell-btn">Alles verkaufen</button>`;
-    
+    btnWrapper.innerHTML = `<button class="glass-btn primary btn-small" id="bulk-sell-btn">Alles verkaufen</button>`;
+
     document.getElementById('bulk-sell-btn').addEventListener('click', () => {
       if (items.length === 0) return;
       let totalValue = 0;
@@ -481,7 +534,7 @@ export default class HeroUI extends BaseModalUI {
     });
 
     if (items.length === 0) {
-      container.innerHTML = `<div class="text-disabled text-italic pt-1">Kein Loot zum Verkauf.</div>`;
+      container.innerHTML = `<div class="text-disabled text-italic pt-1 text-center">Kein Loot im Besitz.</div>`;
       return;
     }
 
@@ -490,16 +543,24 @@ export default class HeroUI extends BaseModalUI {
 
     items.forEach((item) => {
       const row = document.createElement('div');
-      row.className = 'inv-item-row flex-between';
+      row.className = 'ui-card flex-between';
+      row.style.borderLeft = `3px solid ${item.getColor()}`;
+      row.style.background = 'rgba(255, 255, 255, 0.02)';
+      row.style.padding = '0.8rem 1.2rem';
+      row.style.marginBottom = '0.6rem';
+      row.style.borderRadius = 'var(--border-radius-sm)';
+
       const value = 5 + ({ common: 0, uncommon: 5, rare: 10, epic: 20, legendary: 50 }[item.rarity] || 0);
 
       row.innerHTML = `
-        <span class="item-name-span flex-1" style="color: ${item.getColor()}; cursor: help;">${item.name} (${item.getRarityLabel()})</span>
-        <span class="flex-align-center gap-md">
-          <span class="item-value-span text-muted text-sm">+${formatNumber(value)} Partikel</span>
-          <button class="inv-sell-btn btn-action btn-equip">Verkaufen</button>
-          <button class="inv-salvage-btn btn-action btn-salvage">Verwerten</button>
-        </span>
+        <div class="item-name-span flex-1" style="color: ${item.getColor()}; cursor: help; font-weight: 600;">
+          ${item.name} <span class="text-muted text-sm" style="font-weight: normal; margin-left: 5px;">(${item.getRarityLabel()})</span>
+        </div>
+        <div class="flex-row gap-sm align-center">
+          <span class="item-value-span text-muted text-sm" style="margin-right: 10px;">+${formatNumber(value)} Partikel</span>
+          <button class="inv-sell-btn glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);">Verkaufen</button>
+          <button class="inv-salvage-btn glass-btn btn-small" style="border-color: var(--color-danger); color: var(--color-danger);">Zerlegen</button>
+        </div>
       `;
 
       this._bindTooltipEvents(row.querySelector('.item-name-span'), item);
@@ -522,7 +583,7 @@ export default class HeroUI extends BaseModalUI {
           const amount = (dustAmounts[removedItem.rarity] || 1) * removedItem.level;
           this.resourceManager.addMemoryDust(amount);
           this._hideTooltip();
-          this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${removedItem.name} verwertet. +${amount} Staub.`, type: 'event' });
+          this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `${removedItem.name} zerlegt. +${amount} Staub.`, type: 'event' });
           this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
           this.eventBus.publish(EVENTS.HERO_UPDATED);
         }

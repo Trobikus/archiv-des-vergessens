@@ -1,3 +1,5 @@
+// --- START OF FILE forgeui.js ---
+
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
 import BaseModalUI from './basemodal.js';

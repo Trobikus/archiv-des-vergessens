@@ -101,7 +101,7 @@ export default class QuestUI extends BaseModalUI {
 
           let btnHtml = '';
           if (isReady) {
-            btnHtml = `<button class="quest-btn btn-claim-quest">Abholen</button>`;
+            btnHtml = `<button class="ui-btn ui-btn-gold btn-claim-quest">Abholen</button>`;
           } else if (isCurrent) {
             btnHtml = `<span class="text-success text-sm">Aktiv</span>`;
           } else {
@@ -145,7 +145,7 @@ export default class QuestUI extends BaseModalUI {
         if (d.isClaimed) {
           rightHtml = `<span class="text-muted">✅ Erledigt</span>`;
         } else if (d.isComplete) {
-          rightHtml = `<button class="quest-btn btn-claim-quest claim-daily-btn">Abholen</button>`;
+          rightHtml = `<button class="ui-btn ui-btn-gold btn-claim-quest claim-daily-btn">Abholen</button>`;
         } else {
           rightHtml = `<span class="text-muted">${d.progress} / ${d.target}</span>`;
         }

@@ -1,3 +1,5 @@
+// --- START OF FILE main.js ---
+
 // --- CORE ---
 import EventBus from './core/eventbus.js';
 import SettingsManager from './core/settings.js';
@@ -26,6 +28,7 @@ import ChallengeManager from './managers/challenges.js';
 import QuestManager from './managers/quests.js';
 import TutorialManager from './managers/tutorial.js';
 import LibraryManager from './managers/library.js';
+import CraftingManager from './managers/crafting.js'; // NEU
 
 // --- UI ---
 import ClanUI from './ui/clanui.js';
@@ -42,6 +45,7 @@ import ChallengeUI from './ui/challengeui.js';
 import QuestUI from './ui/questui.js';
 import TutorialUI from './ui/tutorialui.js';
 import LibraryUI from './ui/libraryui.js';
+import CraftingUI from './ui/craftingui.js'; // NEU
 
 // --- PREACT IMPORTS ---
 import { html, render } from './ui/preact-setup.js';
@@ -109,6 +113,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   context.questManager = new QuestManager(eventBus, context.hero, context.resourceManager, context.clanManager);
   context.tutorialManager = new TutorialManager(eventBus, context.hero, context.resourceManager);
 
+  // --- NEU: CraftingManager ---
+  context.craftingManager = new CraftingManager(context);
+
   // --- SAVEGAME REGISTRATION ---
   SaveGameManager.register('hero', context.hero);
   SaveGameManager.register('clan', context.clanManager);
@@ -120,6 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   SaveGameManager.register('challenges', context.challengeManager);
   SaveGameManager.register('quests', context.questManager);
   SaveGameManager.register('tutorial', context.tutorialManager);
+  SaveGameManager.register('crafting', context.craftingManager); // NEU
 
   // --- UI INITIALIZATION ---
   let heroUI, storyUI, forgeUI, libraryUI, relicHuntUI, skillTreeUI, challengeUI;
@@ -138,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     new QuestUI(context);
     new TutorialUI(context);
     new GatherController(context);
+    new CraftingUI(context); // NEU
 
     // --- PREACT RENDERING ---
     const preactRoot = document.getElementById('preact-root');
@@ -150,6 +159,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (openAchBtn) {
       openAchBtn.addEventListener('click', () => {
         eventBus.publish('ui:openAchievements');
+      });
+    }
+
+    // Hub-Button für Meisterwerkstatt (wird im HTML benötigt)
+    const hubCraftingBtn = document.getElementById('hub-crafting');
+    if (hubCraftingBtn) {
+      hubCraftingBtn.addEventListener('click', () => {
+        eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
       });
     }
 
@@ -172,6 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, () => saveGame());
   eventBus.subscribe(EVENTS.FORGE_CRAFTED, () => saveGame());
+  eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, () => saveGame()); // NEU
   eventBus.subscribe(EVENTS.HERO_PRESTIGE, () => saveGame());
   eventBus.subscribe(EVENTS.ACHIEVEMENT_CLAIMED, () => saveGame());
   eventBus.subscribe(EVENTS.EXPEDITION_STARTED, () => saveGame());
@@ -250,6 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnHubSkills: document.getElementById('hub-skills'),
     btnHubChallenges: document.getElementById('hub-challenges'),
     btnHubLibrary: document.getElementById('hub-library'),
+    btnHubCrafting: document.getElementById('hub-crafting'), // NEU
     btnHubBack: document.getElementById('hub-back-to-menu'),
     btnBackToHub: document.getElementById('back-to-hub-btn'),
     btnOptionsBack: document.getElementById('options-back-btn'),
@@ -276,7 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.hero.fromJSON(new Hero(eventBus).toJSON());
       context.hero.name = heroName;
 
-      context.resourceManager.fromJSON({ particles: 0, relics: 0, artifacts: 0, memoryDust: 0, timeBank: 0 });
+      context.resourceManager.fromJSON({ particles: 0, relics: 0, artifacts: 0, memoryDust: 0, timeBank: 0, catalyst: 0, essence: 0 });
       context.clanManager.fromJSON({ members: [], nextId: 1, expeditionStatus: [] });
       context.expeditionManager.fromJSON({ activeExpeditions: [] });
       context.libraryManager.fromJSON({});
@@ -285,6 +304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.challengeManager.fromJSON({ activeChallenge: null, completedChallenges: [] });
       context.questManager.fromJSON({ questIndex: 0, dailyQuests: { date: '', gatherClicks: 0, expeditions: 0, craftedItems: 0, claimed: [] } });
       context.tutorialManager.fromJSON({ completed: false });
+      context.craftingManager.fromJSON({}); // NEU
 
       eventBus.publish(EVENTS.HERO_UPDATED);
 
@@ -310,6 +330,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   navElements.btnHubSkills.addEventListener('click', () => skillTreeUI.open());
   navElements.btnHubChallenges.addEventListener('click', () => challengeUI.open());
   if (navElements.btnHubLibrary) navElements.btnHubLibrary.addEventListener('click', () => libraryUI.open());
+  if (navElements.btnHubCrafting) {
+    navElements.btnHubCrafting.addEventListener('click', () => {
+      eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
+    });
+  }
 
   eventBus.subscribe(EVENTS.UI_START_BOSS_FIGHT, () => context.storyManager.startBossFromHub());
 

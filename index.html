@@ -90,10 +90,10 @@
             <span class="option-label text-danger">Spielstand verwerfen</span>
             <span class="option-control"><button id="opt-hard-reset" class="btn-danger glass-btn">Löschen</button></span>
           </div>
-          </div>
-          <div class="text-center mt-2">
+        </div>
+        <div class="text-center mt-2">
           <button class="glass-btn primary mt-1" id="options-back-btn">« Zurück zum Hauptmenü</button>
-          </div>
+        </div>
       </div>
     </div>
 
@@ -107,16 +107,21 @@
             betreten</span>
         </button>
         <button class="hub-btn glass-btn" id="hub-hero">
-          <span class="icon">👤</span><span class="cinzel text-lg">Mein Held</span><span class="label">Ausrüstung &
+          <span class="icon">👤</span><span class="cinzel text-lg">Mein Held</span><span class="label">Ausrüstung &amp;
             Stats</span>
         </button>
         <button class="hub-btn glass-btn" id="hub-story">
-          <span class="icon">📖</span><span class="cinzel text-lg">Story & Bosse</span><span class="label">Kapitel &
+          <span class="icon">📖</span><span class="cinzel text-lg">Story &amp; Bosse</span><span class="label">Kapitel
+            &amp;
             Kämpfe</span>
         </button>
         <button class="hub-btn glass-btn" id="hub-artifact">
           <span class="icon">⚒️</span><span class="cinzel text-lg">Artefakt-Schmiede</span><span class="label">Ausrüstung
             herstellen</span>
+        </button>
+        <button class="hub-btn glass-btn" id="hub-crafting">
+          <span class="icon">🏭</span><span class="cinzel text-lg">Meisterwerkstatt</span><span class="label">Komplexes
+            Crafting</span>
         </button>
         <button class="hub-btn glass-btn" id="hub-library" style="display: none;">
           <span class="icon">📚</span><span class="cinzel text-lg">Bibliothek</span><span class="label">Endlose
@@ -140,7 +145,7 @@
 
     <!-- ===== SPIEL ===== -->
     <div id="game-container" class="fade-in" style="display: none;">
-<!-- HEADER FIX: Sauberes Flex-Grid verhindert Überlappen -->
+      <!-- HEADER FIX: Sauberes Flex-Grid verhindert Überlappen -->
       <div id="game-header">
         <div class="header-left">
           <button id="back-to-hub-btn" class="glass-btn primary" title="Zurück zur Übersicht">« Zurück zum Hub</button>
@@ -168,8 +173,8 @@
             <span class="resource-label">Artefakte:</span>
             <span class="resource-value text-gold glow-text" id="artifact-display">0</span>
           </div>
-          </div>
-          <button id="open-achievements-btn" class="glass-btn primary">🏆 Erfolge ansehen</button>
+        </div>
+        <button id="open-achievements-btn" class="glass-btn primary">🏆 Erfolge ansehen</button>
       </div>
 
       <div class="gather-section">
@@ -247,7 +252,7 @@
       <div id="expedition-modal" class="modal-content-small glass-panel">
         <button class="modal-close" id="expedition-modal-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text cinzel text-center mb-1">Expedition</h2>
-        
+
         <div class="glass-inner-panel mb-1">
           <div class="flex-between mb-1"><span class="text-muted">Name:</span><span class="text-highlight text-bold"
               id="expedition-member-name"></span></div>
@@ -257,10 +262,10 @@
           <div class="flex-between mb-1"><span class="text-muted">Erfolgschance:</span><span class="text-gold text-bold"
               id="expedition-success-chance"></span></div>
           <div class="flex-between"><span class="text-muted">Dauer:</span><span id="expedition-duration"></span></div>
-          </div>
-          
-          <div id="expedition-progress-container" class="mt-1">
-            <div class="progress-bar-container">
+        </div>
+        
+        <div id="expedition-progress-container" class="mt-1">
+          <div class="progress-bar-container">
             <div class="progress-bar-fill" id="expedition-progress-fill"></div>
             <div class="progress-text" id="expedition-progress-text">0%</div>
           </div>
@@ -353,31 +358,49 @@
       </div>
     </div>
 
-    <!-- STORY MODAL -->
+    <!-- ========================================== -->
+    <!-- STORY MODAL                                 -->
+    <!-- ========================================== -->
     <div id="story-overlay" class="modal-overlay" style="display: none;">
-      <div id="story-modal" class="modal-content glass-panel" style="width: 600px;">
+      <div id="story-modal" class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;">
         <button class="modal-close" id="story-close" aria-label="Schließen">&times;</button>
-        <h2 class="glow-text cinzel text-center mb-1">Story & Bosse</h2>
+        <h2 class="modal-title glow-text cinzel text-center">📖 Story &amp; Bosse</h2>
 
-        <div class="chapter-navigation glass-inner-panel">
+        <!-- Kapitelnavigation -->
+        <div class="chapter-navigation glass-inner-panel flex-between mb-1" style="padding: 0.8rem 1.2rem;">
           <button id="story-prev-chapter" class="glass-btn btn-small">◄</button>
-          <div id="story-chapter-info" class="text-gold glow-text cinzel text-lg">Kapitel 1 - Die Erwachenden</div>
+          <div id="story-chapter-info" class="text-gold glow-text cinzel text-lg" style="font-size: 1.1rem;">Kapitel 1 -
+            Die Erwachenden</div>
           <button id="story-next-chapter" class="glass-btn btn-small">►</button>
         </div>
-<div id="story-content-area" style="position: relative; min-height: 250px;" class="mt-1">
-          <div id="story-boss-list"></div>
-<div id="story-locked-overlay" class="glass-inner-panel"
-  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
-  <div class="text-gold" style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
-  <div class="cinzel text-lg text-muted">KAPITEL GESPERRT</div>
+<!-- Boss-Liste -->
+<div id="story-content-area" style="position: relative; min-height: 220px; flex: 1; overflow: hidden;" class="mt-1">
+  <div id="story-boss-list" class="modal-scroll-area" style="max-height: 220px; padding-right: 0.3rem;"></div>
+  <!-- Gesperrter Overlay -->
+  <div id="story-locked-overlay" class="glass-inner-panel"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">
+            <div class="text-gold" style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
+            <div class="cinzel text-lg text-muted">KAPITEL GESPERRT</div>
+            <div class="text-sm text-muted mt-1">Besiege die Bosse des vorherigen Kapitels.</div>
           </div>
         </div>
-<div id="story-current-boss" class="glass-inner-panel mt-1">
-  <div class="text-muted text-center text-sm mb-1">Ausgewähltes Ziel</div>
-  <div id="story-current-boss-name" class="cinzel text-danger glow-text text-center text-lg mb-1"></div>
-  <div id="story-current-boss-stats" class="text-sm text-center mb-1 text-muted"></div>
-  <div id="story-fight-result" class="text-center mb-1"></div>
-  <button id="story-fight-btn" class="glass-btn primary w-100">⚔️ Bosskampf starten</button>
+<!-- Aktueller Boss & Kampf -->
+<div id="story-current-boss" class="glass-inner-panel mt-1" style="padding: 1.2rem;">
+  <div class="text-muted text-sm text-center mb-1" style="letter-spacing: 1px;">AKTUELLES ZIEL</div>
+  <div id="story-current-boss-name" class="cinzel text-danger glow-text text-center text-lg mb-1"
+    style="font-size: 1.3rem;"></div>
+  <div class="boss-stats-grid flex-between mb-1"
+    style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center;">
+    <div><span class="text-muted text-sm">❤️ HP</span><br><span id="story-boss-hp"
+        class="text-highlight text-bold">-</span></div>
+    <div><span class="text-muted text-sm">⚔️ Angriff</span><br><span id="story-boss-atk"
+        class="text-danger text-bold">-</span></div>
+    <div><span class="text-muted text-sm">🛡️ Verteidigung</span><br><span id="story-boss-def"
+        class="text-blue text-bold">-</span></div>
+  </div>
+  <div id="story-fight-result" class="text-center mb-1" style="min-height: 1.8rem;"></div>
+  <button id="story-fight-btn" class="glass-btn primary w-100"
+    style="padding: 0.9rem; font-size: 1.1rem; letter-spacing: 1px;">⚔️ Bosskampf starten</button>
         </div>
       </div>
     </div>
@@ -388,20 +411,35 @@
         <button class="modal-close" id="forge-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text text-gold cinzel text-center">Artefakt-Schmiede</h2>
         <div class="text-center text-muted mb-1">Schmiede und werte Ausrüstung auf</div>
-        
+
         <div id="forge-resources" class="glass-inner-panel flex-between text-sm mb-2" style="padding: 0.8rem 2rem;">
         </div>
-<div class="forge-split-layout">
-  <div class="forge-column glass-inner-panel">
-    <h3 class="options-header text-center">Rezepte</h3>
-    <div id="forge-recipes" class="modal-scroll-area"></div>
-  </div>
-  <div class="forge-column glass-inner-panel">
-    <h3 class="options-header-blue text-center">Ausrüstung Aufwerten</h3>
-    <div id="forge-upgrades" class="modal-scroll-area"></div>
+        <div class="forge-split-layout">
+          <div class="forge-column glass-inner-panel">
+            <h3 class="options-header text-center">Rezepte</h3>
+            <div id="forge-recipes" class="modal-scroll-area"></div>
+          </div>
+          <div class="forge-column glass-inner-panel">
+            <h3 class="options-header-blue text-center">Ausrüstung Aufwerten</h3>
+            <div id="forge-upgrades" class="modal-scroll-area"></div>
           </div>
         </div>
         <div id="forge-result" class="text-center mt-1 text-bold"></div>
+      </div>
+    </div>
+
+    <!-- CRAFTING MODAL (Meisterwerkstatt) -->
+    <div id="crafting-overlay" class="modal-overlay" style="display: none;">
+      <div id="crafting-modal" class="modal-content-wide glass-panel" style="max-width: 900px;">
+        <button class="modal-close" id="crafting-close" aria-label="Schließen">&times;</button>
+        <h2 class="glow-text text-gold cinzel text-center">🏭 Meisterwerkstatt</h2>
+        <div class="text-muted text-sm text-center mb-1">Hier schmiedest du die mächtigsten Artefakte.</div>
+    
+        <div id="crafting-resources" class="glass-inner-panel mb-1"></div>
+        <div id="crafting-skill" class="glass-inner-panel mb-1"></div>
+    
+        <div id="crafting-recipes" class="modal-scroll-area" style="max-height: 40vh;"></div>
+        <div id="crafting-result" class="text-center mt-1 text-bold"></div>
       </div>
     </div>
 
@@ -411,7 +449,8 @@
         <h2 class="glow-text text-gold cinzel text-center">NEUES ARCHIV ÖFFNEN</h2>
         <div class="text-muted text-center mb-2">Wie lautet der Name deines Helden?</div>
         <input type="text" id="new-game-hero-name" class="ui-select w-100 mb-2 text-center text-lg"
-          style="padding: 1rem; color: var(--color-gold);" value="Der Mneme-Bund" autocomplete="off" spellcheck="false" />
+          style="padding: 1rem; color: var(--color-gold);" value="Der Mneme-Bund" autocomplete="off"
+          spellcheck="false" />
         <div class="flex-row gap-md">
           <button id="new-game-cancel-btn" class="glass-btn" style="flex: 1;">Abbrechen</button>
           <button id="new-game-start-btn" class="glass-btn primary" style="flex: 1.5;">Reise beginnen</button>
@@ -425,7 +464,7 @@
         <button class="modal-close" id="relic-hunt-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text text-highlight cinzel text-center">RELIKT-JAGD</h2>
         <div class="text-muted text-center mb-1">Suche nach verlorenen Erinnerungen</div>
-        
+
         <div id="relic-hunt-status-area" class="glass-inner-panel text-center mt-1 mb-2">
           <div class="text-muted text-sm mb-1">Kosten pro Suche</div>
           <div class="text-gold text-lg glow-text cinzel">25 <span class="text-sm text-muted"
@@ -436,13 +475,13 @@
           <div class="text-sm text-muted flex-between"><span>Kampfkraft:</span> <span id="relic-hunt-power"
               class="text-highlight">0</span></div>
         </div>
-<div id="relic-hunt-cooldown" class="glass-inner-panel mb-2" style="display: none;">
-  <div id="relic-hunt-cooldown-text" class="text-center text-sm text-muted mb-1">Wartezeit: 5s</div>
-  <div class="progress-bar-container">
+        <div id="relic-hunt-cooldown" class="glass-inner-panel mb-2" style="display: none;">
+          <div id="relic-hunt-cooldown-text" class="text-center text-sm text-muted mb-1">Wartezeit: 5s</div>
+          <div class="progress-bar-container">
             <div class="progress-bar-fill" id="relic-hunt-cooldown-fill"></div>
           </div>
         </div>
-<button id="relic-hunt-start-btn" class="glass-btn primary w-100 epic-pulse">SUCHE STARTEN</button>
+        <button id="relic-hunt-start-btn" class="glass-btn primary w-100 epic-pulse">SUCHE STARTEN</button>
         <div id="relic-hunt-result" class="text-center mt-2 text-bold"></div>
       </div>
     </div>
@@ -491,7 +530,7 @@
       <div id="offline-modal" class="modal-content-small glass-panel">
         <h2 class="glow-text text-gold cinzel text-center">WILLKOMMEN ZURÜCK!</h2>
         <div class="text-muted text-center mb-2">Das Archiv ruhte nie, während du fort warst.</div>
-        
+
         <div class="glass-inner-panel mb-2">
           <div class="flex-between mb-1"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val"
               class="text-bold text-highlight">0s</span></div>

@@ -1,3 +1,5 @@
+// --- START OF FILE libraryui.js ---
+
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
 import BaseModalUI from './basemodal.js';
@@ -40,7 +42,7 @@ export default class LibraryUI extends BaseModalUI {
             <div class="text-muted text-sm upg-desc"></div>
             <div class="text-sm mt-1 upg-cost"></div>
           </div>
-          <div><button class="btn-claim-quest upg-btn">Forschen</button></div>
+          <div><button class="ui-btn ui-btn-gold upg-btn">Forschen</button></div>
         `;
         
         div.querySelector('.upg-btn').addEventListener('click', () => {

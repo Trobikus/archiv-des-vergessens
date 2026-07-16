@@ -1,3 +1,5 @@
+// --- START OF FILE achievementui.js ---
+
 import { html, useState, useEventBus } from './preact-setup.js';
 import { EVENTS } from '../core/events.js';
 
@@ -48,29 +50,29 @@ export default function AchievementUI({ context }) {
             <div style="color: #5a5a6a; font-style: italic;">Keine Erfolge verfügbar.</div>
           ` : achievements.map(ach => {
 
-            const rewards = [];
-            if (ach.reward.particles) rewards.push(`${ach.reward.particles} Partikel`);
-            if (ach.reward.relics) rewards.push(`${ach.reward.relics} Relikte`);
-            if (ach.reward.artifacts) rewards.push(`${ach.reward.artifacts} Artefakte`);
-            if (ach.reward.title) rewards.push(`Titel: ${ach.reward.title}`);
+    const rewards = [];
+    if (ach.reward.particles) rewards.push(`${ach.reward.particles} Partikel`);
+    if (ach.reward.relics) rewards.push(`${ach.reward.relics} Relikte`);
+    if (ach.reward.artifacts) rewards.push(`${ach.reward.artifacts} Artefakte`);
+    if (ach.reward.title) rewards.push(`Titel: ${ach.reward.title}`);
 
-            const statusClass = ach.claimed ? 'claimed' : ach.achieved ? 'achieved' : 'locked';
+    const statusClass = ach.claimed ? 'claimed' : ach.achieved ? 'achieved' : 'locked';
 
-            return html`
+    return html`
               <div class="ui-card achievement-card ${statusClass}" key=${ach.id}>
                 <div>
-                  <div class="ui-card-title ach-title">${ach.label}</div>
+                  <div class="ui-card-title ach-title" style="color: ${ach.achieved && !ach.claimed ? 'var(--color-gold)' : 'var(--color-text-main)'}">${ach.label}</div>
                   <div class="ui-card-desc ach-desc">Belohnung: ${rewards.join(' | ')}</div>
                   <div class="ui-card-meta ach-meta">Fortschritt: ${ach.progress} / ${ach.target}</div>
                 </div>
                 <div class="ach-action">
                   ${ach.claimed ? html`<span style="color:#8a7a5a;">✅ Abgeholt</span>`
-                : ach.achieved ? html`<button class="ui-btn ui-btn-gold" onClick=${(e) => handleClaim(e, ach.id)}>Abholen</button>`
-                  : html`<span style="color:#5a5a6a;">🔒 Gesperrt</span>`}
+        : ach.achieved ? html`<button class="ui-btn ui-btn-gold" onClick=${(e) => handleClaim(e, ach.id)}>Abholen</button>`
+          : html`<span style="color:#5a5a6a;">🔒 Gesperrt</span>`}
                 </div>
               </div>
             `;
-          })}
+  })}
         </div>
       </div>
     </div>
