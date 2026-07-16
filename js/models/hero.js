@@ -1,3 +1,5 @@
+// --- START OF FILE models/hero.js ---
+
 import { Item } from './item.js';
 import { PRESTIGE_ITEMS } from '../data/items.js';
 import { generateStoryBosses } from '../data/bosses.js';
@@ -11,7 +13,7 @@ export default class Hero {
     this.level = 1;
     this.experience = 0;
     this.expToNext = CONFIG.HERO.BASE_EXP_TO_NEXT;
-    
+
     this.baseStats = { attack: 5, defense: 3, agility: 4, stamina: 6 };
     this.spentStats = { attack: 0, defense: 0, agility: 0, stamina: 0 };
     this.unspentStatPoints = 0;
@@ -24,6 +26,10 @@ export default class Hero {
     this.prestigePoints = 0;
     this.unlockedSkills = [];
     this.clickPowerLevel = 0;
+
+    // Leaderboard: Zeitmessung
+    this._prestigeStartTime = Date.now();
+    this._lastLevelUpTime = Date.now();
 
     if (this.eventBus) {
       this.eventBus.subscribe(EVENTS.CMD_HERO_ADD_BASE_STAT, this._onAddBaseStat.bind(this));
@@ -47,6 +53,7 @@ export default class Hero {
       this.level++;
       this.unspentStatPoints += CONFIG.HERO.STAT_POINTS_PER_LEVEL;
       this.expToNext = Math.floor(this.expToNext * CONFIG.HERO.EXP_MULTIPLIER);
+      this._lastLevelUpTime = Date.now(); // Leaderboard
     }
   }
 
@@ -100,10 +107,8 @@ export default class Hero {
 
   getCombatStats() {
     const attr = this.getStats();
-    // NEUE KAMPF-MATHEMATIK: Diminishing Returns für Rüstung
-    // 100 Rüstung = 50% Reduktion, 300 Rüstung = 75% Reduktion
-    const damageReduction = attr.defense / (attr.defense + 100); 
-    
+    const damageReduction = attr.defense / (attr.defense + 100);
+
     return {
       ...attr,
       maxHp: 100 + (attr.stamina * 10) + (attr.defense * 2),
@@ -206,6 +211,8 @@ export default class Hero {
   performPrestigeReset(resourceManager, clanManager = null) {
     if (this.bossProgress < generateStoryBosses().length) return { success: false, message: 'Verewigung erst nach dem letzten Boss möglich.' };
 
+    const timeSinceLastPrestige = (Date.now() - this._prestigeStartTime) / 1000;
+
     this.prestigeLevel += 1;
     this.prestigePoints += 1;
     this.level = 1;
@@ -219,12 +226,18 @@ export default class Hero {
     this.defeatedBosses = [];
     this.clickPowerLevel = 0;
 
+    // Leaderboard: Prestige-Zeit zurücksetzen
+    this._prestigeStartTime = Date.now();
+
     if (resourceManager) {
       resourceManager.fromJSON({ particles: this.getPrestigeBonus('particleStart'), relics: 0, artifacts: 0, memoryDust: resourceManager.memoryDust });
     }
     if (clanManager) clanManager.fromJSON({ members: [], nextId: 10, expeditionStatus: [] });
     if (this.eventBus) {
-      this.eventBus.publish(EVENTS.HERO_PRESTIGE, { prestigeLevel: this.prestigeLevel });
+      this.eventBus.publish(EVENTS.HERO_PRESTIGE, {
+        prestigeLevel: this.prestigeLevel,
+        timeSinceLastPrestige: timeSinceLastPrestige
+      });
       this.eventBus.publish(EVENTS.HERO_UPDATED);
       this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
       this.eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, { members: clanManager ? clanManager.members : [] });
@@ -257,26 +270,28 @@ export default class Hero {
       _successfulExpeditions: this._successfulExpeditions || 0,
       titles: this.titles || [], title: this.title || '',
       unlockedSkills: this.unlockedSkills,
-      clickPowerLevel: this.clickPowerLevel || 0
+      clickPowerLevel: this.clickPowerLevel || 0,
+      _prestigeStartTime: this._prestigeStartTime,
+      _lastLevelUpTime: this._lastLevelUpTime
     };
   }
 
   fromJSON(data) {
     if (!data) return;
-    
+
     this.name = data.name || 'Der Mneme-Bund';
     this.level = Number(data.level) || 1;
     this.experience = Number(data.experience) || 0;
     this.expToNext = Number(data.expToNext) || CONFIG.HERO.BASE_EXP_TO_NEXT;
-    
+
     this.baseStats = data.baseStats || { attack: 5, defense: 3, agility: 4, stamina: 6 };
     this.spentStats = data.spentStats || { attack: 0, defense: 0, agility: 0, stamina: 0 };
     this.unspentStatPoints = Number(data.unspentStatPoints) || 0;
-    
+
     const expectedPoints = (this.level - 1) * CONFIG.HERO.STAT_POINTS_PER_LEVEL;
     const totalSpent = this.spentStats.attack + this.spentStats.defense + this.spentStats.agility + this.spentStats.stamina;
     if (this.unspentStatPoints + totalSpent < expectedPoints) {
-        this.unspentStatPoints += expectedPoints - (this.unspentStatPoints + totalSpent);
+      this.unspentStatPoints += expectedPoints - (this.unspentStatPoints + totalSpent);
     }
 
     if (data.equipment) {
@@ -300,5 +315,9 @@ export default class Hero {
     this.title = data.title || '';
     this.unlockedSkills = Array.isArray(data.unlockedSkills) ? data.unlockedSkills : [];
     this.clickPowerLevel = Number(data.clickPowerLevel) || 0;
+
+    // Leaderboard Zeitwerte laden
+    this._prestigeStartTime = data._prestigeStartTime || Date.now();
+    this._lastLevelUpTime = data._lastLevelUpTime || Date.now();
   }
 }

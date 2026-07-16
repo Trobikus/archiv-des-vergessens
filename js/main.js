@@ -28,7 +28,10 @@ import ChallengeManager from './managers/challenges.js';
 import QuestManager from './managers/quests.js';
 import TutorialManager from './managers/tutorial.js';
 import LibraryManager from './managers/library.js';
-import CraftingManager from './managers/crafting.js'; // NEU
+import CraftingManager from './managers/crafting.js';
+
+// --- NEU: LEADERBOARD ---
+import LocalLeaderboard from './core/LocalLeaderboard.js';
 
 // --- UI ---
 import ClanUI from './ui/clanui.js';
@@ -45,7 +48,10 @@ import ChallengeUI from './ui/challengeui.js';
 import QuestUI from './ui/questui.js';
 import TutorialUI from './ui/tutorialui.js';
 import LibraryUI from './ui/libraryui.js';
-import CraftingUI from './ui/craftingui.js'; // NEU
+import CraftingUI from './ui/craftingui.js';
+
+// --- NEU: LEADERBOARD UI ---
+import LeaderboardUI from './ui/LeaderboardUI.js';
 
 // --- PREACT IMPORTS ---
 import { html, render } from './ui/preact-setup.js';
@@ -112,9 +118,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   context.skillTreeManager = new SkillTreeManager(eventBus, context.hero);
   context.questManager = new QuestManager(eventBus, context.hero, context.resourceManager, context.clanManager);
   context.tutorialManager = new TutorialManager(eventBus, context.hero, context.resourceManager);
-
-  // --- NEU: CraftingManager ---
   context.craftingManager = new CraftingManager(context);
+
+  // --- NEU: LEADERBOARD MANAGER ---
+  context.leaderboardManager = new LocalLeaderboard();
 
   // --- SAVEGAME REGISTRATION ---
   SaveGameManager.register('hero', context.hero);
@@ -127,7 +134,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   SaveGameManager.register('challenges', context.challengeManager);
   SaveGameManager.register('quests', context.questManager);
   SaveGameManager.register('tutorial', context.tutorialManager);
-  SaveGameManager.register('crafting', context.craftingManager); // NEU
+  SaveGameManager.register('crafting', context.craftingManager);
+  SaveGameManager.register('leaderboard', context.leaderboardManager); // NEU
 
   // --- UI INITIALIZATION ---
   let heroUI, storyUI, forgeUI, libraryUI, relicHuntUI, skillTreeUI, challengeUI;
@@ -146,7 +154,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     new QuestUI(context);
     new TutorialUI(context);
     new GatherController(context);
-    new CraftingUI(context); // NEU
+    new CraftingUI(context);
+    new LeaderboardUI(context); // NEU
 
     // --- PREACT RENDERING ---
     const preactRoot = document.getElementById('preact-root');
@@ -154,7 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       render(html`<${AchievementUI} context=${context} />`, preactRoot);
     }
 
-    // Event für den "Erfolge" Button im Hub binden
     const openAchBtn = document.getElementById('open-achievements-btn');
     if (openAchBtn) {
       openAchBtn.addEventListener('click', () => {
@@ -162,11 +170,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    // Hub-Button für Meisterwerkstatt (wird im HTML benötigt)
     const hubCraftingBtn = document.getElementById('hub-crafting');
     if (hubCraftingBtn) {
       hubCraftingBtn.addEventListener('click', () => {
         eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
+      });
+    }
+
+    // --- NEU: LEADERBOARD BUTTON ---
+    const leaderboardBtn = document.getElementById('hub-leaderboard');
+    if (leaderboardBtn) {
+      leaderboardBtn.addEventListener('click', () => {
+        eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
       });
     }
 
@@ -189,11 +204,98 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, () => saveGame());
   eventBus.subscribe(EVENTS.FORGE_CRAFTED, () => saveGame());
-  eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, () => saveGame()); // NEU
+  eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, () => saveGame());
   eventBus.subscribe(EVENTS.HERO_PRESTIGE, () => saveGame());
   eventBus.subscribe(EVENTS.ACHIEVEMENT_CLAIMED, () => saveGame());
   eventBus.subscribe(EVENTS.EXPEDITION_STARTED, () => saveGame());
   eventBus.subscribe(EVENTS.SETTINGS_UPDATED, () => startAutosave());
+
+  // --- NEU: LEADERBOARD UPDATES ---
+
+  // Bei Boss-Sieg
+  eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, (data) => {
+    if (context.leaderboardManager) {
+      const boss = data.boss;
+      const chapter = context.hero.getChapter();
+      const timeSincePrestige = context.hero._prestigeStartTime
+        ? (Date.now() - context.hero._prestigeStartTime) / 1000
+        : 0;
+      context.leaderboardManager.updateBossDefeated(boss.id, timeSincePrestige, chapter);
+    }
+  });
+
+  // Bei Prestige
+  eventBus.subscribe(EVENTS.HERO_PRESTIGE, (data) => {
+    if (context.leaderboardManager) {
+      const timeSinceLastPrestige = data.timeSinceLastPrestige || 0;
+      context.leaderboardManager.updatePrestige(data.prestigeLevel, timeSinceLastPrestige);
+    }
+  });
+
+  // Bei Level-Up (wird über hero:updated getriggert)
+  let lastLeaderboardLevel = context.hero.level;
+  eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
+    if (context.leaderboardManager && context.hero.level > lastLeaderboardLevel) {
+      const timePerLevel = 0; // Kann später berechnet werden
+      context.leaderboardManager.updateHero(context.hero.level, timePerLevel);
+      lastLeaderboardLevel = context.hero.level;
+    }
+  });
+
+  // Bei Crafting
+  eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, (data) => {
+    if (context.leaderboardManager && data.quality !== undefined) {
+      const level = context.craftingManager ? context.craftingManager.craftingLevel : 0;
+      context.leaderboardManager.updateCrafting(level, data.quality, data.quality >= 90);
+    }
+  });
+
+  // Bei Expedition
+  eventBus.subscribe(EVENTS.EXPEDITION_COMPLETE, (data) => {
+    if (context.leaderboardManager) {
+      context.leaderboardManager.updateExpedition(data.success);
+    }
+  });
+
+  // Bei Achievements
+  eventBus.subscribe(EVENTS.ACHIEVEMENT_UNLOCKED, () => {
+    if (context.leaderboardManager && context.achievementManager) {
+      const count = context.achievementManager.getAchievements().filter(a => a.achieved).length;
+      context.leaderboardManager.updateAchievements(count);
+    }
+  });
+
+  // Ressourcen-Update für Spitzenwerte (alle 5 Sekunden)
+  let lastResourceUpdate = 0;
+  eventBus.subscribe(EVENTS.GAME_RENDER_TICK, (data) => {
+    if (context.leaderboardManager && context.resourceManager) {
+      const now = Date.now();
+      if (now - lastResourceUpdate > 5000) {
+        const res = context.resourceManager.getResources();
+        const ps = res.particles / 5; // Partikel pro Sekunde über 5 Sekunden
+        const rs = res.relics / 5;
+        context.leaderboardManager.updateResources(ps, rs, res.totalParticles, res.totalRelics);
+        lastResourceUpdate = now;
+      }
+    }
+  });
+
+  // Spielzeit
+  let playTimeAccumulator = 0;
+  eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, (data) => {
+    if (context.leaderboardManager && context.gameStateManager.getState() === 'running') {
+      playTimeAccumulator += data.delta / 1000;
+      if (playTimeAccumulator >= 60) {
+        context.leaderboardManager.updatePlayTime(Math.floor(playTimeAccumulator));
+        playTimeAccumulator = 0;
+      }
+    }
+  });
+
+  // Session-Count beim ersten Laden
+  if (context.leaderboardManager) {
+    context.leaderboardManager.incrementSession();
+  }
 
   async function loadGame() {
     const saveData = await SaveGameManager.loadGame();
@@ -268,7 +370,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnHubSkills: document.getElementById('hub-skills'),
     btnHubChallenges: document.getElementById('hub-challenges'),
     btnHubLibrary: document.getElementById('hub-library'),
-    btnHubCrafting: document.getElementById('hub-crafting'), // NEU
+    btnHubCrafting: document.getElementById('hub-crafting'),
+    btnHubLeaderboard: document.getElementById('hub-leaderboard'), // NEU
     btnHubBack: document.getElementById('hub-back-to-menu'),
     btnBackToHub: document.getElementById('back-to-hub-btn'),
     btnOptionsBack: document.getElementById('options-back-btn'),
@@ -304,18 +407,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.challengeManager.fromJSON({ activeChallenge: null, completedChallenges: [] });
       context.questManager.fromJSON({ questIndex: 0, dailyQuests: { date: '', gatherClicks: 0, expeditions: 0, craftedItems: 0, claimed: [] } });
       context.tutorialManager.fromJSON({ completed: false });
-      context.craftingManager.fromJSON({}); // NEU
+      context.craftingManager.fromJSON({});
+      context.leaderboardManager.fromJSON({}); // NEU
 
       eventBus.publish(EVENTS.HERO_UPDATED);
 
       startAutosave();
       navController.showHub();
       context.tutorialManager.start();
+
+      // Leaderboard Session increment
+      if (context.leaderboardManager) {
+        context.leaderboardManager.incrementSession();
+      }
     },
     onHardReset: async () => {
       if (saveTimer) clearInterval(saveTimer);
       if (context.gameLoop.isRunning()) context.gameLoop.stop();
       await SaveGameManager.deleteSaveGame();
+      if (context.leaderboardManager) {
+        context.leaderboardManager.reset();
+      }
       location.reload();
     },
     onGameStart: () => {
@@ -333,6 +445,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (navElements.btnHubCrafting) {
     navElements.btnHubCrafting.addEventListener('click', () => {
       eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
+    });
+  }
+  if (navElements.btnHubLeaderboard) {
+    navElements.btnHubLeaderboard.addEventListener('click', () => {
+      eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
     });
   }
 

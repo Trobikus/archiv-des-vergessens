@@ -27,10 +27,10 @@ export const EVENTS = {
     STORY_BOSS_DEFEATED: 'story:bossDefeated',
     STORY_UPDATED: 'story:updated',
 
-    // === FORGE (alte Schmiede) ===
+    // === FORGE ===
     FORGE_CRAFTED: 'forge:crafted',
 
-    // === CRAFTING (neue Meisterwerkstatt) ===
+    // === CRAFTING ===
     CRAFTING_MASTERWORK: 'crafting:masterwork',
     UI_OPEN_CRAFTING: 'ui:openCrafting',
 
@@ -70,5 +70,9 @@ export const EVENTS = {
     // === COMMANDS ===
     CMD_SPAWN_FLOAT_TEXT: 'cmd:spawnFloatText',
     CMD_HERO_ADD_BASE_STAT: 'cmd:hero:addBaseStat',
-    CMD_FORGE_SALVAGE: 'cmd:forge:salvage'
+    CMD_FORGE_SALVAGE: 'cmd:forge:salvage',
+
+    // === LEADERBOARD ===
+    UI_OPEN_LEADERBOARD: 'ui:openLeaderboard',
+    LEADERBOARD_UPDATED: 'leaderboard:updated'
 };

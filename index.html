@@ -59,7 +59,7 @@
 
     <!-- ===== OPTIONEN ===== -->
     <div id="options-container" class="center-layout fade-in" style="display: none;">
-      <div class="glass-panel" style="padding: 3rem; width: 500px; max-width: 90vw;">
+      <div class="glass-panel" style="padding: 3rem; width: 550px; max-width: 90vw;">
         <h2 class="glow-text text-center">EINSTELLUNGEN</h2>
         <div class="hub-subtitle text-center">Passe das Archiv an deine Bedürfnisse an</div>
 
@@ -72,6 +72,38 @@
           <div class="option-row flex-between mb-2">
             <span class="option-label text-muted">Floating-Text (Ressourcen)</span>
             <span class="option-control"><input type="checkbox" id="opt-floating" checked></span>
+          </div>
+
+          <h3 class="options-header mt-2">Audio</h3>
+          <div class="option-row flex-between mb-1">
+            <span class="option-label text-muted">Musik & Soundeffekte</span>
+            <span class="option-control"><button id="opt-audio-toggle" class="glass-btn btn-small">🔊
+                Aktiv</button></span>
+          </div>
+          <div class="option-row flex-between mb-1">
+            <span class="option-label text-muted">Musik-Lautstärke</span>
+            <span class="option-control"><input type="range" id="opt-music-volume" min="0" max="100" value="40"
+                style="width:120px;"></span>
+          </div>
+          <div class="option-row flex-between mb-2">
+            <span class="option-label text-muted">Soundeffekt-Lautstärke</span>
+            <span class="option-control"><input type="range" id="opt-sfx-volume" min="0" max="100" value="60"
+                style="width:120px;"></span>
+          </div>
+          
+          <h3 class="options-header mt-2">Cloud & Synchronisation</h3>
+          <div class="option-row flex-between mb-1">
+            <span class="option-label text-muted">Cloud-Sync aktivieren</span>
+            <span class="option-control"><input type="checkbox" id="opt-cloud-enabled"></span>
+          </div>
+          <div class="option-row flex-between mb-1">
+            <span class="option-label text-muted">Letzter Sync</span>
+            <span class="option-control text-muted text-sm" id="opt-cloud-last-sync">Nie</span>
+          </div>
+          <div class="option-row flex-between mb-2">
+            <span class="option-label text-muted">Manuell synchronisieren</span>
+            <span class="option-control"><button id="opt-cloud-sync-btn" class="glass-btn btn-small">☁️ Jetzt
+                sichern</button></span>
           </div>
 
           <h3 class="options-header mt-2">System</h3>
@@ -122,6 +154,11 @@
         <button class="hub-btn glass-btn" id="hub-crafting">
           <span class="icon">🏭</span><span class="cinzel text-lg">Meisterwerkstatt</span><span class="label">Komplexes
             Crafting</span>
+        </button>
+        <button class="hub-btn glass-btn" id="hub-leaderboard">
+          <span class="icon">🏆</span>
+          <span class="cinzel text-lg">Bestenliste</span>
+          <span class="label">Persönliche Rekorde</span>
         </button>
         <button class="hub-btn glass-btn" id="hub-library" style="display: none;">
           <span class="icon">📚</span><span class="cinzel text-lg">Bibliothek</span><span class="label">Endlose
@@ -263,7 +300,7 @@
               id="expedition-success-chance"></span></div>
           <div class="flex-between"><span class="text-muted">Dauer:</span><span id="expedition-duration"></span></div>
         </div>
-        
+
         <div id="expedition-progress-container" class="mt-1">
           <div class="progress-bar-container">
             <div class="progress-bar-fill" id="expedition-progress-fill"></div>
@@ -315,6 +352,9 @@
             </div>
             <div id="hero-exp" class="text-sm text-center text-muted mb-1 w-100"
               style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;"></div>
+
+            <!-- Statpunkte-Anzeige -->
+            <div id="hero-stat-points" class="w-100 mb-1"></div>
 
             <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-bottom: 0.5rem;">Attribute</h3>
             <div class="stats-grid w-100 pr-1" style="overflow-y: auto; max-height: 200px;" id="hero-stats"></div>
@@ -373,34 +413,36 @@
             Die Erwachenden</div>
           <button id="story-next-chapter" class="glass-btn btn-small">►</button>
         </div>
-<!-- Boss-Liste -->
-<div id="story-content-area" style="position: relative; min-height: 220px; flex: 1; overflow: hidden;" class="mt-1">
-  <div id="story-boss-list" class="modal-scroll-area" style="max-height: 220px; padding-right: 0.3rem;"></div>
-  <!-- Gesperrter Overlay -->
-  <div id="story-locked-overlay" class="glass-inner-panel"
+
+        <!-- Boss-Liste -->
+        <div id="story-content-area" style="position: relative; min-height: 220px; flex: 1; overflow: hidden;" class="mt-1">
+          <div id="story-boss-list" class="modal-scroll-area" style="max-height: 220px; padding-right: 0.3rem;"></div>
+          <!-- Gesperrter Overlay -->
+          <div id="story-locked-overlay" class="glass-inner-panel"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">
             <div class="text-gold" style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
             <div class="cinzel text-lg text-muted">KAPITEL GESPERRT</div>
             <div class="text-sm text-muted mt-1">Besiege die Bosse des vorherigen Kapitels.</div>
           </div>
         </div>
-<!-- Aktueller Boss & Kampf -->
-<div id="story-current-boss" class="glass-inner-panel mt-1" style="padding: 1.2rem;">
-  <div class="text-muted text-sm text-center mb-1" style="letter-spacing: 1px;">AKTUELLES ZIEL</div>
-  <div id="story-current-boss-name" class="cinzel text-danger glow-text text-center text-lg mb-1"
-    style="font-size: 1.3rem;"></div>
-  <div class="boss-stats-grid flex-between mb-1"
-    style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center;">
-    <div><span class="text-muted text-sm">❤️ HP</span><br><span id="story-boss-hp"
-        class="text-highlight text-bold">-</span></div>
-    <div><span class="text-muted text-sm">⚔️ Angriff</span><br><span id="story-boss-atk"
-        class="text-danger text-bold">-</span></div>
-    <div><span class="text-muted text-sm">🛡️ Verteidigung</span><br><span id="story-boss-def"
-        class="text-blue text-bold">-</span></div>
-  </div>
-  <div id="story-fight-result" class="text-center mb-1" style="min-height: 1.8rem;"></div>
-  <button id="story-fight-btn" class="glass-btn primary w-100"
-    style="padding: 0.9rem; font-size: 1.1rem; letter-spacing: 1px;">⚔️ Bosskampf starten</button>
+
+        <!-- Aktueller Boss & Kampf -->
+        <div id="story-current-boss" class="glass-inner-panel mt-1" style="padding: 1.2rem;">
+          <div class="text-muted text-sm text-center mb-1" style="letter-spacing: 1px;">AKTUELLES ZIEL</div>
+          <div id="story-current-boss-name" class="cinzel text-danger glow-text text-center text-lg mb-1"
+            style="font-size: 1.3rem;"></div>
+          <div class="boss-stats-grid flex-between mb-1"
+            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; text-align: center;">
+            <div><span class="text-muted text-sm">❤️ HP</span><br><span id="story-boss-hp"
+                class="text-highlight text-bold">-</span></div>
+            <div><span class="text-muted text-sm">⚔️ Angriff</span><br><span id="story-boss-atk"
+                class="text-danger text-bold">-</span></div>
+            <div><span class="text-muted text-sm">🛡️ Verteidigung</span><br><span id="story-boss-def"
+                class="text-blue text-bold">-</span></div>
+          </div>
+          <div id="story-fight-result" class="text-center mb-1" style="min-height: 1.8rem;"></div>
+          <button id="story-fight-btn" class="glass-btn primary w-100"
+            style="padding: 0.9rem; font-size: 1.1rem; letter-spacing: 1px;">⚔️ Bosskampf starten</button>
         </div>
       </div>
     </div>
@@ -434,10 +476,10 @@
         <button class="modal-close" id="crafting-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text text-gold cinzel text-center">🏭 Meisterwerkstatt</h2>
         <div class="text-muted text-sm text-center mb-1">Hier schmiedest du die mächtigsten Artefakte.</div>
-    
+
         <div id="crafting-resources" class="glass-inner-panel mb-1"></div>
         <div id="crafting-skill" class="glass-inner-panel mb-1"></div>
-    
+
         <div id="crafting-recipes" class="modal-scroll-area" style="max-height: 40vh;"></div>
         <div id="crafting-result" class="text-center mt-1 text-bold"></div>
       </div>
@@ -546,7 +588,19 @@
         <button id="offline-close-btn" class="glass-btn primary w-100">Archiv betreten</button>
       </div>
     </div>
-
+    <!-- LEADERBOARD MODAL (Persönliche Bestenliste) -->
+    <div id="leaderboard-overlay" class="modal-overlay" style="display: none;">
+      <div id="leaderboard-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw;">
+        <button class="modal-close" id="leaderboard-close" aria-label="Schließen">&times;</button>
+        <h2 class="modal-title glow-text cinzel text-center">🏆 Persönliche Bestenliste</h2>
+        <div class="hub-subtitle text-center mb-1">Deine Rekorde – gespeichert in deinem Browser</div>
+    
+        <div id="leaderboard-container" class="modal-scroll-area" style="max-height: 50vh;"></div>
+    
+        <button id="leaderboard-reset-btn" class="glass-btn btn-danger btn-small mt-2"
+          style="display: none; margin: 0 auto;">Rekorde zurücksetzen</button>
+        </div>
+        </div>
     <!-- PREACT ROOT CONTAINER -->
     <div id="preact-root"></div>
 

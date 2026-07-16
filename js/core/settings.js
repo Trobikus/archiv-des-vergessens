@@ -1,3 +1,5 @@
+// --- START OF FILE core/settings.js ---
+
 import { EVENTS } from './events.js';
 
 export default class SettingsManager {
@@ -7,7 +9,12 @@ export default class SettingsManager {
     this.settings = {
       particles: true,
       floatingText: true,
-      autosave: 15000
+      autosave: 15000,
+      music: true,
+      sfx: true,
+      volume: 0.7,
+      cloudEnabled: true,
+      cloudInterval: 60000
     };
     this.load();
   }

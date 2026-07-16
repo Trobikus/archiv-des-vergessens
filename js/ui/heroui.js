@@ -1,4 +1,4 @@
-// --- START OF FILE heroui.js ---
+// --- START OF FILE ui/heroui.js ---
 
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
@@ -26,6 +26,7 @@ export default class HeroUI extends BaseModalUI {
     this.heroLevel = document.getElementById('hero-level');
     this.heroExp = document.getElementById('hero-exp');
     this.heroStats = document.getElementById('hero-stats');
+    this.heroStatPoints = document.getElementById('hero-stat-points');
     this.prestigeButton = document.getElementById('hero-prestige-btn');
     this.dailyButton = document.getElementById('hero-daily-btn');
 
@@ -183,13 +184,35 @@ export default class HeroUI extends BaseModalUI {
       this.hero.equipment[previewItem.slot] = oldItem;
     }
 
-    let html = '';
-
-    if (this.hero.unspentStatPoints > 0) {
-      html += `<div class="text-gold glow-text text-bold mb-1 glass-inner-panel" style="background: rgba(212,175,55,0.08); border-color: var(--color-gold); padding: 0.5rem; text-align: center; font-family: var(--font-header);">
-          ✨ ${this.hero.unspentStatPoints} PUNKTE VERFÜGBAR ✨
-      </div>`;
+    // --- GOLDENER BALKEN FÜR STATPUNKTE (als Hintergrund des Containers) ---
+    if (this.heroStatPoints) {
+      if (this.hero.unspentStatPoints > 0) {
+        // Setze den Hintergrund und die Umrandung auf den Container
+        this.heroStatPoints.style.background = 'rgba(212, 175, 55, 0.08)';
+        this.heroStatPoints.style.border = '1px solid var(--color-gold)';
+        this.heroStatPoints.style.borderRadius = 'var(--border-radius-sm)';
+        this.heroStatPoints.style.padding = '0.5rem';
+        this.heroStatPoints.style.textAlign = 'center';
+        this.heroStatPoints.style.fontFamily = 'var(--font-header)';
+        this.heroStatPoints.innerHTML = `
+          <span class="text-gold glow-text text-bold" style="font-size: 1.1rem;">
+            ✨ ${this.hero.unspentStatPoints} PUNKTE VERFÜGBAR ✨
+          </span>
+        `;
+      } else {
+        // Container zurücksetzen
+        this.heroStatPoints.style.background = '';
+        this.heroStatPoints.style.border = '';
+        this.heroStatPoints.style.borderRadius = '';
+        this.heroStatPoints.style.padding = '';
+        this.heroStatPoints.style.textAlign = '';
+        this.heroStatPoints.style.fontFamily = '';
+        this.heroStatPoints.innerHTML = '';
+      }
     }
+
+    // --- ATTRIBUTS-LISTE (im scrollbaren Container) ---
+    let html = '';
 
     const attrConfig = [
       { key: 'attack', label: '⚔️ Stärke' },
