@@ -1,6 +1,33 @@
-// --- START OF FILE core/savegame.js ---
-
 import RNG from '../utils/rng.js';
+
+const MIGRATIONS = {
+  '1.1': (data) => {
+    if (!data.hero) data.hero = {};
+    if (!data.hero.unlockedSkills) data.hero.unlockedSkills = [];
+    return data;
+  },
+  '1.2': (data) => {
+    if (data.resources && data.resources.memoryDust === undefined) {
+      data.resources.memoryDust = 0;
+    }
+    return data;
+  },
+  '1.3': (data) => {
+    if (data.resources && data.resources.timeBank === undefined) {
+      data.resources.timeBank = 0;
+    }
+    return data;
+  }
+};
+
+const LATEST_VERSION = '1.3';
+
+function getNextVersion(version) {
+  const versions = Object.keys(MIGRATIONS).sort();
+  const index = versions.indexOf(version);
+  if (index === -1 || index === versions.length - 1) return null;
+  return versions[index + 1];
+}
 
 export default class SaveGameManager {
   static DB_NAME = 'ArchivDB';
@@ -31,7 +58,7 @@ export default class SaveGameManager {
       const db = await this._getDB();
       const saveData = {
         timestamp: Date.now(),
-        version: '1.5',
+        version: LATEST_VERSION,
         rngSeed: RNG.getSeed()
       };
 
@@ -65,30 +92,57 @@ export default class SaveGameManager {
 
       if (!saveData) return null;
 
-      if (saveData.rngSeed) {
-        RNG.setSeed(saveData.rngSeed);
+      let data = saveData;
+      const currentVersion = data.version || '1.0';
+      if (currentVersion !== LATEST_VERSION) {
+        data = this._migrate(data, currentVersion);
+        data.version = LATEST_VERSION;
+        await this.saveGame();
+      }
+
+      if (data.rngSeed !== undefined) {
+        RNG.setSeed(data.rngSeed);
+      } else {
+        RNG.setSeed(Math.floor(Math.random() * 2147483647));
       }
 
       for (const [key, manager] of Object.entries(this.managers)) {
-        if (saveData[key] && manager.fromJSON) {
+        if (data[key] && manager.fromJSON) {
           try {
-            manager.fromJSON(saveData[key]);
+            manager.fromJSON(data[key]);
           } catch (e) {
             console.error(`[SaveGame] Fehler beim Parsen von ${key}:`, e);
-            // Manager zurücksetzen, falls Fehler auftritt
-            try {
-              if (manager.reset) manager.reset();
-            } catch (resetErr) {
-              console.error(`[SaveGame] Fehler beim Reset von ${key}:`, resetErr);
-            }
+            if (manager.reset) manager.reset();
           }
         }
       }
-      return saveData;
+      return data;
     } catch (error) {
       console.error('[SaveGame] Fehler beim Laden:', error);
       return null;
     }
+  }
+
+  static _migrate(data, fromVersion) {
+    let current = fromVersion;
+    let migratedData = { ...data };
+    while (current && current !== LATEST_VERSION) {
+      const next = getNextVersion(current);
+      if (!next) break;
+      const migrationFn = MIGRATIONS[next];
+      if (migrationFn) {
+        try {
+          migratedData = migrationFn(migratedData);
+          current = next;
+        } catch (e) {
+          console.error(`[SaveGame] Migration von ${current} nach ${next} fehlgeschlagen:`, e);
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    return migratedData;
   }
 
   static async hasSaveGame() {
@@ -101,7 +155,9 @@ export default class SaveGameManager {
         req.onsuccess = () => resolve(req.result > 0);
         req.onerror = () => resolve(false);
       });
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 
   static async deleteSaveGame() {
@@ -113,6 +169,8 @@ export default class SaveGameManager {
         const req = store.delete(this.SAVE_KEY);
         req.onsuccess = () => resolve(true);
       });
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 }

@@ -1,5 +1,6 @@
-// --- START OF FILE quests.js ---
-
+// ============================================================
+// FILE: managers/quests.js – mit Prestige-Reset
+// ============================================================
 import { EVENTS } from '../core/events.js';
 import { MAIN_QUESTS_DATA, DAILY_QUESTS_DATA } from '../data/quests.js';
 
@@ -23,8 +24,6 @@ export default class QuestManager {
     this.eventBus.subscribe(EVENTS.CLAN_MEMBERS_UPDATED, () => this.checkCurrentQuest());
     this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => this.checkCurrentQuest());
     this.eventBus.subscribe(EVENTS.QUEST_CHECK, () => this.checkCurrentQuest());
-
-    // Abonniert das Start-Event von Expeditionen, um Quest 3 sofort auszuwerten
     this.eventBus.subscribe(EVENTS.EXPEDITION_STARTED, () => this.checkCurrentQuest());
 
     this.eventBus.subscribe(EVENTS.QUEST_MANUAL_GATHER, () => {
@@ -43,12 +42,21 @@ export default class QuestManager {
       this.checkCurrentQuest();
     });
 
-    // Initiale Überprüfung beim Spielstart
     setTimeout(() => this.checkCurrentQuest(), 100);
   }
 
   _onPrestige() {
     this.questIndex = 0;
+    const today = new Date().toISOString().split('T')[0];
+    this.dailyQuests = {
+      date: today,
+      gatherClicks: 0,
+      expeditions: 0,
+      craftedItems: 0,
+      claimed: []
+    };
+    this.eventBus.publish(EVENTS.QUEST_UPDATED);
+    this.eventBus.publish(EVENTS.UI_REFRESH_QUEST);
   }
 
   _checkDailyReset() {

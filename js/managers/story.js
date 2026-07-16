@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: managers/story.js – vollständig mit Kampfabbruch
+// ============================================================
 import { generateStoryBosses } from '../data/bosses.js';
 import { ITEM_TEMPLATES } from '../data/items.js';
 import { Item } from '../models/item.js';
@@ -11,11 +14,33 @@ export default class StoryManager {
     this.bosses = generateStoryBosses();
     this.battleInProgress = false;
     this.battle = null;
-    
+
     this.autoBossTimer = 0;
     this.battleTimer = 0;
-    
+
+    this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, this._onPrestige.bind(this));
+    this.eventBus.subscribe(EVENTS.GAME_STATE_CHANGED, this._onStateChanged.bind(this));
     this.eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, this._onTick.bind(this));
+  }
+
+  _onPrestige() {
+    this._abortBattle();
+  }
+
+  _onStateChanged(data) {
+    if (data.newState === 'running' && this.battleInProgress) {
+      this._abortBattle();
+    }
+  }
+
+  _abortBattle() {
+    if (this.battleInProgress) {
+      this.battleInProgress = false;
+      this.battle = null;
+      this.battleTimer = 0;
+      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: '⚔️ Kampf wurde abgebrochen.', type: 'system' });
+      this.eventBus.publish(EVENTS.STORY_UPDATED);
+    }
   }
 
   getCurrentBoss() {
@@ -45,7 +70,7 @@ export default class StoryManager {
 
   startBossFight() {
     if (this.battleInProgress) return;
-    
+
     const boss = this.getCurrentBoss();
     if (!boss) return;
 
@@ -55,12 +80,12 @@ export default class StoryManager {
 
     const cStats = this.hero.getCombatStats();
     let heroDamageMultiplier = this.hero.unlockedSkills.includes('warrior_2') ? 1.2 : 1;
-    
+
     const bossDamageReduction = boss.defense / (boss.defense + 100);
-    
+
     let baseHeroDamage = (cStats.attack * heroDamageMultiplier) * (1 - bossDamageReduction);
     let expectedHeroDamage = Math.max(1, baseHeroDamage * (1 + (cStats.critChance / 100) * ((cStats.critDamage / 100) - 1)));
-    
+
     let baseBossDamage = boss.attack * (1 - cStats.damageReduction);
     let expectedBossDamage = Math.max(1, baseBossDamage * (1 - (cStats.dodgeChance / 100)));
 
@@ -69,7 +94,7 @@ export default class StoryManager {
 
     const victory = roundsToKillBoss <= roundsToKillHero;
     let rounds = victory ? roundsToKillBoss : roundsToKillHero;
-    
+
     let bossHP = victory ? 0 : Math.max(0, Math.floor(boss.hp - (rounds * expectedHeroDamage)));
     let heroHP = victory ? Math.max(0, Math.floor(cStats.maxHp - (rounds * expectedBossDamage))) : 0;
 
@@ -81,7 +106,7 @@ export default class StoryManager {
     if (!this.battle) return;
     const boss = this.battle.boss;
     this.battleInProgress = false;
-    this.autoBossTimer = 0; 
+    this.autoBossTimer = 0;
 
     this.eventBus.publish(EVENTS.STORY_BATTLE_RESULT, { victory, boss });
 
@@ -112,9 +137,9 @@ export default class StoryManager {
     } else {
       this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `💀 Niederlage gegen ${boss.name}... Verbessere deine Ausrüstung!`, type: 'system' });
     }
-    
+
     this.battle = null;
-    this.eventBus.publish(EVENTS.STORY_UPDATED); 
+    this.eventBus.publish(EVENTS.STORY_UPDATED);
   }
 
   startBossFromHub() {

@@ -1,3 +1,6 @@
+// ============================================================
+// FILE: managers/forge.js (FIXED: RNG wird korrekt verwendet)
+// ============================================================
 import { Item } from '../models/item.js';
 import { FORGE_RECIPES } from '../data/recipes.js';
 import { EVENTS } from '../core/events.js';
@@ -8,7 +11,7 @@ export default class ForgeManager {
     this.eventBus = eventBus;
     this.hero = hero;
     this.resourceManager = resourceManager;
-    this.libraryManager = null; 
+    this.libraryManager = null;
 
     this.eventBus.subscribe(EVENTS.CMD_FORGE_SALVAGE, this._onSalvageCommand.bind(this));
   }
@@ -20,9 +23,9 @@ export default class ForgeManager {
   getRecipeCost(recipe) {
     let multiplier = this.hero.unlockedSkills.includes('scholar_1') ? 0.9 : 1;
     if (this.libraryManager) {
-        multiplier -= this.libraryManager.getBonus('forge_discount');
+      multiplier -= this.libraryManager.getBonus('forge_discount');
     }
-    multiplier = Math.max(0.1, multiplier); 
+    multiplier = Math.max(0.1, multiplier);
 
     return {
       particles: recipe.cost.particles ? Math.floor(recipe.cost.particles * multiplier) : 0,
@@ -51,8 +54,8 @@ export default class ForgeManager {
     if (cost.relics) this.resourceManager.removeRelics(cost.relics);
     if (cost.artifacts) this.resourceManager.removeArtifacts(cost.artifacts);
 
-    // NEU: Nutzt Seeded RNG gegen Save-Scumming
-    const roll = RNG.random();
+    // ---------- SEEDED RNG ----------
+    const roll = RNG.next(); // ← verwendet den gespeicherten Seed
     let rarity = 'common';
     let statMult = 1.0;
     const isMasterpiece = recipe.id === 'craft_master';
@@ -63,18 +66,18 @@ export default class ForgeManager {
     else if (roll > (isMasterpiece ? 0.00 : 0.40)) { rarity = 'uncommon'; statMult = 1.3; }
 
     const slots = ['weapon', 'armor', 'amulet', 'ring'];
-    const finalSlot = recipe.slot === 'random' ? slots[Math.floor(RNG.random() * slots.length)] : recipe.slot;
+    const finalSlot = recipe.slot === 'random' ? slots[Math.floor(RNG.next() * slots.length)] : recipe.slot;
 
     let stats = { attack: 0, defense: 0, agility: 0, stamina: 0 };
     const basePower = isMasterpiece ? 8 : 4;
-    const power = Math.floor(basePower * statMult) + Math.floor(RNG.random() * 3);
+    const power = Math.floor(basePower * statMult) + Math.floor(RNG.next() * 3);
 
     if (finalSlot === 'weapon') {
       stats.attack = power + 2;
-      if (RNG.random() > 0.5) stats.agility = Math.floor(power / 2);
+      if (RNG.next() > 0.5) stats.agility = Math.floor(power / 2);
     } else if (finalSlot === 'armor') {
       stats.defense = power + 2;
-      if (RNG.random() > 0.5) stats.stamina = Math.floor(power / 2);
+      if (RNG.next() > 0.5) stats.stamina = Math.floor(power / 2);
     } else if (finalSlot === 'amulet') {
       stats.attack = Math.floor(power / 1.5);
       stats.stamina = Math.floor(power / 1.5);
@@ -87,7 +90,7 @@ export default class ForgeManager {
     let newItem;
     if (recipe.id === 'craft_prestige') {
       const prestigeItems = this.hero.getUnlockedPrestigeItems();
-      const selected = prestigeItems[Math.floor(RNG.random() * prestigeItems.length)];
+      const selected = prestigeItems[Math.floor(RNG.next() * prestigeItems.length)];
       if (!selected) return { success: false, message: 'Keine Prestige-Gegenstände verfügbar.' };
       newItem = new Item(selected.name, selected.slot, selected.rarity, { ...selected.baseStats }, selected.description, false, 1);
     } else {
@@ -98,12 +101,12 @@ export default class ForgeManager {
     }
 
     if (rarity === 'common' && this.hero.unlockedSkills.includes('auto_salvage')) {
-        const dustAmount = 1 * newItem.level;
-        this.resourceManager.addMemoryDust(dustAmount);
-        this.hero._craftedRecipeCount = (this.hero._craftedRecipeCount || 0) + 1;
-        this.eventBus.publish(EVENTS.FORGE_CRAFTED, { recipe, item: newItem });
-        this.eventBus.publish(EVENTS.HERO_UPDATED);
-        return { success: true, item: newItem, message: `Automatisch zu Staub verwertet: ${newItem.name}` };
+      const dustAmount = 1 * newItem.level;
+      this.resourceManager.addMemoryDust(dustAmount);
+      this.hero._craftedRecipeCount = (this.hero._craftedRecipeCount || 0) + 1;
+      this.eventBus.publish(EVENTS.FORGE_CRAFTED, { recipe, item: newItem });
+      this.eventBus.publish(EVENTS.HERO_UPDATED);
+      return { success: true, item: newItem, message: `Automatisch zu Staub verwertet: ${newItem.name}` };
     }
 
     this.hero.addEquipmentItem(newItem);

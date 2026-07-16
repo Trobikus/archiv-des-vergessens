@@ -1,5 +1,6 @@
-// --- START OF FILE achievements.js ---
-
+// ============================================================
+// FILE: managers/achievements.js – mit Prestige-Reset
+// ============================================================
 import { EVENTS } from '../core/events.js';
 
 export default class AchievementManager {
@@ -14,6 +15,18 @@ export default class AchievementManager {
     this.eventBus.subscribe(EVENTS.FORGE_CRAFTED, () => this._checkProgress());
     this.eventBus.subscribe(EVENTS.EXPEDITION_COMPLETE, () => this._checkProgress());
     this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => this._checkProgress());
+    this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, () => this._onPrestige());
+  }
+
+  _onPrestige() {
+    for (const ach of this.achievements) {
+      if (!ach.claimed && ach.achieved) continue;
+      if (!ach.claimed) {
+        ach.progress = 0;
+        ach.achieved = false;
+      }
+    }
+    this._checkProgress();
   }
 
   _buildBaseAchievements() {

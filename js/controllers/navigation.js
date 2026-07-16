@@ -1,6 +1,8 @@
-// --- START OF FILE navigation.js ---
-
+// ============================================================
+// FILE: controllers/navigation.js – vollständig mit safeAddEventListener
+// ============================================================
 import { EVENTS } from '../core/events.js';
+import { safeAddEventListener } from '../ui/errorHandler.js';
 
 export default class NavigationController {
   constructor(context, elements, callbacks) {
@@ -18,105 +20,115 @@ export default class NavigationController {
   }
 
   bindEvents() {
-    this.elements.btnNewGame.addEventListener('click', () => {
+    safeAddEventListener(this.elements.btnNewGame, 'click', () => {
+      if (!this.elements.newGameModalOverlay) return;
       this.elements.newGameModalOverlay.style.display = 'flex';
-      this.elements.newGameInput.value = 'Der Mneme-Bund';
-      setTimeout(() => { this.elements.newGameInput.focus(); this.elements.newGameInput.select(); }, 100);
+      if (this.elements.newGameInput) {
+        this.elements.newGameInput.value = 'Der Mneme-Bund';
+        setTimeout(() => {
+          this.elements.newGameInput.focus();
+          this.elements.newGameInput.select();
+        }, 100);
+      }
     });
 
-    this.elements.newGameCancelBtn.addEventListener('click', () => {
-      this.elements.newGameModalOverlay.style.display = 'none';
+    safeAddEventListener(this.elements.newGameCancelBtn, 'click', () => {
+      if (this.elements.newGameModalOverlay) {
+        this.elements.newGameModalOverlay.style.display = 'none';
+      }
     });
 
-    this.elements.newGameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.elements.newGameStartBtn.click();
+    safeAddEventListener(this.elements.newGameInput, 'keypress', (e) => {
+      if (e.key === 'Enter' && this.elements.newGameStartBtn) {
+        this.elements.newGameStartBtn.click();
+      }
     });
 
-    this.elements.newGameStartBtn.addEventListener('click', () => {
-      const heroName = this.elements.newGameInput.value.trim() || 'Der Mneme-Bund';
-      this.elements.newGameModalOverlay.style.display = 'none';
+    safeAddEventListener(this.elements.newGameStartBtn, 'click', () => {
+      const heroName = this.elements.newGameInput?.value?.trim() || 'Der Mneme-Bund';
+      if (this.elements.newGameModalOverlay) {
+        this.elements.newGameModalOverlay.style.display = 'none';
+      }
       if (this.callbacks.onNewGame) this.callbacks.onNewGame(heroName);
     });
 
-    this.elements.btnContinue.addEventListener('click', () => {
+    safeAddEventListener(this.elements.btnContinue, 'click', () => {
       if (this.callbacks.onLoad) this.callbacks.onLoad();
     });
 
-    this.elements.btnOptions.addEventListener('click', () => this.showOptions());
-    this.elements.btnOptionsBack.addEventListener('click', () => this.showMenu());
-    this.elements.btnHubArchive.addEventListener('click', () => this.showGame());
+    safeAddEventListener(this.elements.btnOptions, 'click', () => this.showOptions());
+    safeAddEventListener(this.elements.btnOptionsBack, 'click', () => this.showMenu());
+    safeAddEventListener(this.elements.btnHubArchive, 'click', () => this.showGame());
 
-    this.elements.btnHubBack.addEventListener('click', () => {
+    safeAddEventListener(this.elements.btnHubBack, 'click', () => {
       if (this.callbacks.onSave) this.callbacks.onSave();
       this.showMenu();
     });
 
-    this.elements.btnBackToHub.addEventListener('click', () => {
+    safeAddEventListener(this.elements.btnBackToHub, 'click', () => {
       if (this.callbacks.onSave) this.callbacks.onSave();
       this.showHub();
     });
 
-    this.elements.btnOfflineClose.addEventListener('click', () => {
-      this.elements.offlineModalOverlay.style.display = 'none';
+    safeAddEventListener(this.elements.btnOfflineClose, 'click', () => {
+      if (this.elements.offlineModalOverlay) {
+        this.elements.offlineModalOverlay.style.display = 'none';
+      }
     });
 
-    this.elements.btnQuit.addEventListener('click', () => {
+    safeAddEventListener(this.elements.btnQuit, 'click', () => {
       if (confirm('Möchtest du das Spiel wirklich beenden?')) {
         if (this.callbacks.onSave) this.callbacks.onSave();
         window.close();
       }
     });
 
+    // Optionen
     const optParticles = document.getElementById('opt-particles');
-    if (optParticles) {
-      optParticles.addEventListener('change', (e) => {
-        this.settingsManager.set('particles', e.target.checked);
-      });
-    }
+    safeAddEventListener(optParticles, 'change', (e) => {
+      this.settingsManager.set('particles', e.target.checked);
+    });
 
     const optFloating = document.getElementById('opt-floating');
-    if (optFloating) {
-      optFloating.addEventListener('change', (e) => {
-        this.settingsManager.set('floatingText', e.target.checked);
-      });
-    }
+    safeAddEventListener(optFloating, 'change', (e) => {
+      this.settingsManager.set('floatingText', e.target.checked);
+    });
 
     const optAutosave = document.getElementById('opt-autosave');
-    if (optAutosave) {
-      optAutosave.addEventListener('change', (e) => {
-        this.settingsManager.set('autosave', e.target.value);
-      });
-    }
+    safeAddEventListener(optAutosave, 'change', (e) => {
+      this.settingsManager.set('autosave', e.target.value);
+    });
 
     const optHardReset = document.getElementById('opt-hard-reset');
-    if (optHardReset) {
-      optHardReset.addEventListener('click', async () => {
-        if (confirm('WARNUNG! Möchtest du deinen kompletten Spielstand UNWIDERRUFLICH löschen?')) {
-          if (this.callbacks.onHardReset) this.callbacks.onHardReset();
-        }
-      });
-    }
+    safeAddEventListener(optHardReset, 'click', async () => {
+      if (confirm('WARNUNG! Möchtest du deinen kompletten Spielstand UNWIDERRUFLICH löschen?')) {
+        if (this.callbacks.onHardReset) this.callbacks.onHardReset();
+      }
+    });
   }
 
   showMenu() {
-    this.elements.menuContainer.style.display = 'flex';
-    this.elements.hubContainer.style.display = 'none';
-    this.elements.optionsContainer.style.display = 'none';
-    this.elements.gameContainer.classList.remove('active');
-    this.elements.gameContainer.style.display = 'none';
+    if (this.elements.menuContainer) this.elements.menuContainer.style.display = 'flex';
+    if (this.elements.hubContainer) this.elements.hubContainer.style.display = 'none';
+    if (this.elements.optionsContainer) this.elements.optionsContainer.style.display = 'none';
+    if (this.elements.gameContainer) {
+      this.elements.gameContainer.classList.remove('active');
+      this.elements.gameContainer.style.display = 'none';
+    }
     if (this.gameLoop.isRunning()) this.gameLoop.stop();
     this.updateMenuButtons();
     this.eventBus.publish(EVENTS.UI_REFRESH_QUEST);
   }
 
   showHub() {
-    this.elements.menuContainer.style.display = 'none';
-    this.elements.hubContainer.style.display = 'flex';
-    this.elements.optionsContainer.style.display = 'none';
-    this.elements.gameContainer.classList.remove('active');
-    this.elements.gameContainer.style.display = 'none';
+    if (this.elements.menuContainer) this.elements.menuContainer.style.display = 'none';
+    if (this.elements.hubContainer) this.elements.hubContainer.style.display = 'flex';
+    if (this.elements.optionsContainer) this.elements.optionsContainer.style.display = 'none';
+    if (this.elements.gameContainer) {
+      this.elements.gameContainer.classList.remove('active');
+      this.elements.gameContainer.style.display = 'none';
+    }
 
-    // Game-Loop läuft im Hub weiter, damit die Wirtschaft aktiv bleibt
     if (!this.gameLoop.isRunning()) {
       this.gameStateManager.transitionTo('running');
       this.gameLoop.start();
@@ -129,11 +141,13 @@ export default class NavigationController {
   }
 
   showGame() {
-    this.elements.menuContainer.style.display = 'none';
-    this.elements.hubContainer.style.display = 'none';
-    this.elements.optionsContainer.style.display = 'none';
-    this.elements.gameContainer.classList.add('active');
-    this.elements.gameContainer.style.display = 'flex';
+    if (this.elements.menuContainer) this.elements.menuContainer.style.display = 'none';
+    if (this.elements.hubContainer) this.elements.hubContainer.style.display = 'none';
+    if (this.elements.optionsContainer) this.elements.optionsContainer.style.display = 'none';
+    if (this.elements.gameContainer) {
+      this.elements.gameContainer.classList.add('active');
+      this.elements.gameContainer.style.display = 'flex';
+    }
 
     if (!this.gameLoop.isRunning()) {
       this.gameStateManager.transitionTo('running');
@@ -146,11 +160,13 @@ export default class NavigationController {
   }
 
   showOptions() {
-    this.elements.menuContainer.style.display = 'none';
-    this.elements.hubContainer.style.display = 'none';
-    this.elements.gameContainer.classList.remove('active');
-    this.elements.gameContainer.style.display = 'none';
-    this.elements.optionsContainer.style.display = 'flex';
+    if (this.elements.menuContainer) this.elements.menuContainer.style.display = 'none';
+    if (this.elements.hubContainer) this.elements.hubContainer.style.display = 'none';
+    if (this.elements.gameContainer) {
+      this.elements.gameContainer.classList.remove('active');
+      this.elements.gameContainer.style.display = 'none';
+    }
+    if (this.elements.optionsContainer) this.elements.optionsContainer.style.display = 'flex';
 
     const optParticles = document.getElementById('opt-particles');
     const optFloating = document.getElementById('opt-floating');
@@ -170,11 +186,21 @@ export default class NavigationController {
   }
 
   updateUnfoldingGameplay() {
-    if (this.elements.btnHubArtifact) this.elements.btnHubArtifact.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none';
-    if (this.elements.btnHubLibrary) this.elements.btnHubLibrary.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none';
-    if (this.elements.btnHubRelic) this.elements.btnHubRelic.style.display = this.hero.bossProgress >= 3 ? 'flex' : 'none';
-    if (this.elements.btnHubSkills) this.elements.btnHubSkills.style.display = this.hero.prestigeLevel > 0 ? 'flex' : 'none';
-    if (this.elements.btnHubChallenges) this.elements.btnHubChallenges.style.display = this.hero.prestigeLevel > 0 ? 'flex' : 'none';
+    if (this.elements.btnHubArtifact) {
+      this.elements.btnHubArtifact.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none';
+    }
+    if (this.elements.btnHubLibrary) {
+      this.elements.btnHubLibrary.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none';
+    }
+    if (this.elements.btnHubRelic) {
+      this.elements.btnHubRelic.style.display = this.hero.bossProgress >= 3 ? 'flex' : 'none';
+    }
+    if (this.elements.btnHubSkills) {
+      this.elements.btnHubSkills.style.display = this.hero.prestigeLevel > 0 ? 'flex' : 'none';
+    }
+    if (this.elements.btnHubChallenges) {
+      this.elements.btnHubChallenges.style.display = this.hero.prestigeLevel > 0 ? 'flex' : 'none';
+    }
   }
 
   updateNotifications() {

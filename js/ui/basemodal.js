@@ -4,14 +4,25 @@ export default class BaseModalUI {
     this.overlay = document.getElementById(overlayId);
     this.closeBtn = document.getElementById(closeBtnId);
 
+    // Bindung zur einmaligen Listener-Zuweisung
+    this._boundClose = this.close.bind(this);
+    this._boundOverlayClick = this._onOverlayClick.bind(this);
+
+    this.initEventListeners();
+  }
+
+  initEventListeners() {
     if (this.closeBtn) {
-      this.closeBtn.addEventListener('click', () => this.close());
+      this.closeBtn.addEventListener('click', this._boundClose);
     }
-    
     if (this.overlay) {
-      this.overlay.addEventListener('click', (e) => {
-        if (e.target === this.overlay) this.close();
-      });
+      this.overlay.addEventListener('click', this._boundOverlayClick);
+    }
+  }
+
+  _onOverlayClick(e) {
+    if (e.target === this.overlay) {
+      this.close();
     }
   }
 
@@ -19,7 +30,7 @@ export default class BaseModalUI {
     if (!this.overlay) return;
     this.isOpen = true;
     this.overlay.style.display = 'flex';
-    this.overlay.classList.remove('hidden'); // Fallback für ältere CSS-Klassen
+    this.overlay.classList.remove('hidden');
     this.onOpen();
   }
 
@@ -31,7 +42,16 @@ export default class BaseModalUI {
     this.onClose();
   }
 
-  // Lifecycle Hooks für die Kind-Klassen (können überschrieben werden)
-  onOpen() {}
-  onClose() {}
+  onOpen() { }
+  onClose() { }
+
+  // Ermöglicht das permanente Zerstören bei vollständigem App-Teardown
+  destroy() {
+    if (this.closeBtn) {
+      this.closeBtn.removeEventListener('click', this._boundClose);
+    }
+    if (this.overlay) {
+      this.overlay.removeEventListener('click', this._boundOverlayClick);
+    }
+  }
 }

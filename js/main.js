@@ -1,4 +1,6 @@
-// --- START OF FILE main.js ---
+// ============================================================
+// FILE: main.js
+// ============================================================
 
 // --- CORE ---
 import EventBus from './core/eventbus.js';
@@ -7,6 +9,7 @@ import GameLoop from './core/gameloop.js';
 import GameStateManager from './core/gamestate.js';
 import SaveGameManager from './core/savegame.js';
 import DOMPool from './core/pool.js';
+import { DIContainer } from './core/di.js';
 import { EVENTS } from './core/events.js';
 import { CONFIG } from './core/config.js';
 import { formatNumber } from './utils/format.js';
@@ -41,6 +44,11 @@ import UIAnimations from './ui/animations.js';
 import StoryBranchManager from './core/StoryBranchManager.js';
 import CodexManager from './core/CodexManager.js';
 
+// --- PHASE 3: COMMUNITY FEATURES ---
+import GuildManager from './core/GuildManager.js';
+import FriendManager from './core/FriendManager.js';
+import ChatManager from './core/ChatManager.js';
+
 // --- UI ---
 import ClanUI from './ui/clanui.js';
 import HeroUI from './ui/heroui.js';
@@ -60,6 +68,10 @@ import CraftingUI from './ui/craftingui.js';
 import LeaderboardUI from './ui/LeaderboardUI.js';
 import DialogUI from './ui/DialogUI.js';
 import CodexUI from './ui/CodexUI.js';
+import GuildUI from './ui/GuildUI.js';
+import FriendUI from './ui/FriendUI.js';
+import ChatUI from './ui/ChatUI.js';
+import { safeAddEventListener } from './ui/errorHandler.js';
 
 // --- PREACT IMPORTS ---
 import { html, render } from './ui/preact-setup.js';
@@ -70,11 +82,111 @@ import NavigationController from './controllers/navigation.js';
 import GatherController from './controllers/gather.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[main] DOM bereit, initialisiere Spiel...');
+  console.log('[main] DOM bereit, initialisiere Spielkomponenten...');
 
-  const eventBus = new EventBus();
-  let saveTimer = null;
+  const container = new DIContainer();
 
+  // Registrierung der Kernkomponenten im DI-Container
+  container.register('eventBus', () => new EventBus());
+  const eventBus = container.get('eventBus');
+
+  container.register('settingsManager', () => new SettingsManager(eventBus));
+  container.register('gameLoop', (c) => new GameLoop({ eventBus, resourceManager: c.get('resourceManager') }));
+  container.register('gameStateManager', () => new GameStateManager(eventBus));
+  container.register('hero', () => new Hero(eventBus));
+
+  container.register('resourceManager', (c) => {
+    const rm = new ResourceManager(eventBus);
+    rm.hero = c.get('hero');
+    return rm;
+  });
+
+  container.register('libraryManager', (c) => new LibraryManager(eventBus, c.get('resourceManager')));
+  container.register('challengeManager', (c) => new ChallengeManager(eventBus, c.get('hero')));
+
+  container.register('clanManager', (c) => {
+    const cm = new ClanManager(eventBus, c.get('resourceManager'), c.get('challengeManager'));
+    cm.libraryManager = c.get('libraryManager');
+    return cm;
+  });
+
+  container.register('expeditionManager', (c) => new ExpeditionManager(eventBus, c.get('clanManager'), c.get('resourceManager')));
+  container.register('storyManager', (c) => new StoryManager(eventBus, c.get('hero')));
+
+  container.register('forgeManager', (c) => {
+    const fm = new ForgeManager(eventBus, c.get('hero'), c.get('resourceManager'));
+    fm.libraryManager = c.get('libraryManager');
+    return fm;
+  });
+
+  container.register('relicHuntManager', (c) => new RelicHuntManager({
+    eventBus,
+    hero: c.get('hero'),
+    resourceManager: c.get('resourceManager')
+  }));
+
+  container.register('achievementManager', (c) => new AchievementManager(eventBus, c.get('hero'), c.get('resourceManager')));
+  container.register('dailyRewardManager', (c) => new DailyRewardManager(eventBus, c.get('hero'), c.get('resourceManager')));
+  container.register('skillTreeManager', (c) => new SkillTreeManager(eventBus, c.get('hero')));
+  container.register('questManager', (c) => new QuestManager(eventBus, c.get('hero'), c.get('resourceManager'), c.get('clanManager')));
+  container.register('tutorialManager', (c) => new TutorialManager(eventBus, c.get('hero'), c.get('resourceManager')));
+
+  container.register('craftingManager', (c) => new CraftingManager({
+    eventBus,
+    hero: c.get('hero'),
+    resourceManager: c.get('resourceManager'),
+    clanManager: c.get('clanManager'),
+    forgeManager: c.get('forgeManager')
+  }));
+
+  container.register('audioManager', () => new AudioManager(eventBus));
+  container.register('cloudSaveManager', () => new CloudSaveManager(eventBus));
+  container.register('leaderboardManager', () => new LocalLeaderboard());
+  container.register('transitionManager', () => new TransitionManager(eventBus));
+  container.register('uiAnimations', (c) => new UIAnimations({ eventBus, transitionManager: c.get('transitionManager') }));
+
+  container.register('storyBranchManager', (c) => new StoryBranchManager(eventBus, c.get('hero')));
+  container.register('codexManager', (c) => new CodexManager(eventBus, c.get('hero')));
+
+  container.register('guildManager', (c) => new GuildManager(eventBus, c.get('hero')));
+  container.register('friendManager', (c) => new FriendManager(eventBus, c.get('hero')));
+  container.register('chatManager', (c) => new ChatManager(eventBus, c.get('hero'), c.get('guildManager')));
+
+  // Kontext für einheitliche Referenzierung
+  const context = {
+    eventBus,
+    container,
+    get settingsManager() { return container.get('settingsManager'); },
+    get gameLoop() { return container.get('gameLoop'); },
+    get gameStateManager() { return container.get('gameStateManager'); },
+    get hero() { return container.get('hero'); },
+    get resourceManager() { return container.get('resourceManager'); },
+    get libraryManager() { return container.get('libraryManager'); },
+    get challengeManager() { return container.get('challengeManager'); },
+    get clanManager() { return container.get('clanManager'); },
+    get expeditionManager() { return container.get('expeditionManager'); },
+    get storyManager() { return container.get('storyManager'); },
+    get forgeManager() { return container.get('forgeManager'); },
+    get relicHuntManager() { return container.get('relicHuntManager'); },
+    get achievementManager() { return container.get('achievementManager'); },
+    get dailyRewardManager() { return container.get('dailyRewardManager'); },
+    get skillTreeManager() { return container.get('skillTreeManager'); },
+    get questManager() { return container.get('questManager'); },
+    get tutorialManager() { return container.get('tutorialManager'); },
+    get craftingManager() { return container.get('craftingManager'); },
+    get audioManager() { return container.get('audioManager'); },
+    get cloudSaveManager() { return container.get('cloudSaveManager'); },
+    get leaderboardManager() { return container.get('leaderboardManager'); },
+    get transitionManager() { return container.get('transitionManager'); },
+    get uiAnimations() { return container.get('uiAnimations'); },
+    get storyBranchManager() { return container.get('storyBranchManager'); },
+    get codexManager() { return container.get('codexManager'); },
+    get guildManager() { return container.get('guildManager'); },
+    get friendManager() { return container.get('friendManager'); },
+    get chatManager() { return container.get('chatManager'); }
+  };
+
+  // DOMPool für Floating-Ressourcen-Texte
   const floatTextPool = new DOMPool(() => {
     const el = document.createElement('div');
     el.className = 'float-text';
@@ -100,54 +212,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => floatTextPool.release(el), 1200);
   });
 
-  // --- DEPENDENCY INJECTION / CONTEXT CREATION ---
-  const context = { eventBus };
-
-  context.settingsManager = new SettingsManager(eventBus);
-  context.gameLoop = new GameLoop(context);
-  context.gameStateManager = new GameStateManager(eventBus);
-  context.hero = new Hero(eventBus);
-  context.resourceManager = new ResourceManager(eventBus);
-  context.resourceManager.hero = context.hero;
-
-  context.libraryManager = new LibraryManager(eventBus, context.resourceManager);
-  context.challengeManager = new ChallengeManager(eventBus, context.hero);
-  context.clanManager = new ClanManager(eventBus, context.resourceManager, context.challengeManager);
-  context.expeditionManager = new ExpeditionManager(eventBus, context.clanManager, context.resourceManager);
-  context.storyManager = new StoryManager(eventBus, context.hero);
-  context.forgeManager = new ForgeManager(eventBus, context.hero, context.resourceManager);
-
-  context.clanManager.libraryManager = context.libraryManager;
-  context.forgeManager.libraryManager = context.libraryManager;
-
-  context.relicHuntManager = new RelicHuntManager(context);
-  context.achievementManager = new AchievementManager(eventBus, context.hero, context.resourceManager);
-  context.dailyRewardManager = new DailyRewardManager(eventBus, context.hero, context.resourceManager);
-  context.skillTreeManager = new SkillTreeManager(eventBus, context.hero);
-  context.questManager = new QuestManager(eventBus, context.hero, context.resourceManager, context.clanManager);
-  context.tutorialManager = new TutorialManager(eventBus, context.hero, context.resourceManager);
-  context.craftingManager = new CraftingManager(context);
-
-  // --- PHASE 1 MANAGER ---
-  context.audioManager = new AudioManager(eventBus);
-  context.cloudSaveManager = new CloudSaveManager(eventBus);
-  context.leaderboardManager = new LocalLeaderboard();
-  context.transitionManager = new TransitionManager(eventBus);
-  context.uiAnimations = new UIAnimations(context);
-
-  // --- PHASE 2 MANAGER ---
-  context.storyBranchManager = new StoryBranchManager(eventBus, context.hero);
-  context.codexManager = new CodexManager(eventBus, context.hero);
-
-  // Audio initialisieren (nach User-Interaktion)
-  document.addEventListener('click', () => {
-    if (!context.audioManager.isInitialized) {
-      context.audioManager.init();
-      context.audioManager.playMusic('menu');
+  // Benutzerinteraktion zum Aktivieren des AudioContexts registrieren
+  const handleUserGestureAudio = () => {
+    const audio = context.audioManager;
+    if (!audio.isInitialized) {
+      audio.init();
+      audio.playMusic('menu');
     }
-  }, { once: true });
+    document.removeEventListener('click', handleUserGestureAudio);
+  };
+  document.addEventListener('click', handleUserGestureAudio);
 
-  // --- SAVEGAME REGISTRATION ---
+  // Zuweisung der SaveGame-Schnittstellen
   SaveGameManager.register('hero', context.hero);
   SaveGameManager.register('clan', context.clanManager);
   SaveGameManager.register('expedition', context.expeditionManager);
@@ -164,8 +240,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   SaveGameManager.register('leaderboard', context.leaderboardManager);
   SaveGameManager.register('storyBranch', context.storyBranchManager);
   SaveGameManager.register('codex', context.codexManager);
+  SaveGameManager.register('guild', context.guildManager);
+  SaveGameManager.register('friends', context.friendManager);
+  SaveGameManager.register('chat', context.chatManager);
 
-  // --- UI INITIALIZATION ---
+  // Instanziierung aller UI Controller und Panels
   let heroUI, storyUI, forgeUI, libraryUI, relicHuntUI, skillTreeUI, challengeUI;
   try {
     new ClanUI(context);
@@ -186,59 +265,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     new LeaderboardUI(context);
     new DialogUI(context);
     new CodexUI(context);
+    new GuildUI(context);
+    new FriendUI(context);
+    new ChatUI(context);
 
-    // --- PREACT RENDERING ---
     const preactRoot = document.getElementById('preact-root');
     if (preactRoot) {
       render(html`<${AchievementUI} context=${context} />`, preactRoot);
     }
 
-    // Event für den "Erfolge" Button im Hub binden
-    const openAchBtn = document.getElementById('open-achievements-btn');
-    if (openAchBtn) {
-      openAchBtn.addEventListener('click', () => {
-        eventBus.publish('ui:openAchievements');
-      });
-    }
-
-    // Hub-Button für Meisterwerkstatt
-    const hubCraftingBtn = document.getElementById('hub-crafting');
-    if (hubCraftingBtn) {
-      hubCraftingBtn.addEventListener('click', () => {
-        eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
-      });
-    }
-
-    // Hub-Button für Leaderboard
-    const leaderboardBtn = document.getElementById('hub-leaderboard');
-    if (leaderboardBtn) {
-      leaderboardBtn.addEventListener('click', () => {
-        eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
-      });
-    }
-
-    // Hub-Button für Story-Branching
-    const storyBranchBtn = document.getElementById('hub-story-branch');
-    if (storyBranchBtn) {
-      storyBranchBtn.addEventListener('click', () => {
-        eventBus.publish('ui:openDialog', { npcId: 'archivist' });
-      });
-    }
-
-    // Hub-Button für Codex
-    const codexBtn = document.getElementById('hub-codex');
-    if (codexBtn) {
-      codexBtn.addEventListener('click', () => {
-        eventBus.publish('ui:openCodex');
-      });
-    }
+    // Sichere Registrierung der UI-Öffnungs-Events
+    safeAddEventListener(document.getElementById('open-achievements-btn'), 'click', () => {
+      eventBus.publish('ui:openAchievements');
+    });
+    safeAddEventListener(document.getElementById('hub-crafting'), 'click', () => {
+      eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
+    });
+    safeAddEventListener(document.getElementById('hub-leaderboard'), 'click', () => {
+      eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
+    });
+    safeAddEventListener(document.getElementById('hub-story-branch'), 'click', () => {
+      eventBus.publish('ui:openDialog', { npcId: 'archivist' });
+    });
+    safeAddEventListener(document.getElementById('hub-codex'), 'click', () => {
+      eventBus.publish('ui:openCodex');
+    });
+    safeAddEventListener(document.getElementById('hub-guild'), 'click', () => {
+      eventBus.publish('ui:openGuild');
+    });
+    safeAddEventListener(document.getElementById('hub-friends'), 'click', () => {
+      eventBus.publish('ui:openFriends');
+    });
+    safeAddEventListener(document.getElementById('hub-chat'), 'click', () => {
+      eventBus.publish('ui:openChat');
+    });
 
   } catch (e) {
-    console.error("Fehler bei der UI-Initialisierung:", e);
+    console.error("Kritischer Fehler bei der Initialisierung des UI-Systems:", e);
   }
 
   initParticles();
 
+  // Save-System-Definitionen
+  let saveTimer = null;
   async function saveGame() {
     if (context.storyManager.battleInProgress) return false;
     const result = await SaveGameManager.saveGame();
@@ -254,6 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (interval > 0) saveTimer = setInterval(() => saveGame(), interval);
   }
 
+  // Automatisierte Speicherereignisse abonnieren
   eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, () => saveGame());
   eventBus.subscribe(EVENTS.FORGE_CRAFTED, () => saveGame());
   eventBus.subscribe(EVENTS.CRAFTING_MASTERWORK, () => saveGame());
@@ -264,8 +334,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   eventBus.subscribe('story:branchChanged', () => saveGame());
   eventBus.subscribe('story:endingReached', () => saveGame());
   eventBus.subscribe('codex:entryUnlocked', () => saveGame());
+  eventBus.subscribe('guild:created', () => saveGame());
+  eventBus.subscribe('guild:memberJoined', () => saveGame());
+  eventBus.subscribe('guild:memberLeft', () => saveGame());
+  eventBus.subscribe('guild:deleted', () => saveGame());
+  eventBus.subscribe('guild:levelUp', () => saveGame());
+  eventBus.subscribe('friend:accepted', () => saveGame());
+  eventBus.subscribe('friend:removed', () => saveGame());
 
-  // Hero-Updates für Leaderboard
+  // Übermittlung von Leistungsdaten an das lokale Leaderboard
   eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
     if (context.leaderboardManager) {
       context.leaderboardManager.addEntry({
@@ -279,21 +356,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // --- OPTIONEN: AUDIO & CLOUD EVENT LISTENER ---
-  // Audio Toggle
+  eventBus.subscribe('catchup:ended', () => {
+    const speedIndicator = document.getElementById('speed-indicator');
+    if (speedIndicator) speedIndicator.style.display = 'none';
+    eventBus.publish(EVENTS.UI_REFRESH_QUEST);
+  });
+
+  // --- OPTIONEN: AUDIO & CLOUD-STEUERUNG ---
   const audioToggleBtn = document.getElementById('opt-audio-toggle');
-  if (audioToggleBtn) {
-    audioToggleBtn.addEventListener('click', () => {
-      const muted = context.audioManager.toggleMute();
-      audioToggleBtn.textContent = muted ? '🔇 Stumm' : '🔊 Aktiv';
-      eventBus.publish(EVENTS.UI_ADD_LOG, { text: muted ? '🔇 Audio stummgeschaltet' : '🔊 Audio aktiviert', type: 'system' });
+  safeAddEventListener(audioToggleBtn, 'click', () => {
+    const muted = context.audioManager.toggleMute();
+    audioToggleBtn.textContent = muted ? '🔇 Stumm' : '🔊 Aktiv';
+    eventBus.publish(EVENTS.UI_ADD_LOG, {
+      text: muted ? '🔇 Audio stummgeschaltet' : '🔊 Audio aktiviert',
+      type: 'system'
     });
-    if (context.audioManager.isMuted) {
-      audioToggleBtn.textContent = '🔇 Stumm';
-    }
+  });
+  if (context.audioManager.isMuted && audioToggleBtn) {
+    audioToggleBtn.textContent = '🔇 Stumm';
   }
 
-  // Musik-Lautstärke
   const musicVolumeSlider = document.getElementById('opt-music-volume');
   if (musicVolumeSlider) {
     musicVolumeSlider.addEventListener('input', (e) => {
@@ -303,7 +385,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     musicVolumeSlider.value = context.audioManager.musicVolume * 100;
   }
 
-  // SFX-Lautstärke
   const sfxVolumeSlider = document.getElementById('opt-sfx-volume');
   if (sfxVolumeSlider) {
     sfxVolumeSlider.addEventListener('input', (e) => {
@@ -313,26 +394,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     sfxVolumeSlider.value = context.audioManager.sfxVolume * 100;
   }
 
-  // Cloud-Sync aktivieren
   const cloudEnabledCheck = document.getElementById('opt-cloud-enabled');
   if (cloudEnabledCheck) {
     cloudEnabledCheck.addEventListener('change', (e) => {
       context.cloudSaveManager.setEnabled(e.target.checked);
-      eventBus.publish(EVENTS.UI_ADD_LOG, { text: e.target.checked ? '☁️ Cloud-Sync aktiviert' : '☁️ Cloud-Sync deaktiviert', type: 'system' });
+      eventBus.publish(EVENTS.UI_ADD_LOG, {
+        text: e.target.checked ? '☁️ Cloud-Sync aktiviert' : '☁️ Cloud-Sync deaktiviert',
+        type: 'system'
+      });
       updateCloudLastSync();
     });
     cloudEnabledCheck.checked = context.cloudSaveManager.isCloudEnabled();
   }
 
-  // Cloud manuell synchronisieren
   const cloudSyncBtn = document.getElementById('opt-cloud-sync-btn');
   if (cloudSyncBtn) {
     cloudSyncBtn.addEventListener('click', async () => {
       if (!context.cloudSaveManager.isCloudEnabled()) {
-        eventBus.publish(EVENTS.UI_ADD_LOG, { text: '⚠️ Cloud-Sync ist deaktiviert. Bitte zuerst aktivieren.', type: 'system' });
+        eventBus.publish(EVENTS.UI_ADD_LOG, {
+          text: '⚠️ Cloud-Sync ist deaktiviert. Bitte zuerst in den Einstellungen aktivieren.',
+          type: 'system'
+        });
         return;
       }
-      cloudSyncBtn.textContent = '⏳ Synchrone...';
+      cloudSyncBtn.textContent = '⏳ Sichern...';
       cloudSyncBtn.disabled = true;
       const success = await context.cloudSaveManager.forceSync();
       cloudSyncBtn.disabled = false;
@@ -346,7 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  function updateCloudLastSync() {
+  const updateCloudLastSync = () => {
     const lastSyncEl = document.getElementById('opt-cloud-last-sync');
     if (lastSyncEl) {
       const info = context.cloudSaveManager.getCloudInfo();
@@ -357,12 +442,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         lastSyncEl.textContent = 'Nie';
       }
     }
-  }
+  };
   updateCloudLastSync();
-
   eventBus.subscribe('cloud:synced', updateCloudLastSync);
 
-  // --- OPTIONEN: BESTEHENDE EVENT LISTENER ---
+  // Grafische Feineinstellungen
   const optParticles = document.getElementById('opt-particles');
   if (optParticles) {
     optParticles.addEventListener('change', (e) => {
@@ -401,8 +485,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // --- NAVIGATION ---
-  async function loadGame() {
+  // --- NAVIGATION & SPEICHER-EINGANG ---
+  async function loadGameData() {
     const saveData = await SaveGameManager.loadGame();
     if (!saveData) return false;
 
@@ -426,33 +510,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           context.resourceManager.timeBank = (context.resourceManager.timeBank || 0) + offlineSeconds;
 
-          document.getElementById('offline-time-val').textContent = formatTime(clampedOfflineMs);
+          const timeEl = document.getElementById('offline-time-val');
+          if (timeEl) timeEl.textContent = formatOfflineTime(clampedOfflineMs);
 
-          document.getElementById('offline-particles-val').parentElement.style.display = 'none';
-          document.getElementById('offline-relics-val').parentElement.style.display = 'none';
-          document.getElementById('offline-artifacts-val').parentElement.style.display = 'none';
-          document.getElementById('offline-levels-val').parentElement.innerHTML = `
-            <span class="text-muted">Zeitstaub erhalten:</span>
-            <span class="text-gold text-bold">${formatTime(clampedOfflineMs)} (4x Speed)</span>
-          `;
+          const particlesParent = document.getElementById('offline-particles-val')?.parentElement;
+          if (particlesParent) particlesParent.style.display = 'none';
+          const relicsParent = document.getElementById('offline-relics-val')?.parentElement;
+          if (relicsParent) relicsParent.style.display = 'none';
+          const artifactsParent = document.getElementById('offline-artifacts-val')?.parentElement;
+          if (artifactsParent) artifactsParent.style.display = 'none';
 
-          document.getElementById('offline-modal-overlay').classList.remove('hidden');
-          document.getElementById('offline-modal-overlay').style.display = 'flex';
-          const offlineCloseBtn = document.getElementById('offline-close-btn');
-          if (offlineCloseBtn) offlineCloseBtn.textContent = 'Zum Hub';
+          const levelsEl = document.getElementById('offline-levels-val');
+          if (levelsEl) {
+            levelsEl.parentElement.innerHTML = `
+              <span class="text-muted">Zeitstaub erhalten:</span>
+              <span class="text-gold text-bold">${formatOfflineTime(clampedOfflineMs)} (4x Geschwindigkeit)</span>
+            `;
+          }
+
+          const offlineOverlay = document.getElementById('offline-modal-overlay');
+          if (offlineOverlay) {
+            offlineOverlay.classList.remove('hidden');
+            offlineOverlay.style.display = 'flex';
+            const offlineCloseBtn = document.getElementById('offline-close-btn');
+            if (offlineCloseBtn) {
+              const newBtn = offlineCloseBtn.cloneNode(true);
+              offlineCloseBtn.parentNode.replaceChild(newBtn, offlineCloseBtn);
+              newBtn.textContent = 'Zum Hub';
+              newBtn.addEventListener('click', () => {
+                offlineOverlay.style.display = 'none';
+                if (context.resourceManager.timeBank > 0) {
+                  context.gameLoop._catchupActive = true;
+                }
+              }, { once: true });
+            }
+          }
         }
       }
 
-      eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Spielstand geladen!`, type: 'system' });
+      eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Spielstand erfolgreich geladen!`, type: 'system' });
       startAutosave();
       return true;
     } catch (error) {
-      console.error('[LoadGame] Fehler:', error);
+      console.error('[LoadGame] Kritischer Import-Fehler:', error);
       return false;
     }
   }
 
-  function formatTime(ms) {
+  function formatOfflineTime(ms) {
     const hours = Math.floor(ms / (1000 * 60 * 60));
     const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((ms % (1000 * 60)) / 1000);
@@ -484,6 +589,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnHubLeaderboard: document.getElementById('hub-leaderboard'),
     btnHubStoryBranch: document.getElementById('hub-story-branch'),
     btnHubCodex: document.getElementById('hub-codex'),
+    btnHubGuild: document.getElementById('hub-guild'),
+    btnHubFriends: document.getElementById('hub-friends'),
+    btnHubChat: document.getElementById('hub-chat'),
     btnHubBack: document.getElementById('hub-back-to-menu'),
     btnBackToHub: document.getElementById('back-to-hub-btn'),
     btnOptionsBack: document.getElementById('options-back-btn'),
@@ -499,9 +607,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     hasSaveGame: () => SaveGameManager.hasSaveGame(),
     onSave: () => saveGame(),
     onLoad: async () => {
-      const success = await loadGame();
+      const success = await loadGameData();
       if (success) navController.showHub();
-      else alert('Spielstand konnte nicht geladen werden.');
+      else alert('Der lokale Spielstand konnte nicht fehlerfrei dekomprimiert werden.');
     },
     onNewGame: async (heroName) => {
       const hasSave = await SaveGameManager.hasSaveGame();
@@ -525,6 +633,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       context.leaderboardManager.fromJSON({});
       context.storyBranchManager.fromJSON({});
       context.codexManager.fromJSON({});
+      context.guildManager.fromJSON({});
+      context.friendManager.fromJSON({});
+      context.chatManager.fromJSON({});
 
       eventBus.publish(EVENTS.HERO_UPDATED);
 
@@ -535,6 +646,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (context.audioManager.isInitialized) {
         context.audioManager.playMusic('hub');
       }
+
+      setTimeout(updateHubPlayerInfo, 200);
+      setTimeout(updateQuestIndicator, 300);
     },
     onHardReset: async () => {
       if (saveTimer) clearInterval(saveTimer);
@@ -552,43 +666,106 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  navElements.btnHubHero.addEventListener('click', () => heroUI.open());
-  navElements.btnHubStory.addEventListener('click', () => storyUI.open());
-  navElements.btnHubArtifact.addEventListener('click', () => forgeUI.open());
-  navElements.btnHubRelic.addEventListener('click', () => relicHuntUI.open());
-  navElements.btnHubSkills.addEventListener('click', () => skillTreeUI.open());
-  navElements.btnHubChallenges.addEventListener('click', () => challengeUI.open());
-  if (navElements.btnHubLibrary) navElements.btnHubLibrary.addEventListener('click', () => libraryUI.open());
-  if (navElements.btnHubCrafting) {
-    navElements.btnHubCrafting.addEventListener('click', () => {
-      eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
-    });
-  }
-  if (navElements.btnHubLeaderboard) {
-    navElements.btnHubLeaderboard.addEventListener('click', () => {
-      eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
-    });
-  }
-  if (navElements.btnHubStoryBranch) {
-    navElements.btnHubStoryBranch.addEventListener('click', () => {
-      eventBus.publish('ui:openDialog', { npcId: 'archivist' });
-    });
-  }
-  if (navElements.btnHubCodex) {
-    navElements.btnHubCodex.addEventListener('click', () => {
-      eventBus.publish('ui:openCodex');
-    });
-  }
+  safeAddEventListener(navElements.btnHubHero, 'click', () => heroUI.open());
+  safeAddEventListener(navElements.btnHubStory, 'click', () => storyUI.open());
+  safeAddEventListener(navElements.btnHubArtifact, 'click', () => forgeUI.open());
+  safeAddEventListener(navElements.btnHubRelic, 'click', () => relicHuntUI.open());
+  safeAddEventListener(navElements.btnHubSkills, 'click', () => skillTreeUI.open());
+  safeAddEventListener(navElements.btnHubChallenges, 'click', () => challengeUI.open());
+  safeAddEventListener(navElements.btnHubLibrary, 'click', () => libraryUI.open());
+  safeAddEventListener(navElements.btnHubCrafting, 'click', () => {
+    eventBus.publish(EVENTS.UI_OPEN_CRAFTING);
+  });
+  safeAddEventListener(navElements.btnHubLeaderboard, 'click', () => {
+    eventBus.publish(EVENTS.UI_OPEN_LEADERBOARD);
+  });
+  safeAddEventListener(navElements.btnHubStoryBranch, 'click', () => {
+    eventBus.publish('ui:openDialog', { npcId: 'archivist' });
+  });
+  safeAddEventListener(navElements.btnHubCodex, 'click', () => {
+    eventBus.publish('ui:openCodex');
+  });
+  safeAddEventListener(navElements.btnHubGuild, 'click', () => {
+    eventBus.publish('ui:openGuild');
+  });
+  safeAddEventListener(navElements.btnHubFriends, 'click', () => {
+    eventBus.publish('ui:openFriends');
+  });
+  safeAddEventListener(navElements.btnHubChat, 'click', () => {
+    eventBus.publish('ui:openChat');
+  });
 
   eventBus.subscribe(EVENTS.UI_START_BOSS_FIGHT, () => context.storyManager.startBossFromHub());
 
-  // Codex: Boss-Einträge beim Besiegen freischalten
-  eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, (data) => {
-    if (context.codexManager) {
-      // CodexManager hat eigene Event-Listener
-    }
-  });
-
   await navController.updateMenuButtons();
   navController.showMenu();
+
+  // --- REGISTRIERUNG DER HUB-KATEGORIEN (TABS) ---
+  const tabButtons = document.querySelectorAll('.hub-tab-btn');
+  const categories = {
+    core: document.getElementById('hub-category-core'),
+    progression: document.getElementById('hub-category-progression'),
+    crafting: document.getElementById('hub-category-crafting'),
+    collection: document.getElementById('hub-category-collection'),
+    social: document.getElementById('hub-category-social')
+  };
+
+  for (const [key, el] of Object.entries(categories)) {
+    if (el) el.style.display = key === 'core' ? 'block' : 'none';
+  }
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      for (const el of Object.values(categories)) {
+        if (el) el.style.display = 'none';
+      }
+      const category = btn.dataset.category;
+      if (categories[category]) {
+        categories[category].style.display = 'block';
+      }
+    });
+  });
+
+  // Spieler-Kopfdaten im Hub aktualisieren
+  function updateHubPlayerInfo() {
+    const hero = context.hero;
+    if (!hero) return;
+    const nameEl = document.getElementById('hub-hero-name');
+    const levelEl = document.getElementById('hub-level');
+    const prestigeEl = document.getElementById('hub-prestige');
+    if (nameEl) nameEl.textContent = hero.name || 'Held';
+    if (levelEl) levelEl.textContent = hero.level || 1;
+    if (prestigeEl) prestigeEl.textContent = hero.prestigeLevel || 0;
+  }
+
+  eventBus.subscribe(EVENTS.HERO_UPDATED, updateHubPlayerInfo);
+  setTimeout(updateHubPlayerInfo, 100);
+
+  // Indikator für aktive Missionen aktualisieren
+  function updateQuestIndicator() {
+    const indicator = document.getElementById('hub-quest-indicator');
+    if (!indicator) return;
+    const q = context.questManager?.getCurrentQuest?.();
+    if (q) {
+      indicator.style.display = 'inline';
+      if (context.questManager?.isCurrentQuestComplete?.()) {
+        indicator.textContent = '✅ Mission bereit';
+        indicator.style.color = 'var(--color-success)';
+      } else {
+        indicator.textContent = '📋 Mission aktiv';
+        indicator.style.color = 'var(--color-text-muted)';
+      }
+    } else {
+      indicator.style.display = 'none';
+    }
+  }
+
+  eventBus.subscribe(EVENTS.QUEST_UPDATED, updateQuestIndicator);
+  eventBus.subscribe(EVENTS.QUEST_COMPLETED, updateQuestIndicator);
+  eventBus.subscribe(EVENTS.UI_REFRESH_QUEST, updateQuestIndicator);
+  setTimeout(updateQuestIndicator, 200);
+
+  console.log('[main] Bootstrapping abgeschlossen.');
 });

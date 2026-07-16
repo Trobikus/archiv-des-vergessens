@@ -1,5 +1,9 @@
+// ============================================================
+// FILE: managers/expedition.js – vollständig mit Prestige-Reset
+// ============================================================
 import { ROLES } from '../models/clanmember.js';
 import { EVENTS } from '../core/events.js';
+import RNG from '../utils/rng.js';
 
 export default class ExpeditionManager {
   constructor(eventBus, clanManager, resourceManager) {
@@ -8,6 +12,14 @@ export default class ExpeditionManager {
     this.resourceManager = resourceManager;
     this._activeExpeditions = new Map();
     this.eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, this._onTick.bind(this));
+    this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, this._onPrestige.bind(this));
+  }
+
+  _onPrestige() {
+    for (const [memberId] of this._activeExpeditions) {
+      this.clanManager.setMemberExpedition(memberId, false);
+    }
+    this._activeExpeditions.clear();
   }
 
   startExpedition(memberId, durationSeconds, successChance) {
@@ -16,7 +28,7 @@ export default class ExpeditionManager {
     if (this._activeExpeditions.has(memberId)) return false;
 
     this.clanManager.setMemberExpedition(memberId, true);
-    
+
     const remainingTime = durationSeconds * 1000;
     let chanceMultiplier = this.resourceManager.hero.unlockedSkills.includes('explorer_1') ? 1.1 : 1;
     const clampedChance = Math.min(0.95, Math.max(0.05, successChance * chanceMultiplier));
@@ -37,22 +49,28 @@ export default class ExpeditionManager {
 
   _generateReward(member) {
     const role = member.role;
-    if (role === ROLES.COLLECTOR) return { particles: 5 + Math.floor(Math.random() * 6) };
-    if (role === ROLES.WEAVER) return { relics: 1 + Math.floor(Math.random() * 2) };
-    if (role === ROLES.GUARDIAN) return { artifacts: 1 };
+    if (role === ROLES.COLLECTOR) {
+      return { particles: 5 + Math.floor(RNG.next() * 6) };
+    }
+    if (role === ROLES.WEAVER) {
+      return { relics: 1 + Math.floor(RNG.next() * 2) };
+    }
+    if (role === ROLES.GUARDIAN) {
+      return { artifacts: 1 };
+    }
     return {};
   }
 
   _onTick({ delta }) {
     const completed = [];
-    
+
     for (const [memberId, expedition] of this._activeExpeditions.entries()) {
       expedition.remainingTime -= delta;
       if (expedition.remainingTime <= 0) {
         completed.push(memberId);
       }
     }
-    
+
     for (const memberId of completed) {
       this._completeExpedition(memberId);
     }
@@ -69,15 +87,15 @@ export default class ExpeditionManager {
     const expedition = this._activeExpeditions.get(memberId);
     if (!expedition) return;
     const member = this.clanManager.getMemberById(memberId);
-    
+
     if (!member) {
       this._activeExpeditions.delete(memberId);
       return;
     }
 
-    const success = Math.random() < expedition.successChance;
+    const success = RNG.next() < expedition.successChance;
     let reward = null;
-    
+
     if (success) {
       reward = this._generateReward(member);
       let rewardMultiplier = this.resourceManager.hero.unlockedSkills.includes('explorer_2') ? 1.2 : 1;
@@ -99,17 +117,17 @@ export default class ExpeditionManager {
   }
 
   isOnExpedition(memberId) { return this._activeExpeditions.has(memberId); }
-  
+
   getRemainingTime(memberId) {
     const exp = this._activeExpeditions.get(memberId);
     if (!exp) return 0;
     return Math.max(0, exp.remainingTime);
   }
 
-  toJSON() { 
-    return { activeExpeditions: Array.from(this._activeExpeditions.entries()) }; 
+  toJSON() {
+    return { activeExpeditions: Array.from(this._activeExpeditions.entries()) };
   }
-  
+
   fromJSON(data) {
     if (data && data.activeExpeditions) this._activeExpeditions = new Map(data.activeExpeditions);
     else this._activeExpeditions = new Map();

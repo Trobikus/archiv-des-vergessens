@@ -40,22 +40,25 @@ export default class EventBus {
   publish(event, data = {}) {
     const subscribers = this._listeners.get(event);
     if (subscribers) {
-      [...subscribers].forEach(sub => {
+      // Flache Kopie verhindert Modifikation des Arrays während der Iteration
+      const safeSubscribers = [...subscribers];
+      for (let i = 0; i < safeSubscribers.length; i++) {
         try {
-          sub.callback(data);
+          safeSubscribers[i].callback(data);
         } catch (error) {
-          console.error(`[EventBus] Fehler in Subscriber ${sub.id} für '${event}':`, error);
+          console.error(`[EventBus] Fehler in Subscriber ${safeSubscribers[i].id} für '${event}':`, error);
         }
-      });
+      }
     }
 
-    [...this._globalListeners].forEach(sub => {
+    const safeGlobals = [...this._globalListeners];
+    for (let i = 0; i < safeGlobals.length; i++) {
       try {
-        sub.callback(event, data);
+        safeGlobals[i].callback(event, data);
       } catch (error) {
-        console.error(`[EventBus] Fehler in globalem Subscriber ${sub.id} für '${event}':`, error);
+        console.error(`[EventBus] Fehler in globalem Subscriber ${safeGlobals[i].id} für '${event}':`, error);
       }
-    });
+    }
   }
 
   clear() {

@@ -1,6 +1,6 @@
 import { ROLES } from '../models/clanmember.js';
 import { EVENTS } from '../core/events.js';
-import { formatNumber } from '../utils/format.js'; // NEU
+import { formatNumber } from '../utils/format.js';
 
 export default class ClanUI {
   constructor(context) {
@@ -12,7 +12,7 @@ export default class ClanUI {
     this.membersTbody = document.getElementById('members-tbody');
     this.particleDisplay = document.getElementById('particle-display');
     this.relicDisplay = document.getElementById('relic-display');
-    this.artifactDisplay = document.getElementById('artifact-display');
+    this.artifactDisplay = document.getElementById('node-artifact-display');
     this.resourceBar = document.getElementById('resource-bar');
 
     this._prevResources = { particles: 0, relics: 0, artifacts: 0 };
@@ -20,6 +20,7 @@ export default class ClanUI {
     this._rewardGiven50 = false;
 
     this._rowCache = new Map();
+    this._lastUpdate = 0;
 
     this.eventBus.subscribe(EVENTS.CLAN_MEMBERS_UPDATED, this._onMembersUpdated.bind(this));
     this.eventBus.subscribe(EVENTS.RESOURCES_UPDATED, this._updateResources.bind(this));
@@ -29,6 +30,7 @@ export default class ClanUI {
   _onMembersUpdated(data) {
     const members = data.members;
 
+    // Ungenutzte Zeilen bereinigen
     for (const [id, rowObj] of this._rowCache.entries()) {
       if (!members.find(m => m.id === id)) {
         rowObj.tr.remove();
@@ -36,28 +38,43 @@ export default class ClanUI {
       }
     }
 
-    members.forEach(member => {
+    const fragment = document.createDocumentFragment();
+
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i];
       let rowObj = this._rowCache.get(member.id);
 
       if (!rowObj) {
         const tr = document.createElement('tr');
-        tr.addEventListener('click', () => this.eventBus.publish(EVENTS.UI_MEMBER_CLICKED, { memberId: member.id }));
+        tr.addEventListener('click', () => {
+          this.eventBus.publish(EVENTS.UI_MEMBER_CLICKED, { memberId: member.id });
+        });
 
-        const tdName = document.createElement('td'); tdName.className = 'member-name';
-        const tdRole = document.createElement('td'); tdRole.className = 'member-role';
-        const tdLevel = document.createElement('td'); tdLevel.className = 'member-level';
+        const tdName = document.createElement('td');
+        tdName.className = 'member-name';
+
+        const tdRole = document.createElement('td');
+        tdRole.className = 'member-role';
+
+        const tdLevel = document.createElement('td');
+        tdLevel.className = 'member-level';
 
         const tdProgress = document.createElement('td');
-        const progContainer = document.createElement('div'); progContainer.className = 'progress-bar-container';
-        const progFill = document.createElement('div'); progFill.className = 'progress-bar-fill';
-        const progText = document.createElement('div'); progText.className = 'progress-text';
+        const progContainer = document.createElement('div');
+        progContainer.className = 'progress-bar-container';
+
+        const progFill = document.createElement('div');
+        progFill.className = 'progress-bar-fill';
+
+        const progText = document.createElement('div');
+        progText.className = 'progress-text';
 
         progContainer.appendChild(progFill);
         progContainer.appendChild(progText);
         tdProgress.appendChild(progContainer);
 
         tr.append(tdName, tdRole, tdLevel, tdProgress);
-        this.membersTbody.appendChild(tr);
+        fragment.appendChild(tr);
 
         rowObj = { tr, tdName, tdRole, tdLevel, progFill, progText };
         this._rowCache.set(member.id, rowObj);
@@ -66,13 +83,24 @@ export default class ClanUI {
       rowObj.tdName.textContent = member.name;
       rowObj.tdRole.textContent = this._roleName(member.role);
       rowObj.tdLevel.textContent = member.level;
-    });
+    }
+
+    if (fragment.children.length > 0) {
+      this.membersTbody.appendChild(fragment);
+    }
   }
 
-  _onRenderTick() {
-    this.clanManager.members.forEach(member => {
+  _onRenderTick(data) {
+    const now = data.timestamp;
+    // Drosselt DOM-Updates der Fortschrittsbalken auf maximal 30 FPS (alle 33ms) zur CPU-Entlastung
+    if (now - this._lastUpdate < 33) return;
+    this._lastUpdate = now;
+
+    const members = this.clanManager.members;
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i];
       const rowObj = this._rowCache.get(member.id);
-      if (!rowObj) return;
+      if (!rowObj) continue;
 
       const visualProgress = Math.min(100, Math.max(0, member.progress));
       rowObj.progFill.style.transform = `scaleX(${visualProgress / 100})`;
@@ -82,23 +110,28 @@ export default class ClanUI {
       const isOnExp = this.expeditionManager.isOnExpedition(member.id);
       rowObj.tr.style.opacity = isOnExp ? '0.6' : '1';
       rowObj.tr.style.backgroundColor = isOnExp ? '#1a1a28' : '';
-    });
+    }
   }
 
   _updateResources(data) {
     const { particles, relics, artifacts } = data;
     const prev = this._prevResources;
 
-    // NEU: Werte werden nun formatiert (z.B. 1.000.000) dargestellt
-    if (particles !== prev.particles) this.particleDisplay.textContent = formatNumber(particles);
-    if (relics !== prev.relics) this.relicDisplay.textContent = formatNumber(relics);
-    if (artifacts !== prev.artifacts) this.artifactDisplay.textContent = formatNumber(artifacts);
+    if (particles !== prev.particles && this.particleDisplay) {
+      this.particleDisplay.textContent = formatNumber(particles);
+    }
+    if (relics !== prev.relics && this.relicDisplay) {
+      this.relicDisplay.textContent = formatNumber(relics);
+    }
+    if (artifacts !== prev.artifacts && this.artifactDisplay) {
+      this.artifactDisplay.textContent = formatNumber(artifacts);
+    }
 
     const showFloat = this.settingsManager.get('floatingText');
     if (particles > prev.particles && showFloat) {
-      this.eventBus.publish(EVENTS.CMD_SPAWN_FLOAT_TEXT, { 
-        text: '+' + formatNumber(particles - prev.particles), 
-        targetId: 'res-particle' 
+      this.eventBus.publish(EVENTS.CMD_SPAWN_FLOAT_TEXT, {
+        text: '+' + formatNumber(particles - prev.particles),
+        targetId: 'res-particle'
       });
       this._pulseResourceBar();
     }
@@ -106,12 +139,12 @@ export default class ClanUI {
     if (particles >= 100 && !this._rewardGiven100) {
       this._rewardGiven100 = true;
       this.eventBus.publish(EVENTS.CMD_HERO_ADD_BASE_STAT, { stat: 'attack', amount: 5 });
-      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: '100 Partikel gesammelt! Dein Held erhält +5 Angriff!', type: 'event' });
+      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: '100 Partikel gesammelt! Held erhält +5 Angriff.', type: 'event' });
     }
     if (relics >= 50 && !this._rewardGiven50) {
       this._rewardGiven50 = true;
       this.eventBus.publish(EVENTS.CMD_HERO_ADD_BASE_STAT, { stat: 'defense', amount: 3 });
-      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: '50 Relikte gesammelt! Dein Held erhält +3 Verteidigung!', type: 'event' });
+      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: '50 Relikte gesammelt! Held erhält +3 Verteidigung.', type: 'event' });
     }
 
     this._prevResources = { particles, relics, artifacts };

@@ -90,7 +90,7 @@
             <span class="option-control"><input type="range" id="opt-sfx-volume" min="0" max="100" value="60"
                 style="width:120px;"></span>
           </div>
-          
+
           <h3 class="options-header mt-2">Cloud & Synchronisation</h3>
           <div class="option-row flex-between mb-1">
             <span class="option-label text-muted">Cloud-Sync aktivieren</span>
@@ -130,70 +130,196 @@
     </div>
 
     <!-- ===== HUB ===== -->
-    <div id="hub-container" class="center-layout fade-in" style="display: none;">
-      <h2 class="glow-text">WÄHLE DEINE MISSION</h2>
-      <div class="hub-subtitle">Welches Archiv öffnest du?</div>
-      <div class="hub-grid">
-        <button class="hub-btn primary glass-btn" id="hub-archive">
-          <span class="icon">📜</span><span class="cinzel text-lg">Archiv des Vergessens</span><span class="label">Hauptspiel
-            betreten</span>
+    <div id="hub-container" class="fade-in" style="display: none;">
+      <div id="hub-header" class="glass-panel">
+        <div class="hub-header-left">
+          <div class="hub-title-group">
+            <span class="hub-icon">🏛️</span>
+            <div>
+              <h2 class="hub-title glow-text">Archiv des Vergessens</h2>
+              <div class="hub-subtitle">Der Mneme-Bund</div>
+            </div>
+          </div>
+        </div>
+        <div class="hub-header-right">
+          <div class="hub-player-card">
+            <div class="hub-avatar">⚔️</div>
+            <div class="hub-player-info">
+              <div id="hub-hero-name" class="hub-player-name">Held</div>
+              <div class="hub-player-stats">
+                <span>Stufe <span id="hub-level">1</span></span>
+                <span class="hub-stat-divider">·</span>
+                <span>Prestige <span id="hub-prestige">0</span></span>
+                <span class="hub-stat-divider">·</span>
+                <span id="hub-guild-badge" style="display:none;">🏛️</span>
+              </div>
+            </div>
+            <div class="hub-player-level">
+              <div class="hub-level-ring">
+                <span id="hub-level-number">1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      <div id="hub-tabs" class="hub-tab-bar">
+        <button class="hub-tab-btn active" data-category="core">
+          <span class="tab-icon">⚔️</span>
+          <span class="tab-label">Kern</span>
         </button>
-        <button class="hub-btn glass-btn" id="hub-hero">
-          <span class="icon">👤</span><span class="cinzel text-lg">Mein Held</span><span class="label">Ausrüstung &amp;
-            Stats</span>
+        <button class="hub-tab-btn" data-category="progression">
+          <span class="tab-icon">📈</span>
+          <span class="tab-label">Fortschritt</span>
         </button>
-        <button class="hub-btn glass-btn" id="hub-story">
-          <span class="icon">📖</span><span class="cinzel text-lg">Story &amp; Bosse</span><span class="label">Kapitel
-            &amp;
-            Kämpfe</span>
+        <button class="hub-tab-btn" data-category="crafting">
+          <span class="tab-icon">⚒️</span>
+          <span class="tab-label">Handwerk</span>
         </button>
-        <button class="hub-btn glass-btn" id="hub-artifact">
-          <span class="icon">⚒️</span><span class="cinzel text-lg">Artefakt-Schmiede</span><span class="label">Ausrüstung
-            herstellen</span>
+        <button class="hub-tab-btn" data-category="collection">
+          <span class="tab-icon">📚</span>
+          <span class="tab-label">Sammlung</span>
         </button>
-        <button class="hub-btn glass-btn" id="hub-crafting">
-          <span class="icon">🏭</span><span class="cinzel text-lg">Meisterwerkstatt</span><span class="label">Komplexes
-            Crafting</span>
-        </button>
-        <button class="hub-btn glass-btn" id="hub-leaderboard">
-          <span class="icon">🏆</span>
-          <span class="cinzel text-lg">Bestenliste</span>
-          <span class="label">Persönliche Rekorde</span>
-        </button>
-        <button class="hub-btn glass-btn" id="hub-story-branch">
-          <span class="icon">📖</span>
-          <span class="cinzel text-lg">Story</span>
-          <span class="label">Entscheidungen treffen</span>
-        </button>
-        
-        <button class="hub-btn glass-btn" id="hub-codex">
-          <span class="icon">📚</span>
-          <span class="cinzel text-lg">Codex</span>
-          <span class="label">Tagebuch &amp; Lore</span>
-        </button>
-        <button class="hub-btn glass-btn" id="hub-library" style="display: none;">
-          <span class="icon">📚</span><span class="cinzel text-lg">Bibliothek</span><span class="label">Endlose
-            Forschungen</span>
-        </button>
-        <button class="hub-btn glass-btn" id="hub-relic">
-          <span class="icon">💎</span><span class="cinzel text-lg">Relikt-Jagd</span><span class="label">Relikte
-            finden</span>
-        </button>
-        <button class="hub-btn glass-btn" id="hub-skills">
-          <span class="icon">🌳</span><span class="cinzel text-lg">Talentbaum</span><span class="label">Prestige-Punkte
-            nutzen</span>
-        </button>
-        <button class="hub-btn span-2 glass-btn btn-danger" id="hub-challenges" style="border-color: #f87171;">
-          <span class="icon">🔥</span><span class="cinzel text-lg text-danger">Anomalien</span><span class="label">Extreme
-            Herausforderungen</span>
+        <button class="hub-tab-btn" data-category="social">
+          <span class="tab-icon">👥</span>
+          <span class="tab-label">Gemeinschaft</span>
         </button>
       </div>
-      <button class="glass-btn mt-2" id="hub-back-to-menu">« Zurück zum Hauptmenü</button>
-    </div>
+    
+      <div id="hub-content">
+        <!-- KERN -->
+        <div id="hub-category-core" class="hub-category">
+          <div class="hub-grid">
+            <button class="hub-btn primary" id="hub-archive">
+              <span class="icon">📜</span>
+              <span class="cinzel text-lg">Archiv</span>
+              <span class="label">Hauptspiel betreten</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+            <button class="hub-btn" id="hub-hero">
+              <span class="icon">👤</span>
+              <span class="cinzel text-lg">Mein Held</span>
+              <span class="label">Ausrüstung &amp; Stats</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+            <button class="hub-btn" id="hub-story">
+              <span class="icon">📖</span>
+              <span class="cinzel text-lg">Story &amp; Bosse</span>
+              <span class="label">Kapitel &amp; Kämpfe</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+            <button class="hub-btn" id="hub-skills">
+              <span class="icon">🌳</span>
+              <span class="cinzel text-lg">Talentbaum</span>
+              <span class="label">Prestige-Punkte nutzen</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+          </div>
+          </div>
+          
+          <!-- FORTSCHRITT -->
+          <div id="hub-category-progression" class="hub-category" style="display: none;">
+            <div class="hub-grid">
+              <button class="hub-btn" id="hub-leaderboard">
+                <span class="icon">🏆</span>
+              <span class="cinzel text-lg">Ruhmeshalle</span>
+              <span class="label">Persönliche Rekorde</span>
+              <span class="hub-btn-glow"></span>
+              </button>
+              <button class="hub-btn" id="hub-relic">
+                <span class="icon">💎</span>
+                <span class="cinzel text-lg">Relikt-Jagd</span>
+                <span class="label">Relikte finden</span>
+                <span class="hub-btn-glow"></span>
+              </button>
+              <button class="hub-btn hub-btn-danger span-2" id="hub-challenges">
+                <span class="icon">🔥</span>
+                <span class="cinzel text-lg text-danger">Anomalien</span>
+                <span class="label">Extreme Herausforderungen</span>
+                <span class="hub-btn-glow"></span>
+              </button>
+              </div>
+              </div>
+              
+              <!-- HANDWERK -->
+              <div id="hub-category-crafting" class="hub-category" style="display: none;">
+                <div class="hub-grid">
+                  <button class="hub-btn" id="hub-artifact">
+                    <span class="icon">⚒️</span>
+                    <span class="cinzel text-lg">Artefakt-Schmiede</span>
+                    <span class="label">Ausrüstung herstellen</span>
+                    <span class="hub-btn-glow"></span>
+                  </button>
+                  <button class="hub-btn" id="hub-crafting">
+                    <span class="icon">🏭</span>
+                    <span class="cinzel text-lg">Meisterwerkstatt</span>
+                    <span class="label">Komplexes Crafting</span>
+                    <span class="hub-btn-glow"></span>
+            </button>
+            <button class="hub-btn" id="hub-library" style="display: none;">
+              <span class="icon">📚</span>
+              <span class="cinzel text-lg">Bibliothek</span>
+              <span class="label">Endlose Forschungen</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+          </div>
+          </div>
 
-    <!-- ===== SPIEL ===== -->
+        <!-- SAMMLUNG -->
+        <div id="hub-category-collection" class="hub-category" style="display: none;">
+          <div class="hub-grid">
+            <button class="hub-btn" id="hub-codex">
+              <span class="icon">📚</span>
+              <span class="cinzel text-lg">Codex</span>
+              <span class="label">Tagebuch &amp; Lore</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+            <button class="hub-btn" id="hub-story-branch">
+              <span class="icon">📖</span>
+              <span class="cinzel text-lg">Story</span>
+              <span class="label">Entscheidungen treffen</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+          </div>
+          </div>
+          
+          <!-- GEMEINSCHAFT -->
+          <div id="hub-category-social" class="hub-category" style="display: none;">
+            <div class="hub-grid">
+              <button class="hub-btn" id="hub-guild">
+                <span class="icon">🏛️</span>
+                <span class="cinzel text-lg">Gilde</span>
+                <span class="label">Clan &amp; Mitglieder</span>
+                <span class="hub-btn-glow"></span>
+              </button>
+            <button class="hub-btn" id="hub-friends">
+              <span class="icon">👥</span>
+              <span class="cinzel text-lg">Freunde</span>
+              <span class="label">Freundesliste</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+            <button class="hub-btn" id="hub-chat">
+              <span class="icon">💬</span>
+              <span class="cinzel text-lg">Chat</span>
+              <span class="label">Globaler Chat</span>
+              <span class="hub-btn-glow"></span>
+            </button>
+          </div>
+        </div>
+        </div>
+
+      <div id="hub-footer">
+        <button class="hub-back-btn glass-btn" id="hub-back-to-menu">« Zurück</button>
+        <div id="hub-notifications">
+          <span id="hub-quest-indicator" style="display: none;">📋 Mission aktiv</span>
+          <span id="hub-guild-indicator" style="display: none;">🏛️</span>
+        </div>
+        <div class="hub-version">v1.5</div>
+      </div>
+      </div>
+      
+      <!-- ===== IN-GAME SPIEL ===== -->
     <div id="game-container" class="fade-in" style="display: none;">
-      <!-- HEADER FIX: Sauberes Flex-Grid verhindert Überlappen -->
       <div id="game-header">
         <div class="header-left">
           <button id="back-to-hub-btn" class="glass-btn primary" title="Zurück zur Übersicht">« Zurück zum Hub</button>
@@ -202,9 +328,7 @@
           <h1 class="glow-text text-center">ARCHIV DES VERGESSENS</h1>
           <div class="subtitle text-center">Der Mneme-Bund</div>
         </div>
-        <div class="header-right">
-          <!-- Platzhalter für Balance im Layout -->
-        </div>
+        <div class="header-right"></div>
       </div>
 
       <div id="resource-bar" class="resource-bar-flex glass-panel">
@@ -219,7 +343,7 @@
           </div>
           <div class="resource-item" id="res-artifact">
             <span class="resource-label">Artefakte:</span>
-            <span class="resource-value text-gold glow-text" id="artifact-display">0</span>
+            <span class="resource-value text-gold glow-text" id="node-artifact-display">0</span>
           </div>
         </div>
         <button id="open-achievements-btn" class="glass-btn primary">🏆 Erfolge ansehen</button>
@@ -277,10 +401,7 @@
       </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- OVERLAYS (Modals)                          -->
-    <!-- ========================================== -->
-
+    <!-- MODALS & OVERLAYS -->
     <!-- QUEST MODAL -->
     <div id="quest-modal-overlay" class="modal-overlay" style="display: none;">
       <div id="quest-modal" class="modal-content glass-panel">
@@ -300,7 +421,6 @@
       <div id="expedition-modal" class="modal-content-small glass-panel">
         <button class="modal-close" id="expedition-modal-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text cinzel text-center mb-1">Expedition</h2>
-
         <div class="glass-inner-panel mb-1">
           <div class="flex-between mb-1"><span class="text-muted">Name:</span><span class="text-highlight text-bold"
               id="expedition-member-name"></span></div>
@@ -311,7 +431,6 @@
               id="expedition-success-chance"></span></div>
           <div class="flex-between"><span class="text-muted">Dauer:</span><span id="expedition-duration"></span></div>
         </div>
-
         <div id="expedition-progress-container" class="mt-1">
           <div class="progress-bar-container">
             <div class="progress-bar-fill" id="expedition-progress-fill"></div>
@@ -330,12 +449,10 @@
         <button class="modal-close" id="hero-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text cinzel text-center mb-1">Mein Held</h2>
         <div class="hero-split-layout">
-          <!-- LINKE SEITE: Avatar & Stats -->
           <div class="hero-avatar-panel glass-inner-panel">
             <div id="hero-name" class="cinzel text-lg text-gold glow-text mt-1"></div>
             <div id="hero-level" class="text-muted text-sm mb-1"></div>
             <div class="avatar-container">
-              <!-- Silhouette SVG -->
               <svg class="silhouette-svg" viewBox="0 0 100 200">
                 <defs>
                   <filter id="hero-glow">
@@ -363,27 +480,20 @@
             </div>
             <div id="hero-exp" class="text-sm text-center text-muted mb-1 w-100"
               style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;"></div>
-
-            <!-- Statpunkte-Anzeige -->
             <div id="hero-stat-points" class="w-100 mb-1"></div>
-
             <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-bottom: 0.5rem;">Attribute</h3>
             <div class="stats-grid w-100 pr-1" style="overflow-y: auto; max-height: 200px;" id="hero-stats"></div>
           </div>
-
-          <!-- RECHTE SEITE: Inventar & Aktionen -->
           <div class="hero-details-panel">
             <div class="hero-action-buttons">
               <button id="hero-prestige-btn" class="glass-btn primary btn-small epic-pulse" style="display: none;">Verewigen</button>
               <button id="hero-daily-btn" class="glass-btn btn-small">Tägliche Belohnung</button>
             </div>
-
             <div class="tab-container">
               <button id="hero-tab-resources" class="inv-tab-btn active glass-btn">Ressourcen</button>
               <button id="hero-tab-equipment" class="inv-tab-btn glass-btn">Ausrüstung</button>
               <button id="hero-tab-loot" class="inv-tab-btn glass-btn">Loot</button>
             </div>
-
             <div id="hero-bulk-actions" class="bulk-actions-container glass-inner-panel flex-row" style="display: none;">
               <select id="inv-filter" class="ui-select">
                 <option value="all">Alle Slots</option>
@@ -400,7 +510,6 @@
               <div style="flex: 1;"></div>
               <div id="bulk-btn-wrapper"></div>
             </div>
-
             <div id="hero-inventory-resources" class="modal-scroll-area glass-inner-panel" style="padding: 1rem;"></div>
             <div id="hero-inventory-equipment" class="modal-scroll-area" style="display: none;"></div>
             <div id="hero-inventory-loot" class="modal-scroll-area" style="display: none;"></div>
@@ -409,26 +518,19 @@
       </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- STORY MODAL                                 -->
-    <!-- ========================================== -->
+    <!-- STORY MODAL -->
     <div id="story-overlay" class="modal-overlay" style="display: none;">
       <div id="story-modal" class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;">
         <button class="modal-close" id="story-close" aria-label="Schließen">&times;</button>
         <h2 class="modal-title glow-text cinzel text-center">📖 Story &amp; Bosse</h2>
-
-        <!-- Kapitelnavigation -->
         <div class="chapter-navigation glass-inner-panel flex-between mb-1" style="padding: 0.8rem 1.2rem;">
           <button id="story-prev-chapter" class="glass-btn btn-small">◄</button>
-          <div id="story-chapter-info" class="text-gold glow-text cinzel text-lg" style="font-size: 1.1rem;">Kapitel 1 -
-            Die Erwachenden</div>
+          <div id="story-chapter-info" class="text-gold glow-text cinzel text-lg" style="font-size: 1.1rem;">Kapitel 1
+          </div>
           <button id="story-next-chapter" class="glass-btn btn-small">►</button>
         </div>
-
-        <!-- Boss-Liste -->
         <div id="story-content-area" style="position: relative; min-height: 220px; flex: 1; overflow: hidden;" class="mt-1">
           <div id="story-boss-list" class="modal-scroll-area" style="max-height: 220px; padding-right: 0.3rem;"></div>
-          <!-- Gesperrter Overlay -->
           <div id="story-locked-overlay" class="glass-inner-panel"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);">
             <div class="text-gold" style="font-size: 3rem; margin-bottom: 0.5rem;">🔒</div>
@@ -436,8 +538,6 @@
             <div class="text-sm text-muted mt-1">Besiege die Bosse des vorherigen Kapitels.</div>
           </div>
         </div>
-
-        <!-- Aktueller Boss & Kampf -->
         <div id="story-current-boss" class="glass-inner-panel mt-1" style="padding: 1.2rem;">
           <div class="text-muted text-sm text-center mb-1" style="letter-spacing: 1px;">AKTUELLES ZIEL</div>
           <div id="story-current-boss-name" class="cinzel text-danger glow-text text-center text-lg mb-1"
@@ -458,13 +558,12 @@
       </div>
     </div>
 
-    <!-- FORGE MODAL -->
+    <!-- ARTEFAKT-SCHMIEDE -->
     <div id="forge-overlay" class="modal-overlay" style="display: none;">
       <div id="forge-modal" class="modal-content-wide glass-panel">
         <button class="modal-close" id="forge-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text text-gold cinzel text-center">Artefakt-Schmiede</h2>
         <div class="text-center text-muted mb-1">Schmiede und werte Ausrüstung auf</div>
-
         <div id="forge-resources" class="glass-inner-panel flex-between text-sm mb-2" style="padding: 0.8rem 2rem;">
         </div>
         <div class="forge-split-layout">
@@ -481,22 +580,20 @@
       </div>
     </div>
 
-    <!-- CRAFTING MODAL (Meisterwerkstatt) -->
+    <!-- MASTERWERKSTATT -->
     <div id="crafting-overlay" class="modal-overlay" style="display: none;">
       <div id="crafting-modal" class="modal-content-wide glass-panel" style="max-width: 900px;">
         <button class="modal-close" id="crafting-close" aria-label="Schließen">&times;</button>
-        <h2 class="glow-text text-gold cinzel text-center">🏭 Meisterwerkstatt</h2>
+        <h2 class="glow-text text-gold cinzel text-center"> Meisterwerkstatt</h2>
         <div class="text-muted text-sm text-center mb-1">Hier schmiedest du die mächtigsten Artefakte.</div>
-
         <div id="crafting-resources" class="glass-inner-panel mb-1"></div>
         <div id="crafting-skill" class="glass-inner-panel mb-1"></div>
-
         <div id="crafting-recipes" class="modal-scroll-area" style="max-height: 40vh;"></div>
         <div id="crafting-result" class="text-center mt-1 text-bold"></div>
       </div>
     </div>
 
-    <!-- NEW GAME MODAL -->
+    <!-- NEW GAME DIALOG -->
     <div id="new-game-modal-overlay" class="modal-overlay" style="display: none; z-index: 9999;">
       <div id="new-game-modal" class="modal-content-small glass-panel">
         <h2 class="glow-text text-gold cinzel text-center">NEUES ARCHIV ÖFFNEN</h2>
@@ -511,13 +608,12 @@
       </div>
     </div>
 
-    <!-- RELIC HUNT MODAL -->
+    <!-- RELIC HUNT -->
     <div id="relic-hunt-overlay" class="modal-overlay" style="display: none;">
       <div id="relic-hunt-modal" class="modal-content-small glass-panel">
         <button class="modal-close" id="relic-hunt-close" aria-label="Schließen">&times;</button>
         <h2 class="glow-text text-highlight cinzel text-center">RELIKT-JAGD</h2>
         <div class="text-muted text-center mb-1">Suche nach verlorenen Erinnerungen</div>
-
         <div id="relic-hunt-status-area" class="glass-inner-panel text-center mt-1 mb-2">
           <div class="text-muted text-sm mb-1">Kosten pro Suche</div>
           <div class="text-gold text-lg glow-text cinzel">25 <span class="text-sm text-muted"
@@ -539,7 +635,7 @@
       </div>
     </div>
 
-    <!-- SKILLTREE MODAL -->
+    <!-- TALENTBAUM -->
     <div id="skilltree-overlay" class="modal-overlay" style="display: none;">
       <div id="skilltree-modal" class="modal-content glass-panel" style="width: 700px;">
         <button class="modal-close" id="skilltree-close" aria-label="Schließen">&times;</button>
@@ -552,7 +648,7 @@
       </div>
     </div>
 
-    <!-- CHALLENGES MODAL -->
+    <!-- ANOMALIEN -->
     <div id="challenges-overlay" class="modal-overlay" style="display: none;">
       <div id="challenges-modal" class="modal-content glass-panel" style="width: 700px;">
         <button class="modal-close" id="challenges-close" aria-label="Schließen">&times;</button>
@@ -565,7 +661,7 @@
       </div>
     </div>
 
-    <!-- LIBRARY MODAL -->
+    <!-- BIBLIOTHEK -->
     <div id="library-overlay" class="modal-overlay" style="display: none;">
       <div id="library-modal" class="modal-content glass-panel" style="width: 700px;">
         <button class="modal-close" id="library-close" aria-label="Schließen">&times;</button>
@@ -578,97 +674,119 @@
       </div>
     </div>
 
-    <!-- OFFLINE CATCHUP MODAL -->
-    <div id="offline-modal-overlay" class="modal-overlay" style="display: none; z-index: 1000;">
-      <div id="offline-modal" class="modal-content-small glass-panel">
-        <h2 class="glow-text text-gold cinzel text-center">WILLKOMMEN ZURÜCK!</h2>
-        <div class="text-muted text-center mb-2">Das Archiv ruhte nie, während du fort warst.</div>
-
-        <div class="glass-inner-panel mb-2">
-          <div class="flex-between mb-1"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val"
-              class="text-bold text-highlight">0s</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Partikel:</span><span id="offline-particles-val"
-              class="text-gold text-bold">0</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Relikte:</span><span id="offline-relics-val"
-              class="text-gold text-bold">0</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Artefakte:</span><span id="offline-artifacts-val"
-              class="text-gold text-bold">0</span></div>
-          <div class="flex-between"><span class="text-muted">+ Stufenaufstiege:</span><span id="offline-levels-val"
-              class="text-success text-bold">0</span></div>
+    <!-- DIALOG (NPC INTERACTION) -->
+    <div id="dialog-overlay" class="modal-overlay" style="display: none;">
+      <div id="dialog-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 80vh;">
+        <button class="modal-close" id="dialog-close" aria-label="Schließen">&times;</button>
+        <div class="flex-row gap-md mb-1" style="align-items: center;">
+          <span id="dialog-npc-portrait" style="font-size: 3rem;">👤</span>
+          <div>
+            <div id="dialog-npc-name" class="text-gold text-bold cinzel text-lg"></div>
+            <div id="dialog-npc-title" class="text-muted text-sm"></div>
+          </div>
         </div>
-        <button id="offline-close-btn" class="glass-btn primary w-100">Archiv betreten</button>
+        <div id="dialog-text" class="glass-inner-panel mb-1" style="min-height: 80px; padding: 1rem; line-height: 1.6;">
+        </div>
+        <div id="dialog-options" class="flex-column" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
       </div>
     </div>
-    <!-- LEADERBOARD MODAL (Persönliche Bestenliste) -->
-    <div id="leaderboard-overlay" class="modal-overlay" style="display: none;">
-      <div id="leaderboard-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw;">
-        <button class="modal-close" id="leaderboard-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">🏆 Persönliche Bestenliste</h2>
-        <div class="hub-subtitle text-center mb-1">Deine Rekorde – gespeichert in deinem Browser</div>
-    
-        <div id="leaderboard-container" class="modal-scroll-area" style="max-height: 50vh;"></div>
-    
-        <button id="leaderboard-reset-btn" class="glass-btn btn-danger btn-small mt-2"
-          style="display: none; margin: 0 auto;">Rekorde zurücksetzen</button>
-        </div>
-        </div>
-        <!-- DIALOG MODAL -->
-        <div id="dialog-overlay" class="modal-overlay" style="display: none;">
-          <div id="dialog-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 80vh;">
-            <button class="modal-close" id="dialog-close" aria-label="Schließen">&times;</button>
-            <div class="flex-row gap-md mb-1" style="align-items: center;">
-              <span id="dialog-npc-portrait" style="font-size: 3rem;">👤</span>
-              <div>
-                <div id="dialog-npc-name" class="text-gold text-bold cinzel text-lg"></div>
-                <div id="dialog-npc-title" class="text-muted text-sm"></div>
-              </div>
+<!-- CODEX -->
+<div id="codex-overlay" class="modal-overlay" style="display: none;">
+  <div id="codex-modal" class="modal-content-wide glass-panel" style="max-width: 1000px; max-height: 85vh;">
+    <button class="modal-close" id="codex-close" aria-label="Schließen">&times;</button>
+    <h2 class="modal-title glow-text cinzel text-center">📚 Codex – Das Tagebuch des Archivs</h2>
+    <div class="hub-subtitle text-center mb-1">Alle entdeckten Geheimnisse und Erinnerungen</div>
+        <div
+          style="display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; flex: 1; min-height: 0; height: calc(100% - 130px); max-height: 60vh;">
+          <div class="glass-inner-panel"
+            style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+            <div id="codex-categories" class="flex-row gap-sm mb-1" style="flex-wrap: wrap;"></div>
+            <input id="codex-search" type="text" placeholder="🔍 Suchen..." class="ui-select w-100 mb-1"
+              style="padding: 0.5rem;" />
+            <div id="codex-container" class="modal-scroll-area"
+              style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
             </div>
-            <div id="dialog-text" class="glass-inner-panel mb-1" style="min-height: 80px; padding: 1rem; line-height: 1.6;">
+          <div class="glass-inner-panel"
+            style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+            <div class="text-muted text-sm mb-1"
+              style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; flex-shrink: 0;">Details
             </div>
-            <div id="dialog-options" class="flex-column" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+            <div id="codex-entry-detail" class="modal-scroll-area"
+              style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
           </div>
         </div>
-        <!-- CODEX MODAL -->
-        <div id="codex-overlay" class="modal-overlay" style="display: none;">
-          <div id="codex-modal" class="modal-content-wide glass-panel" style="max-width: 1000px; max-height: 85vh;">
-            <button class="modal-close" id="codex-close" aria-label="Schließen">&times;</button>
-            <h2 class="modal-title glow-text cinzel text-center">📚 Codex – Das Tagebuch des Archivs</h2>
-            <div class="hub-subtitle text-center mb-1">Alle entdeckten Geheimnisse und Erinnerungen</div>
-        
-            <!-- Grid mit fester Höhe für scrollbare Bereiche -->
-            <div
-              style="display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; flex: 1; min-height: 0; height: calc(100% - 130px); max-height: 60vh;">
-        
-              <!-- Linke Spalte: Kategorien, Suche, Liste -->
-              <div class="glass-inner-panel"
-                style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
-                <div id="codex-categories" class="flex-row gap-sm mb-1" style="flex-wrap: wrap;"></div>
-                <input id="codex-search" type="text" placeholder="🔍 Suchen..." class="ui-select w-100 mb-1"
-                  style="padding: 0.5rem;" />
-                <!-- Container für die Eintragsliste – scrollbar -->
-                <div id="codex-container" class="modal-scroll-area"
-                  style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
-              </div>
-        
-              <!-- Rechte Spalte: Detailansicht -->
-              <div class="glass-inner-panel"
-                style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
-                <div class="text-muted text-sm mb-1"
-                  style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; flex-shrink: 0;">Details</div>
-                <!-- Container für die Detailansicht – scrollbar -->
-                <div id="codex-entry-detail" class="modal-scroll-area"
-                  style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
-              </div>
-            </div>
-        
-            <div class="text-center text-muted text-sm mt-1" style="flex-shrink: 0; padding-top: 0.5rem;">
-              Fortschritt: <span id="codex-progress">0</span>% freigeschaltet
-            </div>
-          </div>
+        <div class="text-center text-muted text-sm mt-1" style="flex-shrink: 0; padding-top: 0.5rem;">
+          Fortschritt: <span id="codex-progress">0</span>% freigeschaltet
         </div>
-    <!-- PREACT ROOT CONTAINER -->
-    <div id="preact-root"></div>
+        </div>
+        </div>
+<!-- GILDEN -->
+<div id="guild-overlay" class="modal-overlay" style="display: none;">
+  <div id="guild-modal" class="modal-content glass-panel" style="width: 650px; max-width: 95vw; max-height: 85vh;">
+    <button class="modal-close" id="guild-close" aria-label="Schließen">&times;</button>
+    <h2 class="modal-title glow-text cinzel text-center">🏛️ Gilde</h2>
+    <div id="guild-container" class="modal-scroll-area" style="max-height: 70vh;"></div>
+  </div>
+</div>
 
+<!-- FREUNDE -->
+<div id="friend-overlay" class="modal-overlay" style="display: none;">
+  <div id="friend-modal" class="modal-content glass-panel" style="width: 500px; max-width: 95vw; max-height: 85vh;">
+    <button class="modal-close" id="friend-close" aria-label="Schließen">&times;</button>
+    <h2 class="modal-title glow-text cinzel text-center">👥 Freunde</h2>
+    <div id="friend-container" class="modal-scroll-area" style="max-height: 70vh;"></div>
+  </div>
+</div>
+
+<!-- GLOBAL CHAT -->
+<div id="chat-overlay" class="modal-overlay" style="display: none;">
+  <div id="chat-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 85vh;">
+    <button class="modal-close" id="chat-close" aria-label="Schließen">&times;</button>
+    <h2 class="modal-title glow-text cinzel text-center">💬 Globaler Chat</h2>
+    <div id="chat-messages" class="modal-scroll-area" style="max-height: 50vh; margin-bottom: 0.5rem;"></div>
+    <div class="flex-row gap-sm">
+      <input id="chat-input" type="text" placeholder="Nachricht..." class="ui-select"
+        style="flex: 1; padding: 0.5rem;" />
+      <button class="glass-btn primary btn-small" id="chat-send-btn">Senden</button>
+      <button class="glass-btn btn-danger btn-small" id="chat-clear-btn">🗑️ Leeren</button>
+    </div>
+  </div>
+</div>
+
+<!-- BESTENLISTE -->
+<div id="leaderboard-overlay" class="modal-overlay" style="display: none;">
+  <div id="leaderboard-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw;">
+    <button class="modal-close" id="leaderboard-close" aria-label="Schließen">&times;</button>
+    <h2 class="modal-title glow-text cinzel text-center">🏆 Persönliche Bestenliste</h2>
+    <div class="hub-subtitle text-center mb-1">Deine Rekorde – gespeichert in deinem Browser</div>
+    <div id="leaderboard-container" class="modal-scroll-area" style="max-height: 50vh;"></div>
+    <button id="leaderboard-reset-btn" class="glass-btn btn-danger btn-small mt-2"
+      style="display: none; margin: 0 auto;">Rekorde zurücksetzen</button>
+  </div>
+</div>
+
+<!-- OFFLINE WELCOME -->
+<div id="offline-modal-overlay" class="modal-overlay" style="display: none; z-index: 1000;">
+  <div id="offline-modal" class="modal-content-small glass-panel">
+    <h2 class="glow-text text-gold cinzel text-center">WILLKOMMEN ZURÜCK!</h2>
+    <div class="text-muted text-center mb-2">Das Archiv ruhte nie, während du fort warst.</div>
+    <div class="glass-inner-panel mb-2">
+      <div class="flex-between mb-1"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val"
+          class="text-bold text-highlight">0s</span></div>
+      <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Partikel:</span><span id="offline-particles-val"
+          class="text-gold text-bold">0</span></div>
+      <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Relikte:</span><span id="offline-relics-val"
+          class="text-gold text-bold">0</span></div>
+      <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Artefakte:</span><span id="offline-artifacts-val"
+          class="text-gold text-bold">0</span></div>
+      <div class="flex-between"><span class="text-muted">+ Stufenaufstiege:</span><span id="offline-levels-val"
+          class="text-success text-bold">0</span></div>
+    </div>
+    <button id="offline-close-btn" class="glass-btn primary w-100">Archiv betreten</button>
+  </div>
+</div>
+
+    <div id="preact-root"></div>
   </div>
   <script type="module" src="js/main.js"></script>
 </body>

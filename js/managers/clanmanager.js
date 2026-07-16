@@ -1,14 +1,18 @@
+// ============================================================
+// managers/clanmanager.js – FIXED: RNG.next() statt Math.random()
+// ============================================================
 import ClanMember, { ROLES } from '../models/clanmember.js';
 import { EVENTS } from '../core/events.js';
 import { CONFIG } from '../core/config.js';
+import RNG from '../utils/rng.js';
 
 export default class ClanManager {
   constructor(eventBus, resourceManager, challengeManager) {
     this.eventBus = eventBus;
     this.resourceManager = resourceManager;
     this.challengeManager = challengeManager;
-    this.libraryManager = null; 
-    
+    this.libraryManager = null;
+
     this.members = [];
     this._nextId = 1;
     this._expeditionStatus = new Map();
@@ -46,11 +50,19 @@ export default class ClanManager {
     if (member.role === ROLES.COLLECTOR) {
       this.resourceManager.addParticles(1);
     } else if (member.role === ROLES.WEAVER) {
-      if (Math.random() < 0.1) this.resourceManager.addRelics(1);
-      else this.resourceManager.addParticles(2);
+      // ---------- SEEDED RNG ----------
+      if (RNG.next() < 0.1) {
+        this.resourceManager.addRelics(1);
+      } else {
+        this.resourceManager.addParticles(2);
+      }
     } else if (member.role === ROLES.GUARDIAN) {
-      if (Math.random() < 0.05) this.resourceManager.addArtifacts(1);
-      else this.resourceManager.addParticles(3);
+      // ---------- SEEDED RNG ----------
+      if (RNG.next() < 0.05) {
+        this.resourceManager.addArtifacts(1);
+      } else {
+        this.resourceManager.addParticles(3);
+      }
     }
   }
 
@@ -58,8 +70,9 @@ export default class ClanManager {
     const { role, cost } = data;
     if (this.resourceManager.particles >= cost) {
       this.resourceManager.removeParticles(cost);
+      // ---------- SEEDED RNG für Namensauswahl ----------
       const names = ['Lyra', 'Theron', 'Kael', 'Elara', 'Vane', 'Sira', 'Jace', 'Rin'];
-      const name = names[Math.floor(Math.random() * names.length)] + ' ' + this._nextId;
+      const name = names[Math.floor(RNG.next() * names.length)] + ' ' + this._nextId;
       const newMember = new ClanMember(this._nextId++, name, role);
       this.members.push(newMember);
       this._expeditionStatus.set(newMember.id, false);
@@ -69,9 +82,9 @@ export default class ClanManager {
   }
 
   getMemberById(id) { return this.members.find(m => m.id === id); }
-  
+
   setMemberExpedition(id, isOut) { this._expeditionStatus.set(id, isOut); }
-  
+
   toJSON() {
     return {
       members: this.members.map(m => ({

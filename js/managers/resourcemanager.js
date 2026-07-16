@@ -1,5 +1,6 @@
-// --- START OF FILE managers/resourcemanager.js ---
-
+// ============================================================
+// FILE: managers/resourcemanager.js – vollständig mit Arrow-Funktion
+// ============================================================
 import { EVENTS } from '../core/events.js';
 
 export default class ResourceManager {
@@ -15,8 +16,11 @@ export default class ResourceManager {
     this.catalyst = 0;
     this.essence = 0;
 
-    // Binde _publishUpdate an diese Instanz, damit sie immer verfügbar ist
-    this._publishUpdate = this._publishUpdate.bind(this);
+    this._publishUpdate = () => {
+      if (this.eventBus) {
+        this.eventBus.publish(EVENTS.RESOURCES_UPDATED, this.getResources());
+      }
+    };
   }
 
   addParticles(amount) {
@@ -105,12 +109,6 @@ export default class ResourceManager {
     return true;
   }
 
-  _publishUpdate() {
-    if (this.eventBus) {
-      this.eventBus.publish(EVENTS.RESOURCES_UPDATED, this.getResources());
-    }
-  }
-
   getResources() {
     return {
       particles: this.particles,
@@ -140,15 +138,6 @@ export default class ResourceManager {
     this.totalRelics = data.totalRelics || this.relics;
     this.catalyst = data.catalyst || 0;
     this.essence = data.essence || 0;
-
-    // Sicherheitscheck: Falls _publishUpdate nicht existiert (sollte aber nicht vorkommen)
-    if (typeof this._publishUpdate === 'function') {
-      this._publishUpdate();
-    } else {
-      // Fallback: Direktes Event-Publishen
-      if (this.eventBus) {
-        this.eventBus.publish(EVENTS.RESOURCES_UPDATED, this.getResources());
-      }
-    }
+    this._publishUpdate();
   }
 }

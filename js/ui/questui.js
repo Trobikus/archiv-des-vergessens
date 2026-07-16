@@ -1,5 +1,6 @@
-// --- START OF FILE questui.js ---
-
+// ============================================================
+// FILE: ui/questui.js (FIXED: Hört auf UI_REFRESH_QUEST)
+// ============================================================
 import { EVENTS } from '../core/events.js';
 import BaseModalUI from './basemodal.js';
 
@@ -29,6 +30,7 @@ export default class QuestUI extends BaseModalUI {
 
     this.eventBus.subscribe(EVENTS.QUEST_COMPLETED, () => this.render());
     this.eventBus.subscribe(EVENTS.QUEST_UPDATED, () => this.render());
+    // ---------- FIX: Reagiere auch auf UI_REFRESH_QUEST ----------
     this.eventBus.subscribe(EVENTS.UI_REFRESH_QUEST, () => this.render());
   }
 

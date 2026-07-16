@@ -27,7 +27,7 @@ export const EVENTS = {
     STORY_BOSS_DEFEATED: 'story:bossDefeated',
     STORY_UPDATED: 'story:updated',
 
-    // === STORY BRANCH (NEU) ===
+    // === STORY BRANCH ===
     STORY_BRANCH_CHANGED: 'story:branchChanged',
     STORY_BRANCH_RESET: 'story:branchReset',
     STORY_ENDING_REACHED: 'story:endingReached',
@@ -70,6 +70,9 @@ export const EVENTS = {
     UI_OPEN_LIBRARY: 'ui:openLibrary',
     UI_OPEN_CODEX: 'ui:openCodex',
     UI_OPEN_DIALOG: 'ui:openDialog',
+    UI_OPEN_GUILD: 'ui:openGuild',
+    UI_OPEN_FRIENDS: 'ui:openFriends',
+    UI_OPEN_CHAT: 'ui:openChat',
     UI_REFRESH_QUEST: 'ui:refreshQuestUI',
     UI_START_BOSS_FIGHT: 'ui:startBossFight',
     UI_ENTER_GAME: 'ui:enterGame',
@@ -83,6 +86,23 @@ export const EVENTS = {
     UI_OPEN_LEADERBOARD: 'ui:openLeaderboard',
     LEADERBOARD_UPDATED: 'leaderboard:updated',
 
-    // === CODEX (NEU) ===
-    CODEX_ENTRY_UNLOCKED: 'codex:entryUnlocked'
+    // === CODEX ===
+    CODEX_ENTRY_UNLOCKED: 'codex:entryUnlocked',
+
+    // === GUILD ===
+    GUILD_CREATED: 'guild:created',
+    GUILD_MEMBER_JOINED: 'guild:memberJoined',
+    GUILD_MEMBER_LEFT: 'guild:memberLeft',
+    GUILD_DELETED: 'guild:deleted',
+    GUILD_LEVEL_UP: 'guild:levelUp',
+
+    // === FRIEND ===
+    FRIEND_REQUEST_SENT: 'friend:requestSent',
+    FRIEND_ACCEPTED: 'friend:accepted',
+    FRIEND_REMOVED: 'friend:removed',
+
+    // === CHAT ===
+    CHAT_GLOBAL_MESSAGE: 'chat:globalMessage',
+    CHAT_GUILD_MESSAGE: 'chat:guildMessage',
+    CHAT_CLEARED: 'chat:cleared'
 };

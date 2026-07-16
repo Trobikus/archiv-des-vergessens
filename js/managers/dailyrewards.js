@@ -1,5 +1,9 @@
+// ============================================================
+// managers/dailyrewards.js – FIXED: RNG.next() statt Math.random()
+// ============================================================
 import { Item } from '../models/item.js';
 import { EVENTS } from '../core/events.js';
+import RNG from '../utils/rng.js';
 
 export default class DailyRewardManager {
   constructor(eventBus, hero, resourceManager) {
@@ -41,9 +45,14 @@ export default class DailyRewardManager {
       reward = { particles: 250, relics: 15, artifacts: 5, title: 'Tagebuch der Erinnerung', amulet: true };
     } else {
       const rewards = [
-        { particles: 80 }, { relics: 12 }, { artifacts: 4 }, { particles: 50, relics: 4, boost: 'collect-2x' }
+        { particles: 80 },
+        { relics: 12 },
+        { artifacts: 4 },
+        { particles: 50, relics: 4, boost: 'collect-2x' }
       ];
-      reward = rewards[Math.floor(Math.random() * rewards.length)];
+      // ---------- SEEDED RNG für Belohnungsauswahl ----------
+      const idx = Math.floor(RNG.next() * rewards.length);
+      reward = rewards[idx];
     }
 
     this.lastClaimDate = today;

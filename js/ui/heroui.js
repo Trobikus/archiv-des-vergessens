@@ -1,5 +1,6 @@
-// --- START OF FILE ui/heroui.js ---
-
+// ============================================================
+// ui/heroui.js – FIXED: Tooltip-Leaks und Event-Leaks
+// ============================================================
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
 import BaseModalUI from './basemodal.js';
@@ -21,6 +22,7 @@ export default class HeroUI extends BaseModalUI {
 
     this._activeTab = 'resources';
     this._filterBound = false;
+    this._tooltipCleanup = [];
 
     this.heroName = document.getElementById('hero-name');
     this.heroLevel = document.getElementById('hero-level');
@@ -91,6 +93,15 @@ export default class HeroUI extends BaseModalUI {
 
   onClose() {
     this._hideTooltip();
+    this._cleanupTooltips();
+  }
+
+  // ---------- FIX: Tooltip-Cleanup ----------
+  _cleanupTooltips() {
+    for (const cleanup of this._tooltipCleanup) {
+      cleanup();
+    }
+    this._tooltipCleanup = [];
   }
 
   // --- TOOLTIP LOGIK ---
@@ -139,9 +150,20 @@ export default class HeroUI extends BaseModalUI {
   }
 
   _bindTooltipEvents(element, item) {
-    element.addEventListener('mouseenter', (e) => this._showTooltip(item, e));
-    element.addEventListener('mousemove', (e) => this._updateTooltipPos(e));
-    element.addEventListener('mouseleave', () => this._hideTooltip());
+    const onEnter = (e) => this._showTooltip(item, e);
+    const onMove = (e) => this._updateTooltipPos(e);
+    const onLeave = () => this._hideTooltip();
+
+    element.addEventListener('mouseenter', onEnter);
+    element.addEventListener('mousemove', onMove);
+    element.addEventListener('mouseleave', onLeave);
+
+    // Cleanup-Funktion speichern
+    this._tooltipCleanup.push(() => {
+      element.removeEventListener('mouseenter', onEnter);
+      element.removeEventListener('mousemove', onMove);
+      element.removeEventListener('mouseleave', onLeave);
+    });
   }
 
   render(previewItem = null) {
@@ -184,10 +206,8 @@ export default class HeroUI extends BaseModalUI {
       this.hero.equipment[previewItem.slot] = oldItem;
     }
 
-    // --- GOLDENER BALKEN FÜR STATPUNKTE (als Hintergrund des Containers) ---
     if (this.heroStatPoints) {
       if (this.hero.unspentStatPoints > 0) {
-        // Setze den Hintergrund und die Umrandung auf den Container
         this.heroStatPoints.style.background = 'rgba(212, 175, 55, 0.08)';
         this.heroStatPoints.style.border = '1px solid var(--color-gold)';
         this.heroStatPoints.style.borderRadius = 'var(--border-radius-sm)';
@@ -200,7 +220,6 @@ export default class HeroUI extends BaseModalUI {
           </span>
         `;
       } else {
-        // Container zurücksetzen
         this.heroStatPoints.style.background = '';
         this.heroStatPoints.style.border = '';
         this.heroStatPoints.style.borderRadius = '';
@@ -211,9 +230,7 @@ export default class HeroUI extends BaseModalUI {
       }
     }
 
-    // --- ATTRIBUTS-LISTE (im scrollbaren Container) ---
     let html = '';
-
     const attrConfig = [
       { key: 'attack', label: '⚔️ Stärke' },
       { key: 'defense', label: '🛡️ Zähigkeit' },
@@ -277,6 +294,9 @@ export default class HeroUI extends BaseModalUI {
   }
 
   _renderAvatarNodes() {
+    // Cleanup alte Tooltips
+    this._cleanupTooltips();
+
     const slots = [
       { key: 'weapon', node: this.nodeWeapon, icon: '🗡️' },
       { key: 'armor', node: this.nodeArmor, icon: '🛡️' },

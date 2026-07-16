@@ -1,5 +1,3 @@
-// --- START OF FILE models/hero.js ---
-
 import { Item } from './item.js';
 import { PRESTIGE_ITEMS } from '../data/items.js';
 import { generateStoryBosses } from '../data/bosses.js';
@@ -27,20 +25,36 @@ export default class Hero {
     this.unlockedSkills = [];
     this.clickPowerLevel = 0;
 
-    // Leaderboard: Zeitmessung
     this._prestigeStartTime = Date.now();
     this._lastLevelUpTime = Date.now();
 
+    // Cache-Invaliderung
+    this._statsCache = null;
+    this._combatStatsCache = null;
+    this._statsDirty = true;
+
     if (this.eventBus) {
       this.eventBus.subscribe(EVENTS.CMD_HERO_ADD_BASE_STAT, this._onAddBaseStat.bind(this));
+      this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => this._markDirty());
+      this.eventBus.subscribe(EVENTS.FORGE_CRAFTED, () => this._markDirty());
+      this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, () => this._markDirty());
     }
   }
 
-  get inventory() { return this._inventory; }
+  _markDirty() {
+    this._statsDirty = true;
+    this._statsCache = null;
+    this._combatStatsCache = null;
+  }
+
+  get inventory() {
+    return this._inventory;
+  }
 
   _onAddBaseStat(data) {
     if (this.baseStats[data.stat] !== undefined) {
       this.baseStats[data.stat] += data.amount;
+      this._markDirty();
       this.eventBus.publish(EVENTS.HERO_UPDATED);
     }
   }
@@ -53,7 +67,8 @@ export default class Hero {
       this.level++;
       this.unspentStatPoints += CONFIG.HERO.STAT_POINTS_PER_LEVEL;
       this.expToNext = Math.floor(this.expToNext * CONFIG.HERO.EXP_MULTIPLIER);
-      this._lastLevelUpTime = Date.now(); // Leaderboard
+      this._lastLevelUpTime = Date.now();
+      this._markDirty();
     }
   }
 
@@ -61,6 +76,7 @@ export default class Hero {
     if (this.unspentStatPoints > 0 && this.spentStats[statKey] !== undefined) {
       this.spentStats[statKey]++;
       this.unspentStatPoints--;
+      this._markDirty();
       this.eventBus.publish(EVENTS.HERO_UPDATED);
       return true;
     }
@@ -72,6 +88,9 @@ export default class Hero {
   }
 
   getStats() {
+    if (!this._statsDirty && this._statsCache) {
+      return this._statsCache;
+    }
     const stats = {
       attack: this.baseStats.attack + this.spentStats.attack,
       defense: this.baseStats.defense + this.spentStats.defense,
@@ -90,26 +109,42 @@ export default class Hero {
       }
     }
 
-    if (setCounts['Schatten'] >= 4) { stats.agility += Math.floor(stats.agility * 0.2); stats.attack += Math.floor(stats.attack * 0.1); }
-    if (setCounts['Archiv'] >= 4) { stats.defense += Math.floor(stats.defense * 0.2); stats.stamina += Math.floor(stats.stamina * 0.2); }
+    if (setCounts['Schatten'] >= 4) {
+      stats.agility += Math.floor(stats.agility * 0.2);
+      stats.attack += Math.floor(stats.attack * 0.1);
+    }
+    if (setCounts['Archiv'] >= 4) {
+      stats.defense += Math.floor(stats.defense * 0.2);
+      stats.stamina += Math.floor(stats.stamina * 0.2);
+    }
     if (setCounts['Ur'] >= 4) {
-      stats.attack += Math.floor(stats.attack * 0.3); stats.defense += Math.floor(stats.defense * 0.3);
-      stats.agility += Math.floor(stats.agility * 0.3); stats.stamina += Math.floor(stats.stamina * 0.3);
+      stats.attack += Math.floor(stats.attack * 0.3);
+      stats.defense += Math.floor(stats.defense * 0.3);
+      stats.agility += Math.floor(stats.agility * 0.3);
+      stats.stamina += Math.floor(stats.stamina * 0.3);
     }
     if (setCounts['Gott'] >= 4) {
-      stats.attack += Math.floor(stats.attack * 0.5); stats.defense += Math.floor(stats.defense * 0.5);
-      stats.agility += Math.floor(stats.agility * 0.5); stats.stamina += Math.floor(stats.stamina * 0.5);
+      stats.attack += Math.floor(stats.attack * 0.5);
+      stats.defense += Math.floor(stats.defense * 0.5);
+      stats.agility += Math.floor(stats.agility * 0.5);
+      stats.stamina += Math.floor(stats.stamina * 0.5);
     }
-    if (this.unlockedSkills.includes('warrior_1')) stats.attack += Math.floor(stats.attack * 0.1);
+    if (this.unlockedSkills.includes('warrior_1')) {
+      stats.attack += Math.floor(stats.attack * 0.1);
+    }
 
+    this._statsCache = stats;
     return stats;
   }
 
   getCombatStats() {
+    if (!this._statsDirty && this._combatStatsCache) {
+      return this._combatStatsCache;
+    }
     const attr = this.getStats();
     const damageReduction = attr.defense / (attr.defense + 100);
 
-    return {
+    const combatStats = {
       ...attr,
       maxHp: 100 + (attr.stamina * 10) + (attr.defense * 2),
       damageReduction: damageReduction,
@@ -117,6 +152,9 @@ export default class Hero {
       critDamage: 150 + (attr.attack * 0.5),
       dodgeChance: Math.min(50, attr.agility * 0.25)
     };
+    this._combatStatsCache = combatStats;
+    this._statsDirty = false;
+    return combatStats;
   }
 
   getTotalPower() {
@@ -136,6 +174,7 @@ export default class Hero {
     const oldItem = this.equipment[slotToEquip];
     if (oldItem) this._inventory.equipment.push(oldItem);
     this.equipment[slotToEquip] = item;
+    this._markDirty();
     return true;
   }
 
@@ -145,20 +184,46 @@ export default class Hero {
     if (item) {
       this.equipment[slot] = null;
       this._inventory.equipment.push(item);
+      this._markDirty();
       return item;
     }
     return null;
   }
 
-  getEquippedItem(slot) { return this.equipment[slot] || null; }
-  addEquipmentItem(item) { if (!item) return false; this._inventory.equipment.push(item); return true; }
-  addLootItem(item) { if (!item) return false; this._inventory.loot.push(item); return true; }
-  removeEquipmentItem(index) { return index < 0 || index >= this._inventory.equipment.length ? null : this._inventory.equipment.splice(index, 1)[0]; }
-  removeLootItem(index) { return index < 0 || index >= this._inventory.loot.length ? null : this._inventory.loot.splice(index, 1)[0]; }
+  getEquippedItem(slot) {
+    return this.equipment[slot] || null;
+  }
+
+  addEquipmentItem(item) {
+    if (!item) return false;
+    this._inventory.equipment.push(item);
+    this._markDirty();
+    return true;
+  }
+
+  addLootItem(item) {
+    if (!item) return false;
+    this._inventory.loot.push(item);
+    return true;
+  }
+
+  removeEquipmentItem(index) {
+    const item = index < 0 || index >= this._inventory.equipment.length ? null : this._inventory.equipment.splice(index, 1)[0];
+    if (item) this._markDirty();
+    return item;
+  }
+
+  removeLootItem(index) {
+    return index < 0 || index >= this._inventory.loot.length ? null : this._inventory.loot.splice(index, 1)[0];
+  }
 
   removeEquipmentItemByRef(item) {
     const index = this._inventory.equipment.indexOf(item);
-    if (index !== -1) return this._inventory.equipment.splice(index, 1)[0];
+    if (index !== -1) {
+      this._inventory.equipment.splice(index, 1);
+      this._markDirty();
+      return item;
+    }
     return null;
   }
 
@@ -167,6 +232,7 @@ export default class Hero {
     if (index !== -1) return this._inventory.loot.splice(index, 1)[0];
     return null;
   }
+
   sellLootItem(index, resourceManager) {
     const item = this.removeLootItem(index);
     if (!item) return false;
@@ -184,7 +250,9 @@ export default class Hero {
     return boss ? boss.chapter : 1;
   }
 
-  getBossProgressText() { return `${this.bossProgress} / ${generateStoryBosses().length}`; }
+  getBossProgressText() {
+    return `${this.bossProgress} / ${generateStoryBosses().length}`;
+  }
 
   getPrestigeBonus(type) {
     if (this.prestigeLevel <= 0) return 0;
@@ -209,7 +277,9 @@ export default class Hero {
   }
 
   performPrestigeReset(resourceManager, clanManager = null) {
-    if (this.bossProgress < generateStoryBosses().length) return { success: false, message: 'Verewigung erst nach dem letzten Boss möglich.' };
+    if (this.bossProgress < generateStoryBosses().length) {
+      return { success: false, message: 'Verewigung erst nach dem letzten Boss möglich.' };
+    }
 
     const timeSinceLastPrestige = (Date.now() - this._prestigeStartTime) / 1000;
 
@@ -226,13 +296,19 @@ export default class Hero {
     this.defeatedBosses = [];
     this.clickPowerLevel = 0;
 
-    // Leaderboard: Prestige-Zeit zurücksetzen
     this._prestigeStartTime = Date.now();
+    this._markDirty();
 
     if (resourceManager) {
-      resourceManager.fromJSON({ particles: this.getPrestigeBonus('particleStart'), relics: 0, artifacts: 0, memoryDust: resourceManager.memoryDust });
+      resourceManager.fromJSON({
+        particles: this.getPrestigeBonus('particleStart'),
+        relics: 0,
+        artifacts: 0,
+        memoryDust: resourceManager.memoryDust
+      });
     }
     if (clanManager) clanManager.fromJSON({ members: [], nextId: 10, expeditionStatus: [] });
+
     if (this.eventBus) {
       this.eventBus.publish(EVENTS.HERO_PRESTIGE, {
         prestigeLevel: this.prestigeLevel,
@@ -241,7 +317,8 @@ export default class Hero {
       this.eventBus.publish(EVENTS.HERO_UPDATED);
       this.eventBus.publish(EVENTS.RESOURCES_UPDATED);
       this.eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, { members: clanManager ? clanManager.members : [] });
-      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `🌌 Dein Held wurde verewigt und beginnt die neue Ära in Prestige Stufe ${this.prestigeLevel}.`, type: 'event' });
+      this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `🌌 Dein Held wurde verewigt (Prestige Stufe ${this.prestigeLevel}).`, type: 'event' });
+      this.eventBus.publish(EVENTS.UI_REFRESH_QUEST);
     }
     return { success: true, message: `Dein Held wurde verewigt. Prestige Stufe ${this.prestigeLevel} erreicht.` };
   }
@@ -316,8 +393,8 @@ export default class Hero {
     this.unlockedSkills = Array.isArray(data.unlockedSkills) ? data.unlockedSkills : [];
     this.clickPowerLevel = Number(data.clickPowerLevel) || 0;
 
-    // Leaderboard Zeitwerte laden
     this._prestigeStartTime = data._prestigeStartTime || Date.now();
     this._lastLevelUpTime = data._lastLevelUpTime || Date.now();
+    this._markDirty();
   }
 }
