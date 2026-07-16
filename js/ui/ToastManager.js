@@ -1,5 +1,3 @@
-// --- START OF FILE ui/ToastManager.js ---
-
 export default class ToastManager {
     constructor() {
         this.container = document.createElement('div');
@@ -18,27 +16,23 @@ export default class ToastManager {
         `;
         document.body.appendChild(this.container);
 
-        // Event-Bus wird von außen injected
         this.eventBus = null;
         this._timeouts = new Map();
+        this._subscriptionId = null;
+        this._destroyed = false;
     }
 
     setEventBus(eventBus) {
+        if (this._destroyed) return;
         this.eventBus = eventBus;
-        this.eventBus.subscribe('ui:showToast', (data) => {
+        this._subscriptionId = eventBus.subscribe('ui:showToast', (data) => {
             this.show(data.message, data.type || 'info', data.duration || 4000);
         });
     }
 
-    /**
-     * Zeigt einen Toast an.
-     * @param {string} message – Nachricht
-     * @param {string} type – 'info', 'success', 'warning', 'error'
-     * @param {number} duration – Anzeigedauer in ms (0 = unendlich)
-     * @param {string} action – optionaler Button-Text
-     * @param {Function} onAction – Callback bei Button-Klick
-     */
     show(message, type = 'info', duration = 4000, action = null, onAction = null) {
+        if (this._destroyed) return;
+
         const toast = document.createElement('div');
         toast.className = `toast-item toast-${type}`;
         toast.style.cssText = `
@@ -59,7 +53,6 @@ export default class ToastManager {
             min-height: 48px;
         `;
 
-        // Icon je nach Typ
         const iconMap = {
             info: 'ℹ️',
             success: '✅',
@@ -89,7 +82,6 @@ export default class ToastManager {
             toast.appendChild(btn);
         }
 
-        // Schließen-Button
         const closeBtn = document.createElement('button');
         closeBtn.textContent = '×';
         closeBtn.style.cssText = `
@@ -106,7 +98,6 @@ export default class ToastManager {
 
         this.container.appendChild(toast);
 
-        // Automatisches Entfernen
         if (duration > 0) {
             const timeoutId = setTimeout(() => this._removeToast(toast), duration);
             this._timeouts.set(toast, timeoutId);
@@ -121,7 +112,7 @@ export default class ToastManager {
             }
         });
         toast.addEventListener('mouseleave', () => {
-            if (duration > 0 && toast.parentNode) {
+            if (duration > 0 && toast.parentNode && !this._destroyed) {
                 const newTid = setTimeout(() => this._removeToast(toast), duration);
                 this._timeouts.set(toast, newTid);
             }
@@ -129,6 +120,7 @@ export default class ToastManager {
     }
 
     _removeToast(toast) {
+        if (this._destroyed) return;
         if (!toast.parentNode) return;
         const tid = this._timeouts.get(toast);
         if (tid) {
@@ -150,7 +142,36 @@ export default class ToastManager {
         }
     }
 
-    // CSS-Animationen (einmalig hinzufügen)
+    // ---- DESTROY: Vollständige Bereinigung ----
+    destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
+
+        // Event-Bus Unsubscribe
+        if (this.eventBus && this._subscriptionId !== null) {
+            this.eventBus.unsubscribe(this._subscriptionId);
+            this._subscriptionId = null;
+        }
+
+        // Alle Timeouts löschen
+        for (const [, timeoutId] of this._timeouts) {
+            clearTimeout(timeoutId);
+        }
+        this._timeouts.clear();
+
+        // Alle Toasts entfernen
+        if (this.container) {
+            while (this.container.firstChild) {
+                this.container.removeChild(this.container.firstChild);
+            }
+            if (this.container.parentNode) {
+                this.container.parentNode.removeChild(this.container);
+            }
+        }
+        this.container = null;
+        this.eventBus = null;
+    }
+
     static injectStyles() {
         if (document.getElementById('toast-styles')) return;
         const style = document.createElement('style');
@@ -169,5 +190,4 @@ export default class ToastManager {
     }
 }
 
-// Statische Initialisierung
 ToastManager.injectStyles();

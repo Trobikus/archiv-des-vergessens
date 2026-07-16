@@ -1,19 +1,18 @@
-// --- START OF FILE ui/LoadingUI.js ---
-
 import BaseModalUI from './basemodal.js';
 
 export default class LoadingUI extends BaseModalUI {
     constructor() {
-        // Kein Overlay, sondern ein eigenes Fixed-Element
         super('loading-overlay', null);
         this._createElements();
         this.progress = 0;
         this.text = '';
         this.visible = false;
+        this._dotInterval = null;
+        this._animationFrame = null;
+        this._destroyed = false;
     }
 
     _createElements() {
-        // Prüfen, ob bereits ein Loading-Overlay existiert
         if (document.getElementById('loading-overlay')) return;
 
         this.overlay = document.createElement('div');
@@ -34,7 +33,6 @@ export default class LoadingUI extends BaseModalUI {
             transition: opacity 0.4s ease;
         `;
 
-        // Glühendes Symbol
         this.icon = document.createElement('div');
         this.icon.textContent = '🏛️';
         this.icon.style.cssText = `
@@ -43,7 +41,6 @@ export default class LoadingUI extends BaseModalUI {
             animation: pulse-glow 1.2s ease-in-out infinite alternate;
         `;
 
-        // Fortschrittsbalken-Container
         const barContainer = document.createElement('div');
         barContainer.style.cssText = `
             width: 300px;
@@ -75,7 +72,6 @@ export default class LoadingUI extends BaseModalUI {
             text-align: center;
         `;
 
-        // Status-Animation (Punkte)
         this.statusDots = document.createElement('span');
         this.statusDots.textContent = '...';
         this.statusDots.style.cssText = `
@@ -89,7 +85,6 @@ export default class LoadingUI extends BaseModalUI {
         this.overlay.appendChild(this.textEl);
         document.body.appendChild(this.overlay);
 
-        // CSS-Animation für Glow
         const style = document.createElement('style');
         style.textContent = `
             @keyframes pulse-glow {
@@ -99,7 +94,6 @@ export default class LoadingUI extends BaseModalUI {
         `;
         document.head.appendChild(style);
 
-        // Schließen-Button (für Notfälle)
         this.closeBtn = document.createElement('button');
         this.closeBtn.textContent = '✕';
         this.closeBtn.style.cssText = `
@@ -121,32 +115,41 @@ export default class LoadingUI extends BaseModalUI {
     }
 
     show(text = 'Lade Archiv...', progress = 0) {
+        if (this._destroyed) return;
         this.visible = true;
         this.progress = Math.min(100, Math.max(0, progress));
         this.text = text;
         this.overlay.style.display = 'flex';
         this.overlay.style.opacity = '1';
         this._updateUI();
-        // Animation starten
+
+        if (this._dotInterval) clearInterval(this._dotInterval);
         this._dotInterval = setInterval(() => {
-            if (!this.visible) return;
+            if (!this.visible || this._destroyed) {
+                clearInterval(this._dotInterval);
+                this._dotInterval = null;
+                return;
+            }
             const dots = this.statusDots.textContent;
             this.statusDots.textContent = dots.length >= 3 ? '.' : dots + '.';
         }, 400);
     }
 
     setProgress(progress, text = null) {
+        if (this._destroyed) return;
         this.progress = Math.min(100, Math.max(0, progress));
         if (text) this.text = text;
         this._updateUI();
     }
 
     _updateUI() {
+        if (this._destroyed) return;
         this.bar.style.width = this.progress + '%';
         this.textEl.innerHTML = `${this.text} <span style="color: #c5a059;">${Math.round(this.progress)}%</span>`;
     }
 
     hide() {
+        if (this._destroyed) return;
         this.visible = false;
         if (this._dotInterval) {
             clearInterval(this._dotInterval);
@@ -154,14 +157,40 @@ export default class LoadingUI extends BaseModalUI {
         }
         this.overlay.style.opacity = '0';
         setTimeout(() => {
+            if (this._destroyed) return;
             this.overlay.style.display = 'none';
         }, 400);
     }
 
-    // Für Offline-Catchup: spezielle Anzeige
     showOfflineCatchup(timeStr) {
+        if (this._destroyed) return;
         this.show('Erinnerungen kehren zurück...', 0);
         this.textEl.innerHTML = `⏳ Offline-Zeit: <span style="color: #c5a059;">${timeStr}</span><br>4× Geschwindigkeit aktiv`;
-        // Fortschritt läuft automatisch über setProgress
+    }
+
+    // ---- DESTROY: Vollständige Bereinigung ----
+    destroy() {
+        if (this._destroyed) return;
+        this._destroyed = true;
+        this.visible = false;
+
+        if (this._dotInterval) {
+            clearInterval(this._dotInterval);
+            this._dotInterval = null;
+        }
+        if (this._animationFrame) {
+            cancelAnimationFrame(this._animationFrame);
+            this._animationFrame = null;
+        }
+
+        if (this.overlay && this.overlay.parentNode) {
+            this.overlay.parentNode.removeChild(this.overlay);
+        }
+        this.overlay = null;
+        this.bar = null;
+        this.textEl = null;
+        this.icon = null;
+        this.statusDots = null;
+        this.closeBtn = null;
     }
 }

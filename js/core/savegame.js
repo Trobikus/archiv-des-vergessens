@@ -35,6 +35,12 @@ export default class SaveGameManager {
   static SAVE_KEY = 'main_save';
   static managers = {};
 
+  // ---- LOCKING MECHANISMUS FÜR RACE-CONDITIONS ----
+  static _saveLock = false;
+  static _saveQueue = [];
+  static _loadLock = false;
+  static _loadQueue = [];
+
   static register(key, manager) {
     this.managers[key] = manager;
   }
@@ -54,6 +60,15 @@ export default class SaveGameManager {
   }
 
   static async saveGame() {
+    // ---- RACE-CONDITION: Warte auf laufenden Speichervorgang ----
+    if (this._saveLock) {
+      return new Promise((resolve) => {
+        this._saveQueue.push(resolve);
+      });
+    }
+
+    this._saveLock = true;
+
     try {
       const db = await this._getDB();
       const saveData = {
@@ -66,20 +81,41 @@ export default class SaveGameManager {
         if (manager.toJSON) saveData[key] = manager.toJSON();
       }
 
-      return new Promise((resolve, reject) => {
+      const result = await new Promise((resolve, reject) => {
         const tx = db.transaction(this.STORE_NAME, 'readwrite');
         const store = tx.objectStore(this.STORE_NAME);
         const req = store.put(saveData, this.SAVE_KEY);
         req.onsuccess = () => resolve(true);
         req.onerror = () => reject(req.error);
       });
+
+      // ---- Aufgestaute Speicheranfragen verarbeiten ----
+      const queue = [...this._saveQueue];
+      this._saveQueue = [];
+      for (const resolve of queue) {
+        resolve(true);
+      }
+
+      return result;
     } catch (error) {
       console.error('[SaveGame] Fehler beim Speichern:', error);
+      this._saveQueue = [];
       return false;
+    } finally {
+      this._saveLock = false;
     }
   }
 
   static async loadGame() {
+    // ---- RACE-CONDITION: Warte auf laufenden Ladevorgang ----
+    if (this._loadLock) {
+      return new Promise((resolve) => {
+        this._loadQueue.push(resolve);
+      });
+    }
+
+    this._loadLock = true;
+
     try {
       const db = await this._getDB();
       const saveData = await new Promise((resolve, reject) => {
@@ -90,7 +126,10 @@ export default class SaveGameManager {
         req.onerror = () => reject(req.error);
       });
 
-      if (!saveData) return null;
+      if (!saveData) {
+        this._loadQueue = [];
+        return null;
+      }
 
       let data = saveData;
       const currentVersion = data.version || '1.0';
@@ -116,10 +155,21 @@ export default class SaveGameManager {
           }
         }
       }
+
+      // ---- Aufgestaute Ladeanfragen verarbeiten ----
+      const queue = [...this._loadQueue];
+      this._loadQueue = [];
+      for (const resolve of queue) {
+        resolve(data);
+      }
+
       return data;
     } catch (error) {
       console.error('[SaveGame] Fehler beim Laden:', error);
+      this._loadQueue = [];
       return null;
+    } finally {
+      this._loadLock = false;
     }
   }
 
@@ -161,6 +211,11 @@ export default class SaveGameManager {
   }
 
   static async deleteSaveGame() {
+    // ---- Warte auf laufende Vorgänge ----
+    while (this._saveLock || this._loadLock) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
     try {
       const db = await this._getDB();
       return new Promise((resolve) => {
@@ -172,5 +227,14 @@ export default class SaveGameManager {
     } catch {
       return false;
     }
+  }
+
+  // ---- Cleanup bei App-Teardown ----
+  static destroy() {
+    this._saveLock = false;
+    this._saveQueue = [];
+    this._loadLock = false;
+    this._loadQueue = [];
+    this.managers = {};
   }
 }

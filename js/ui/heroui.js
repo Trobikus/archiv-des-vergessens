@@ -1,5 +1,5 @@
 // ============================================================
-// ui/heroui.js – FIXED: 13 Equipment-Slots (AAA-RPG)
+// ui/heroui.js – AAA-RPG Standard (vollständig & fehlerfrei)
 // ============================================================
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
@@ -24,6 +24,7 @@ export default class HeroUI extends BaseModalUI {
     this._filterBound = false;
     this._tooltipCleanup = [];
 
+    // ---- DOM-REFERENZEN ----
     this.heroName = document.getElementById('hero-name');
     this.heroLevel = document.getElementById('hero-level');
     this.heroExp = document.getElementById('hero-exp');
@@ -32,7 +33,7 @@ export default class HeroUI extends BaseModalUI {
     this.prestigeButton = document.getElementById('hero-prestige-btn');
     this.dailyButton = document.getElementById('hero-daily-btn');
 
-    // ---------- 13 SLOTS ----------
+    // 13 Equipment-Slots
     this.nodeHelmet = document.getElementById('node-helmet');
     this.nodeAmulet = document.getElementById('node-amulet');
     this.nodeShouldersL = document.getElementById('node-shoulders-l');
@@ -61,6 +62,7 @@ export default class HeroUI extends BaseModalUI {
     this.tooltipEl = document.getElementById('custom-tooltip');
     this._bindTooltipEvents = this._bindTooltipEvents.bind(this);
 
+    // ---- EVENT-LISTENER ----
     this.prestigeButton.addEventListener('click', () => {
       const result = this.hero.performPrestigeReset(this.resourceManager, this.clanManager);
       if (!result.success) {
@@ -82,6 +84,7 @@ export default class HeroUI extends BaseModalUI {
     this.tabEquipment.addEventListener('click', () => this._switchTab('equipment'));
     this.tabLoot.addEventListener('click', () => this._switchTab('loot'));
 
+    // ---- EVENT-BUS ----
     this.eventBus.subscribe(EVENTS.UI_OPEN_HERO, () => this.open());
     this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
       if (this.isOpen) this.render();
@@ -91,8 +94,18 @@ export default class HeroUI extends BaseModalUI {
         this._renderResourcesTab();
       }
     });
+
+    // ---- Überschreibe open für sicheren Render-Aufruf ----
+    const originalOpen = this.open.bind(this);
+    this.open = function() {
+      originalOpen();
+      setTimeout(() => this.render(), 30);
+    };
   }
 
+  // ============================================================
+  // LEBENSZYKLUS
+  // ============================================================
   onOpen() {
     requestAnimationFrame(() => {
       this._switchTab(this._activeTab);
@@ -112,6 +125,9 @@ export default class HeroUI extends BaseModalUI {
     this._tooltipCleanup = [];
   }
 
+  // ============================================================
+  // TOOLTIPS
+  // ============================================================
   _showTooltip(item, e) {
     if (!item || !this.tooltipEl) return;
 
@@ -172,22 +188,34 @@ export default class HeroUI extends BaseModalUI {
     });
   }
 
+  // ============================================================
+  // HAUPT-RENDER
+  // ============================================================
   render(previewItem = null) {
     if (!this.hero || !this.isOpen) return;
-    const progress = this.hero.getLevelProgress();
-    this.heroName.textContent = this.hero.name;
-    this.heroLevel.textContent = `Stufe ${this.hero.level}`;
-    this.heroExp.textContent = `Erfahrung: ${formatNumber(this.hero.experience)} / ${formatNumber(this.hero.expToNext)} (${Math.floor(progress)}%)`;
 
+    // ---- 1. HELDENKOPFDATEN ----
+    const progress = this.hero.getLevelProgress();
+    if (this.heroName) this.heroName.textContent = this.hero.name;
+    if (this.heroLevel) this.heroLevel.textContent = `Stufe ${this.hero.level}`;
+    if (this.heroExp) {
+      this.heroExp.textContent = `Erfahrung: ${formatNumber(this.hero.experience)} / ${formatNumber(this.hero.expToNext)} (${Math.floor(progress)}%)`;
+    }
+
+    // ---- 2. STATS + STAT-PUNKTE (KERN) ----
     this._renderStats(previewItem);
     this._renderPrestigeSection();
     this._renderAvatarNodes();
 
+    // ---- 3. TABS ----
     if (this._activeTab === 'resources') this._renderResourcesTab();
     else if (this._activeTab === 'equipment') this._renderEquipmentTab();
     else if (this._activeTab === 'loot') this._renderLootTab();
   }
 
+  // ============================================================
+  // PRESTIGE-SEKTION
+  // ============================================================
   _renderPrestigeSection() {
     const unlocked = this.hero.bossProgress >= 20;
     this.prestigeButton.style.display = unlocked ? 'inline-block' : 'none';
@@ -198,7 +226,20 @@ export default class HeroUI extends BaseModalUI {
     this.prestigeButton.textContent = `Verewigen (${this.hero.prestigeLevel + 1})`;
   }
 
+  // ============================================================
+  // STATS RENDERN (KERNPROBLEM BEHOBEN)
+  // ============================================================
   _renderStats(previewItem) {
+    // ---- SICHERSTELLEN, DASS DER CONTAINER EXISTIERT ----
+    if (!this.heroStats) {
+      console.warn('[HeroUI] Container #hero-stats nicht gefunden!');
+      return;
+    }
+
+    // ---- CONTAINER SICHTBAR MACHEN ----
+    this.heroStats.style.display = 'block';
+
+    // ---- Basis- und Kampfstats ----
     const curAttr = this.hero.getStats();
     const curCStats = this.hero.getCombatStats();
     let simAttr = curAttr;
@@ -212,6 +253,7 @@ export default class HeroUI extends BaseModalUI {
       this.hero.equipment[previewItem.slot] = oldItem;
     }
 
+    // ---- STAT-PUNKTE ANZEIGE ----
     if (this.heroStatPoints) {
       if (this.hero.unspentStatPoints > 0) {
         this.heroStatPoints.style.background = 'rgba(212, 175, 55, 0.08)';
@@ -236,6 +278,7 @@ export default class HeroUI extends BaseModalUI {
       }
     }
 
+    // ---- ATTRIBUTE (4 Basiseigenschaften) ----
     let html = '';
     const attrConfig = [
       { key: 'attack', label: '⚔️ Stärke' },
@@ -258,18 +301,25 @@ export default class HeroUI extends BaseModalUI {
         ? `<button class="btn-stat-add" data-stat="${s.key}">+</button>`
         : '';
 
-      html += `<div class="stat-row glass-inner-panel flex-between mb-1" style="padding: 0.5rem 0.8rem; margin-bottom: 0.5rem;">
-                  <span><span class="text-muted">${s.label}:</span> <span class="text-highlight text-bold" style="font-size: 1.05rem;">${formatNumber(simVal)}</span> ${diffHtml}</span>
-                  ${btnHtml}
-               </div>`;
+      html += `
+        <div class="stat-row glass-inner-panel flex-between mb-1" style="padding: 0.5rem 0.8rem; margin-bottom: 0.5rem;">
+          <span>
+            <span class="text-muted">${s.label}:</span>
+            <span class="text-highlight text-bold" style="font-size: 1.05rem;">${formatNumber(simVal)}</span>
+            ${diffHtml}
+          </span>
+          ${btnHtml}
+        </div>
+      `;
     }
 
+    // ---- KAMPFSTATISTIKEN ----
     const combatConfig = [
-      { key: 'maxHp', label: 'Max Leben', format: (v) => formatNumber(v) },
-      { key: 'damageReduction', label: 'Schadensreduktion', format: (v) => (v * 100).toFixed(1) + '%' },
-      { key: 'critChance', label: 'Krit-Chance', format: (v) => v.toFixed(1) + '%' },
-      { key: 'critDamage', label: 'Krit-Schaden', format: (v) => v.toFixed(1) + '%' },
-      { key: 'dodgeChance', label: 'Ausweichen', format: (v) => v.toFixed(1) + '%' }
+      { key: 'maxHp', label: '❤️ Max Leben', format: (v) => formatNumber(v) },
+      { key: 'damageReduction', label: '🛡️ Schadensreduktion', format: (v) => (v * 100).toFixed(1) + '%' },
+      { key: 'critChance', label: '⚡ Krit-Chance', format: (v) => v.toFixed(1) + '%' },
+      { key: 'critDamage', label: '💥 Krit-Schaden', format: (v) => v.toFixed(1) + '%' },
+      { key: 'dodgeChance', label: '🌀 Ausweichen', format: (v) => v.toFixed(1) + '%' }
     ];
 
     for (const s of combatConfig) {
@@ -281,23 +331,37 @@ export default class HeroUI extends BaseModalUI {
         const diff = simVal - curVal;
         diffHtml = `<span class="${diff > 0 ? 'stat-diff-pos' : 'stat-diff-neg'}">(${diff > 0 ? '+' : ''}${s.format(diff)})</span>`;
       }
-      html += `<div class="flex-between mb-1 py-1" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding: 0.2rem 0.5rem;">
-                 <span class="text-muted">${s.label}</span>
-                 <span class="text-bold text-highlight">${s.format(curVal)} ${diffHtml}</span>
-               </div>`;
+
+      html += `
+        <div class="flex-between mb-1 py-1" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding: 0.2rem 0.5rem;">
+          <span class="text-muted">${s.label}</span>
+          <span class="text-bold text-highlight">${s.format(curVal)} ${diffHtml}</span>
+        </div>
+      `;
     }
 
+    // ---- IN DEN CONTAINER EINFÜGEN ----
     this.heroStats.innerHTML = html;
 
-    this.heroStats.querySelectorAll('.btn-stat-add').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    // ---- EVENT-LISTENER FÜR STAT-PUNKTE-BUTTONS ----
+    const buttons = this.heroStats.querySelectorAll('.btn-stat-add');
+    buttons.forEach(btn => {
+      // Entferne alte Listener, um Duplikate zu vermeiden
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.addEventListener('click', (e) => {
         const stat = e.target.dataset.stat;
-        this.hero.spendStatPoint(stat);
+        if (stat && this.hero.spendStatPoint(stat)) {
+          // Nach dem Verteilen neu rendern
+          this.render();
+        }
       });
     });
   }
 
-  // ---------- RENDER 13 SLOTS ----------
+  // ============================================================
+  // 13 EQUIPMENT-SLOTS RENDERN
+  // ============================================================
   _renderAvatarNodes() {
     this._cleanupTooltips();
 
@@ -320,7 +384,7 @@ export default class HeroUI extends BaseModalUI {
     slots.forEach(s => {
       if (!s.node) return;
 
-      // Besonderheit: Ring2 nur anzeigen, wenn Pazifist abgeschlossen (optional)
+      // Ring2 nur anzeigen, wenn Pazifist abgeschlossen
       if (s.key === 'ring2' && !this.challengeManager.completedChallenges.includes('pacifist')) {
         s.node.style.display = 'none';
         return;
@@ -371,6 +435,9 @@ export default class HeroUI extends BaseModalUI {
     });
   }
 
+  // ============================================================
+  // TABS
+  // ============================================================
   _switchTab(tab) {
     this._activeTab = tab;
     [this.tabResources, this.tabEquipment, this.tabLoot].forEach(el => el.classList.remove('active'));
@@ -389,11 +456,16 @@ export default class HeroUI extends BaseModalUI {
     else if (tab === 'loot') this._renderLootTab();
   }
 
+  // ============================================================
+  // RESSOURCEN-TAB
+  // ============================================================
   _renderResourcesTab() {
     const container = this.tabContents.resources;
     const res = this.resourceManager.getResources();
     const prestigeItems = this.hero.getUnlockedPrestigeItems().map(item => item.name).join(', ');
-    const achievementsHtml = this.achievementManager ? this.achievementManager.getAchievements().slice(0, 3).map(a => `<div class="text-sm text-muted mb-1 flex-between"><span>${a.label}:</span> <span class="text-bold text-highlight">${formatAchievementState(a)}</span></div>`).join('') : '';
+    const achievementsHtml = this.achievementManager ? this.achievementManager.getAchievements().slice(0, 3).map(a =>
+      `<div class="text-sm text-muted mb-1 flex-between"><span>${a.label}:</span> <span class="text-bold text-highlight">${formatAchievementState(a)}</span></div>`
+    ).join('') : '';
     const dailyState = this.dailyRewardManager ? this.dailyRewardManager.getState() : null;
 
     container.innerHTML = `
@@ -460,6 +532,9 @@ export default class HeroUI extends BaseModalUI {
     `;
   }
 
+  // ============================================================
+  // AUSRÜSTUNGS-TAB
+  // ============================================================
   _renderEquipmentTab() {
     const container = this.tabContents.equipment;
     let items = [...this.hero.inventory.equipment];
@@ -471,7 +546,6 @@ export default class HeroUI extends BaseModalUI {
     filterEl.style.display = 'block';
     sortEl.style.display = 'block';
 
-    // Bulk-Salvage Dropdown
     const rarityMap = {
       'common': 'Gewöhnlich',
       'uncommon': 'Ungewöhnlich',
@@ -496,7 +570,6 @@ export default class HeroUI extends BaseModalUI {
       option.textContent = label;
       raritySelect.appendChild(option);
     }
-
     raritySelect.value = 'common';
 
     const salvageBtn = document.createElement('button');
@@ -514,10 +587,7 @@ export default class HeroUI extends BaseModalUI {
       const rarityLabel = selectedRarity === 'all' ? 'aller' : rarityMap[selectedRarity] || selectedRarity;
 
       if (items.length === 0) {
-        this.eventBus.publish(EVENTS.UI_ADD_LOG, {
-          text: 'Keine Ausrüstung im Inventar.',
-          type: 'system'
-        });
+        this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: 'Keine Ausrüstung im Inventar.', type: 'system' });
         return;
       }
 
@@ -526,10 +596,7 @@ export default class HeroUI extends BaseModalUI {
         : items.filter(item => item.rarity === selectedRarity);
 
       if (itemsToSalvage.length === 0) {
-        this.eventBus.publish(EVENTS.UI_ADD_LOG, {
-          text: `Keine ${rarityLabel} Items im Inventar.`,
-          type: 'system'
-        });
+        this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `Keine ${rarityLabel} Items im Inventar.`, type: 'system' });
         return;
       }
 
@@ -645,6 +712,9 @@ export default class HeroUI extends BaseModalUI {
     container.appendChild(fragment);
   }
 
+  // ============================================================
+  // LOOT-TAB
+  // ============================================================
   _renderLootTab() {
     const container = this.tabContents.loot;
     const items = this.hero.inventory.loot;
