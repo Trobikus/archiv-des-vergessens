@@ -1,3 +1,5 @@
+// --- START OF FILE navigation.js ---
+
 import { EVENTS } from '../core/events.js';
 
 export default class NavigationController {
@@ -113,7 +115,13 @@ export default class NavigationController {
     this.elements.optionsContainer.style.display = 'none';
     this.elements.gameContainer.classList.remove('active');
     this.elements.gameContainer.style.display = 'none';
-    if (this.gameLoop.isRunning()) this.gameLoop.stop();
+
+    // Game-Loop läuft im Hub weiter, damit die Wirtschaft aktiv bleibt
+    if (!this.gameLoop.isRunning()) {
+      this.gameStateManager.transitionTo('running');
+      this.gameLoop.start();
+    }
+
     this.updateMenuButtons();
     this.updateUnfoldingGameplay();
     this.updateNotifications();
@@ -143,15 +151,15 @@ export default class NavigationController {
     this.elements.gameContainer.classList.remove('active');
     this.elements.gameContainer.style.display = 'none';
     this.elements.optionsContainer.style.display = 'flex';
-    
+
     const optParticles = document.getElementById('opt-particles');
     const optFloating = document.getElementById('opt-floating');
     const optAutosave = document.getElementById('opt-autosave');
-    
+
     if (optParticles) optParticles.checked = this.settingsManager.get('particles');
     if (optFloating) optFloating.checked = this.settingsManager.get('floatingText');
     if (optAutosave) optAutosave.value = this.settingsManager.get('autosave');
-    
+
     this.eventBus.publish(EVENTS.UI_REFRESH_QUEST);
   }
 
@@ -163,7 +171,7 @@ export default class NavigationController {
 
   updateUnfoldingGameplay() {
     if (this.elements.btnHubArtifact) this.elements.btnHubArtifact.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none';
-    if (this.elements.btnHubLibrary) this.elements.btnHubLibrary.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none'; 
+    if (this.elements.btnHubLibrary) this.elements.btnHubLibrary.style.display = this.hero.bossProgress >= 1 ? 'flex' : 'none';
     if (this.elements.btnHubRelic) this.elements.btnHubRelic.style.display = this.hero.bossProgress >= 3 ? 'flex' : 'none';
     if (this.elements.btnHubSkills) this.elements.btnHubSkills.style.display = this.hero.prestigeLevel > 0 ? 'flex' : 'none';
     if (this.elements.btnHubChallenges) this.elements.btnHubChallenges.style.display = this.hero.prestigeLevel > 0 ? 'flex' : 'none';

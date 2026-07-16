@@ -1,3 +1,5 @@
+// --- START OF FILE questui.js ---
+
 import { EVENTS } from '../core/events.js';
 import BaseModalUI from './basemodal.js';
 
@@ -55,7 +57,7 @@ export default class QuestUI extends BaseModalUI {
     this.container.style.display = 'flex';
 
     if (this.questManager.isCurrentQuestComplete()) {
-      this.textEl.textContent = 'Mission abgeschlossen! (Klicken zum Abholen)';
+      this.textEl.textContent = 'Mission abgeschlossen! (Missionslog öffnen)';
       this.btnEl.classList.add('quest-ready');
       this.container.classList.add('quest-ready');
     } else {

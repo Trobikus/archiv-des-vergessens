@@ -1,3 +1,5 @@
+// --- START OF FILE resourcemanager.js ---
+
 import { EVENTS } from '../core/events.js';
 
 export default class ResourceManager {
@@ -7,12 +9,15 @@ export default class ResourceManager {
     this.relics = 0;
     this.artifacts = 0;
     this.memoryDust = 0;
-    this.timeBank = 0; // NEU: Speichert Offline-Sekunden für Catch-Up
+    this.timeBank = 0;
+    this.totalParticles = 0;
+    this.totalRelics = 0;
   }
 
   addParticles(amount) {
     if (amount <= 0) return this.particles;
     this.particles += amount;
+    this.totalParticles += amount;
     this._publishUpdate();
     return this.particles;
   }
@@ -27,6 +32,7 @@ export default class ResourceManager {
   addRelics(amount) {
     if (amount <= 0) return this.relics;
     this.relics += amount;
+    this.totalRelics += amount;
     this._publishUpdate();
     return this.relics;
   }
@@ -76,7 +82,9 @@ export default class ResourceManager {
       relics: this.relics,
       artifacts: this.artifacts,
       memoryDust: this.memoryDust,
-      timeBank: this.timeBank
+      timeBank: this.timeBank,
+      totalParticles: this.totalParticles,
+      totalRelics: this.totalRelics
     };
   }
 
@@ -90,6 +98,8 @@ export default class ResourceManager {
     this.artifacts = data.artifacts || 0;
     this.memoryDust = data.memoryDust || 0;
     this.timeBank = data.timeBank || 0;
+    this.totalParticles = data.totalParticles || this.particles;
+    this.totalRelics = data.totalRelics || this.relics;
     this._publishUpdate();
   }
 }

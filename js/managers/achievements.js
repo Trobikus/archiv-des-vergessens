@@ -1,3 +1,5 @@
+// --- START OF FILE achievements.js ---
+
 import { EVENTS } from '../core/events.js';
 
 export default class AchievementManager {
@@ -29,9 +31,9 @@ export default class AchievementManager {
   _checkProgress() {
     const res = this.resourceManager.getResources();
     const progressMap = {
-      particles_100: Math.floor(res.particles),
-      particles_1000: Math.floor(res.particles),
-      relics_100: Math.floor(res.relics),
+      particles_100: Math.floor(res.totalParticles),
+      particles_1000: Math.floor(res.totalParticles),
+      relics_100: Math.floor(res.totalRelics),
       boss_first_no_equip: this._bossNoEquipmentWins(),
       recipes_10: this._craftedRecipesCount(),
       recipes_50: this._craftedRecipesCount(),
@@ -105,7 +107,7 @@ export default class AchievementManager {
   }
 
   fromJSON(data) {
-    if (!Array.isArray(data)) return;
+    if (!data.length) return;
     const map = new Map(data.map(item => [item.id, item]));
     this.achievements = this._buildBaseAchievements().map(ach => {
       const saved = map.get(ach.id);

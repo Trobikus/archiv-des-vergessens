@@ -1307,3 +1307,76 @@ body.boss-defeat-flash::after {
   opacity: 0;
   }
 }
+/* Am Ende von style.css anfügen */
+
+/* --- HILFSKLASSEN & EFFEKTE --- */
+.hidden {
+  display: none !important;
+}
+
+@keyframes screenShake {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  10% {
+    transform: translate(-2px, -2px);
+  }
+
+  20% {
+    transform: translate(2px, 2px);
+  }
+
+  30% {
+    transform: translate(-2px, 2px);
+  }
+
+  40% {
+    transform: translate(2px, -2px);
+  }
+
+  50% {
+    transform: translate(-1px, -1px);
+  }
+
+  60% {
+    transform: translate(1px, 1px);
+  }
+
+  70% {
+    transform: translate(-1px, 1px);
+  }
+
+  80% {
+    transform: translate(1px, -1px);
+  }
+
+  90% {
+    transform: translate(-1px, -1px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.screen-shake {
+  animation: screenShake 0.4s ease-in-out;
+}
+
+/* Bereinigte Float-Animation */
+@keyframes floatUpFade {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-30px) scale(1.1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(1);
+  }
+}

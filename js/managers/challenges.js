@@ -1,3 +1,5 @@
+// --- START OF FILE challenges.js ---
+
 import { EVENTS } from '../core/events.js';
 import { CHALLENGES_DATA } from '../data/challenges.js';
 
@@ -7,7 +9,7 @@ export default class ChallengeManager {
     this.hero = hero;
     this.activeChallenge = null;
     this.completedChallenges = [];
-    this.challenges = CHALLENGES_DATA; // Daten-Driven
+    this.challenges = CHALLENGES_DATA;
 
     this.eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, this._onBossDefeated.bind(this));
     this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, this._onPrestige.bind(this));
@@ -43,7 +45,7 @@ export default class ChallengeManager {
   _onBossDefeated() {
     if (!this.activeChallenge) return;
     const challenge = this.challenges[this.activeChallenge];
-    if (this.hero.getChapter() > challenge.targetChapter) {
+    if (this.hero.getChapter() >= challenge.targetChapter) {
       this.completedChallenges.push(this.activeChallenge);
       this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `🌟 Anomalie '${challenge.name}' gemeistert! Belohnung freigeschaltet.`, type: 'event' });
       this.activeChallenge = null;

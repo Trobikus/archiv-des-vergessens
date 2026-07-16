@@ -1,16 +1,18 @@
+// --- START OF FILE gather.js ---
+
 import { EVENTS } from '../core/events.js';
 import { CONFIG } from '../core/config.js';
 
 export default class GatherController {
   constructor(context) {
-    this.context = context; 
+    this.context = context;
     this.eventBus = context.eventBus;
     this.resourceManager = context.resourceManager;
     this.hero = context.hero;
 
     this.btnManualGather = document.getElementById('manual-gather-btn');
     this.btnUpgradeClick = document.getElementById('upgrade-click-btn');
-    this.lastClickTime = 0; 
+    this.lastClickTime = 0;
 
     this.bindEvents();
     this.eventBus.subscribe(EVENTS.RESOURCES_UPDATED, () => this.updateUI());
@@ -22,6 +24,8 @@ export default class GatherController {
         const cost = this.getUpgradeCost();
         if (this.resourceManager.removeParticles(cost)) {
           this.hero.clickPowerLevel = (this.hero.clickPowerLevel || 0) + 1;
+          // Veröffentlicht das Event NACH dem Stufenaufstieg, um Quests & UI korrekt zu aktualisieren
+          this.eventBus.publish(EVENTS.HERO_UPDATED);
           this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `✨ Klick-Stärke erhöht auf Stufe ${this.hero.clickPowerLevel}!`, type: 'event' });
           this.updateUI();
         }
@@ -31,16 +35,15 @@ export default class GatherController {
     if (this.btnManualGather) {
       this.btnManualGather.addEventListener('mousedown', (e) => {
         const now = performance.now();
-        if (now - this.lastClickTime < CONFIG.GATHER.COOLDOWN_MS) return; 
+        if (now - this.lastClickTime < CONFIG.GATHER.COOLDOWN_MS) return;
         this.lastClickTime = now;
 
         const libraryBonus = this.context.libraryManager ? (1 + this.context.libraryManager.getBonus('gather_boost')) : 1;
         const baseAmount = CONFIG.GATHER.BASE_AMOUNT + Math.floor(this.hero.level / 2) + ((this.hero.clickPowerLevel || 0) * CONFIG.GATHER.POWER_MULT);
         const amount = Math.floor(baseAmount * libraryBonus);
-        
+
         this.resourceManager.addParticles(amount);
 
-        // Schönerer, leicht randomisierter Offset für den Floating-Text
         const optFloating = document.getElementById('opt-floating');
         if (!optFloating || optFloating.checked) {
           this.eventBus.publish(EVENTS.CMD_SPAWN_FLOAT_TEXT, {
@@ -50,18 +53,16 @@ export default class GatherController {
           });
         }
 
-        // Epische Physik-Partikel spawnen
         if (window.spawnClickParticles) {
-            window.spawnClickParticles(e.clientX, e.clientY);
+          window.spawnClickParticles(e.clientX, e.clientY);
         }
 
-        // Visuelles Button-Feedback (CSS Animation)
         this.btnManualGather.style.transform = 'scale(0.92)';
         this.btnManualGather.style.boxShadow = '0 0 30px rgba(212, 175, 55, 0.8)';
-        
+
         setTimeout(() => {
-            this.btnManualGather.style.transform = 'scale(1)';
-            this.btnManualGather.style.boxShadow = '';
+          this.btnManualGather.style.transform = 'scale(1)';
+          this.btnManualGather.style.boxShadow = '';
         }, 80);
 
         this.eventBus.publish(EVENTS.QUEST_MANUAL_GATHER);

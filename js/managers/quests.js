@@ -1,3 +1,5 @@
+// --- START OF FILE quests.js ---
+
 import { EVENTS } from '../core/events.js';
 import { MAIN_QUESTS_DATA, DAILY_QUESTS_DATA } from '../data/quests.js';
 
@@ -10,7 +12,7 @@ export default class QuestManager {
 
     this.questIndex = 0;
     this.dailyQuests = { date: '', gatherClicks: 0, expeditions: 0, craftedItems: 0, claimed: [] };
-    
+
     this.mainQuestsData = MAIN_QUESTS_DATA;
     this.dailyDefs = DAILY_QUESTS_DATA;
 
@@ -21,6 +23,9 @@ export default class QuestManager {
     this.eventBus.subscribe(EVENTS.CLAN_MEMBERS_UPDATED, () => this.checkCurrentQuest());
     this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => this.checkCurrentQuest());
     this.eventBus.subscribe(EVENTS.QUEST_CHECK, () => this.checkCurrentQuest());
+
+    // Abonniert das Start-Event von Expeditionen, um Quest 3 sofort auszuwerten
+    this.eventBus.subscribe(EVENTS.EXPEDITION_STARTED, () => this.checkCurrentQuest());
 
     this.eventBus.subscribe(EVENTS.QUEST_MANUAL_GATHER, () => {
       this._checkDailyReset();
@@ -37,6 +42,9 @@ export default class QuestManager {
       this.dailyQuests.craftedItems++;
       this.checkCurrentQuest();
     });
+
+    // Initiale Überprüfung beim Spielstart
+    setTimeout(() => this.checkCurrentQuest(), 100);
   }
 
   _onPrestige() {
@@ -51,9 +59,8 @@ export default class QuestManager {
     }
   }
 
-  // Dynamische Check-Logik basierend auf der ID
   _checkCondition(questId) {
-    switch(questId) {
+    switch (questId) {
       case 'q1': return this.resourceManager.particles >= 10;
       case 'q2': return this.clanManager.members.length >= 1;
       case 'q3': return this.clanManager.members.some(m => this.hero._successfulExpeditions > 0 || this.clanManager._expeditionStatus.get(m.id));
@@ -80,7 +87,6 @@ export default class QuestManager {
     if (rewardObj.memoryDust) this.resourceManager.addMemoryDust(rewardObj.memoryDust);
   }
 
-  // Erzeugt das Quest-Objekt für das UI
   get mainQuests() {
     return this.mainQuestsData.map(q => ({
       ...q,
@@ -120,10 +126,10 @@ export default class QuestManager {
     return this.dailyDefs.map(def => {
       const progress = this.dailyQuests[def.key] || 0;
       const isClaimed = this.dailyQuests.claimed.includes(def.id);
-      return { 
-        ...def, 
-        progress: Math.min(progress, def.target), 
-        isClaimed, 
+      return {
+        ...def,
+        progress: Math.min(progress, def.target),
+        isClaimed,
         isComplete: progress >= def.target,
         rewardFunc: () => this._grantReward(def.reward)
       };
