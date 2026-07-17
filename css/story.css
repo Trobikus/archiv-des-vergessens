@@ -156,6 +156,7 @@
     padding: 2rem;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     border-radius: 2px;
     border: 1px solid rgba(197, 160, 89, 0.05);
 }

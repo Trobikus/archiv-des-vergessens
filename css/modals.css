@@ -10,6 +10,7 @@
     height: 100vh;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -30,7 +31,8 @@
 .modal-content-wide,
 .hero-modal-wide,
 .modal-content-small {
-    background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E') repeat,
+    background: 
+        url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E') repeat,
         linear-gradient(180deg, #15151a 0%, #0a0a0c 100%);
     border: 1px solid #000;
     border-top: 2px solid var(--color-gold);
@@ -40,8 +42,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    max-height: 90vh !important;
-    overflow: hidden !important;
+    max-height: 90vh;
+    overflow: hidden;
     animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -108,17 +110,18 @@
     border-bottom: 1px solid rgba(197, 160, 89, 0.15);
     padding-bottom: 1rem;
     text-align: center;
+    flex-shrink: 0;
 }
 
 /* ---- Scroll Areas ---- */
 .modal-scroll-area {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: #2a2a35 #0a0a0c;
     padding-right: 0.5rem;
-    flex: 1 !important;
-    min-height: 0 !important;
+    flex: 1;
+    min-height: 0;
 }
 
 .modal-scroll-area::-webkit-scrollbar {

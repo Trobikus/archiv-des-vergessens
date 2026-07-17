@@ -5,7 +5,7 @@ import { generateStoryBosses } from '../data/bosses.js';
 import { ITEM_TEMPLATES } from '../data/items.js';
 import { Item } from '../models/item.js';
 import { EVENTS } from '../core/events.js';
-import { CONFIG } from '../core/config.js';
+import { CONFIG } from '../core/di/config.js';
 import { Sanitizer } from '../core/security.js';
 
 export default class StoryManager {

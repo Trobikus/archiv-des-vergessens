@@ -2,7 +2,7 @@
 // FILE: js/core/gameloop.js – Spiel-Loop mit Anti-Speed-Hack
 // ============================================================
 import { EVENTS } from './events.js';
-import { CONFIG } from './config.js';
+import { CONFIG } from './di/config.js';
 
 export default class GameLoop {
     constructor(context) {

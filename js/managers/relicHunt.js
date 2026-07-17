@@ -2,7 +2,7 @@
 // FILE: js/managers/relicHunt.js
 // ============================================================
 import { EVENTS } from '../core/events.js';
-import { CONFIG } from '../core/config.js';
+import { CONFIG } from '../core/di/config.js';
 import RNG from '../utils/rng.js';
 import { Sanitizer } from '../core/security.js';
 

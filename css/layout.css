@@ -41,6 +41,12 @@ body {
     background: var(--color-gold);
 }
 
+/* Firefox Scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #2a2a35 #0a0a0c;
+}
+
 /* ---- App Container ---- */
 #app-container {
     position: relative;

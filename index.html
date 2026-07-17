@@ -1,825 +1,838 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
-  <link rel="icon" type="image/svg+xml" href="icon.svg" />
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Archiv des Vergessens - Der Mneme-Bund</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050507" />
+    <meta name="description" content="Archiv des Vergessens – Ein episches Idle-RPG. Sammle Mneme-Partikel, besiege Bosse und werde zum Hüter der Erinnerungen." />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="Archiv des Vergessens – Der Mneme-Bund" />
+    <meta property="og:description" content="Ein episches Idle-RPG über Erinnerung, Vergessen und die Macht der Mneme." />
+    <meta property="og:type" content="website" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- Hochwertige Fonts für eine epische RPG-Atmosphäre -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap"
-    rel="stylesheet">
+    <title>Archiv des Vergessens – Der Mneme-Bund</title>
 
-  <link rel="stylesheet" href="css/style.css" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+
+    <!-- Haupt-Stylesheet -->
+    <link rel="stylesheet" href="css/style.css" />
+
+    <!-- Preload -->
+    <link rel="preload" href="js/controllers/game-boot.js" as="script" />
 </head>
 
 <body>
-  <div id="app-container">
+    <!-- ============================================================
+    APP-CONTAINER
+    ============================================================ -->
+    <div id="app-container">
 
-    <!-- Kino-Vignette für mehr Tiefe & Grit -->
-    <div class="vignette-overlay"></div>
+        <!-- KINO-VIGNETTE -->
+        <div class="vignette-overlay" aria-hidden="true"></div>
 
-    <!-- Canvas für Hintergrund- und Klick-Partikel -->
-    <canvas id="bg-canvas" class="fullscreen-canvas" style="pointer-events: none; z-index: -2;"></canvas>
-    <canvas id="fx-canvas" class="fullscreen-canvas" style="pointer-events: none; z-index: 9999;"></canvas>
+        <!-- CANVAS -->
+        <canvas id="bg-canvas" class="fullscreen-canvas" aria-hidden="true"></canvas>
+        <canvas id="fx-canvas" class="fullscreen-canvas" aria-hidden="true"></canvas>
 
-    <!-- MISSION TRACKER (HUD) -->
-    <div id="quest-tracker-container" class="quest-tracker-container" style="display: none;">
-      <div id="quest-slide-out" class="quest-slide-out glass-panel">
-        <div class="quest-slide-content">
-          <div class="quest-header">Aktuelle Mission</div>
-          <div id="quest-text" class="quest-text"></div>
-        </div>
-      </div>
-      <button id="quest-tracker-btn" class="quest-tracker-btn glass-btn" aria-label="Missionen">Missionen</button>
-    </div>
+        <!-- ==========================================================
+        HAUPTMENÜ
+        ========================================================== -->
+        <section id="menu-container" class="center-layout fade-in" role="main" aria-label="Hauptmenü">
+            <h1 class="glow-text">ARCHIV DES VERGESSENS</h1>
+            <p class="subtitle" aria-label="Untertitel">Der Mneme-Bund</p>
 
-    <!-- ACHIEVEMENT TOAST CONTAINER -->
-    <div id="achievement-toast-container"></div>
+            <nav class="menu-buttons" aria-label="Hauptmenü Navigation">
+                <button class="menu-btn primary glass-btn" id="menu-new-game" type="button">Neues Spiel</button>
+                <button class="menu-btn primary glass-btn" id="menu-continue" type="button" disabled>Weiter</button>
+                <button class="menu-btn glass-btn" id="menu-options" type="button">Optionen</button>
+                <button class="menu-btn glass-btn" id="menu-quit" type="button">Beenden</button>
+            </nav>
 
-    <!-- CUSTOM TOOLTIP -->
-    <div id="custom-tooltip" class="custom-tooltip glass-panel"></div>
+            <footer class="menu-footer">Version 1.6 – AAA Overhaul</footer>
+        </section>
 
-    <!-- ===== HAUPTMENÜ ===== -->
-    <div id="menu-container" class="center-layout fade-in">
-      <h1 class="glow-text">ARCHIV DES VERGESSENS</h1>
-      <div class="subtitle">Der Mneme-Bund</div>
+        <!-- ==========================================================
+        OPTIONEN
+        ========================================================== -->
+        <section id="options-container" class="center-layout fade-in" style="display: none;" role="dialog" aria-label="Einstellungen">
+            <div class="glass-panel" style="padding: 3rem; width: 550px; max-width: 90vw;">
+                <h2 class="glow-text text-center">EINSTELLUNGEN</h2>
+                <p class="hub-subtitle text-center">Passe das Archiv an deine Bedürfnisse an</p>
 
-      <div class="menu-buttons">
-        <button class="menu-btn primary glass-btn" id="menu-new-game">Neues Spiel</button>
-        <button class="menu-btn primary glass-btn" id="menu-continue" disabled>Weiter</button>
-        <button class="menu-btn glass-btn" id="menu-options">Optionen</button>
-        <button class="menu-btn glass-btn" id="menu-quit">Beenden</button>
-      </div>
-      <div class="menu-footer">Version 1.5 - AAA Overhaul Update</div>
-    </div>
+                <div class="options-panel mt-2">
+                    <!-- Grafik -->
+                    <h3 class="options-header">Grafik &amp; UI</h3>
+                    <div class="option-row flex-between mb-1">
+                        <span class="option-label text-muted">Mystisches Netzwerk (Partikel)</span>
+                        <span class="option-control"><input type="checkbox" id="opt-particles" checked aria-label="Partikel aktivieren" /></span>
+                    </div>
+                    <div class="option-row flex-between mb-2">
+                        <span class="option-label text-muted">Floating-Text (Ressourcen)</span>
+                        <span class="option-control"><input type="checkbox" id="opt-floating" checked aria-label="Floating-Text aktivieren" /></span>
+                    </div>
 
-    <!-- ===== OPTIONEN ===== -->
-    <div id="options-container" class="center-layout fade-in" style="display: none;">
-      <div class="glass-panel" style="padding: 3rem; width: 550px; max-width: 90vw;">
-        <h2 class="glow-text text-center">EINSTELLUNGEN</h2>
-        <div class="hub-subtitle text-center">Passe das Archiv an deine Bedürfnisse an</div>
+                    <!-- Audio -->
+                    <h3 class="options-header mt-2">Audio</h3>
+                    <div class="option-row flex-between mb-1">
+                        <span class="option-label text-muted">Musik &amp; Soundeffekte</span>
+                        <span class="option-control"><button id="opt-audio-toggle" class="glass-btn btn-small" type="button">🔊 Aktiv</button></span>
+                    </div>
+                    <div class="option-row flex-between mb-1">
+                        <span class="option-label text-muted">Musik-Lautstärke</span>
+                        <span class="option-control"><input type="range" id="opt-music-volume" min="0" max="100" value="40" style="width:120px;" aria-label="Musik-Lautstärke" /></span>
+                    </div>
+                    <div class="option-row flex-between mb-2">
+                        <span class="option-label text-muted">Soundeffekt-Lautstärke</span>
+                        <span class="option-control"><input type="range" id="opt-sfx-volume" min="0" max="100" value="60" style="width:120px;" aria-label="Soundeffekt-Lautstärke" /></span>
+                    </div>
 
-        <div class="options-panel mt-2">
-          <h3 class="options-header">Grafik & UI</h3>
-          <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Mystisches Netzwerk (Partikel)</span>
-            <span class="option-control"><input type="checkbox" id="opt-particles" checked></span>
-          </div>
-          <div class="option-row flex-between mb-2">
-            <span class="option-label text-muted">Floating-Text (Ressourcen)</span>
-            <span class="option-control"><input type="checkbox" id="opt-floating" checked></span>
-          </div>
+                    <!-- Cloud -->
+                    <h3 class="options-header mt-2">Cloud &amp; Synchronisation</h3>
+                    <div class="option-row flex-between mb-1">
+                        <span class="option-label text-muted">Cloud-Sync aktivieren</span>
+                        <span class="option-control"><input type="checkbox" id="opt-cloud-enabled" aria-label="Cloud-Sync aktivieren" /></span>
+                    </div>
+                    <div class="option-row flex-between mb-1">
+                        <span class="option-label text-muted">Letzter Sync</span>
+                        <span class="option-control text-muted text-sm" id="opt-cloud-last-sync">Nie</span>
+                    </div>
+                    <div class="option-row flex-between mb-2">
+                        <span class="option-label text-muted">Manuell synchronisieren</span>
+                        <span class="option-control"><button id="opt-cloud-sync-btn" class="glass-btn btn-small" type="button">☁️ Jetzt sichern</button></span>
+                    </div>
 
-          <h3 class="options-header mt-2">Audio</h3>
-          <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Musik & Soundeffekte</span>
-            <span class="option-control"><button id="opt-audio-toggle" class="glass-btn btn-small">🔊
-                Aktiv</button></span>
-          </div>
-          <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Musik-Lautstärke</span>
-            <span class="option-control"><input type="range" id="opt-music-volume" min="0" max="100" value="40"
-                style="width:120px;"></span>
-          </div>
-          <div class="option-row flex-between mb-2">
-            <span class="option-label text-muted">Soundeffekt-Lautstärke</span>
-            <span class="option-control"><input type="range" id="opt-sfx-volume" min="0" max="100" value="60"
-                style="width:120px;"></span>
-          </div>
+                    <!-- System -->
+                    <h3 class="options-header mt-2">System</h3>
+                    <div class="option-row flex-between mb-1">
+                        <span class="option-label text-muted">Autosave-Intervall</span>
+                        <span class="option-control">
+                            <select id="opt-autosave" class="ui-select" aria-label="Autosave-Intervall">
+                                <option value="0">Aus</option>
+                                <option value="15000">15 Sekunden</option>
+                                <option value="60000">1 Minute</option>
+                                <option value="300000">5 Minuten</option>
+                            </select>
+                        </span>
+                    </div>
+                    <div class="option-row flex-between mt-2 pt-1" style="border-top: 1px solid rgba(255,255,255,0.05);">
+                        <span class="option-label text-danger">Spielstand verwerfen</span>
+                        <span class="option-control"><button id="opt-hard-reset" class="btn-danger glass-btn" type="button">Löschen</button></span>
+                    </div>
+                </div>
 
-          <h3 class="options-header mt-2">Cloud & Synchronisation</h3>
-          <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Cloud-Sync aktivieren</span>
-            <span class="option-control"><input type="checkbox" id="opt-cloud-enabled"></span>
-          </div>
-          <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Letzter Sync</span>
-            <span class="option-control text-muted text-sm" id="opt-cloud-last-sync">Nie</span>
-          </div>
-          <div class="option-row flex-between mb-2">
-            <span class="option-label text-muted">Manuell synchronisieren</span>
-            <span class="option-control"><button id="opt-cloud-sync-btn" class="glass-btn btn-small">☁️ Jetzt
-                sichern</button></span>
-          </div>
-
-          <h3 class="options-header mt-2">System</h3>
-          <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Autosave-Intervall</span>
-            <span class="option-control">
-              <select id="opt-autosave" class="ui-select">
-                <option value="0">Aus</option>
-                <option value="15000">15 Sekunden</option>
-                <option value="60000">1 Minute</option>
-                <option value="300000">5 Minuten</option>
-              </select>
-            </span>
-          </div>
-          <div class="option-row flex-between mt-2 pt-1" style="border-top: 1px solid rgba(255,255,255,0.05);">
-            <span class="option-label text-danger">Spielstand verwerfen</span>
-            <span class="option-control"><button id="opt-hard-reset" class="btn-danger glass-btn">Löschen</button></span>
-          </div>
-        </div>
-        <div class="text-center mt-2">
-          <button class="glass-btn primary mt-1" id="options-back-btn">« Zurück zum Hauptmenü</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== HUB ===== -->
-    <div id="hub-container" class="fade-in" style="display: none;">
-      <div id="hub-header" class="glass-panel">
-        <div class="hub-header-left">
-          <div class="hub-title-group">
-            <span class="hub-icon">🏛️</span>
-            <div>
-              <h2 class="hub-title glow-text">Archiv des Vergessens</h2>
-              <div class="hub-subtitle">Der Mneme-Bund</div>
+                <div class="text-center mt-2">
+                    <button class="glass-btn primary mt-1" id="options-back-btn" type="button">« Zurück zum Hauptmenü</button>
+                </div>
             </div>
-          </div>
-        </div>
-        <div class="hub-header-right">
-          <div class="hub-player-card">
-            <div class="hub-avatar">⚔️</div>
-            <div class="hub-player-info">
-              <div id="hub-hero-name" class="hub-player-name">Held</div>
-              <div class="hub-player-stats">
-                <span>Stufe <span id="hub-level">1</span></span>
-                <span class="hub-stat-divider">·</span>
-                <span>Prestige <span id="hub-prestige">0</span></span>
-                <span class="hub-stat-divider">·</span>
-                <span id="hub-guild-badge" style="display:none;">🏛️</span>
-              </div>
-            </div>
-            <div class="hub-player-level">
-              <div class="hub-level-ring">
-                <span id="hub-level-number">1</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <div id="hub-tabs" class="hub-tab-bar">
-        <button class="hub-tab-btn active" data-category="core">
-          <span class="tab-icon">⚔️</span>
-          <span class="tab-label">Kern</span>
-        </button>
-        <button class="hub-tab-btn" data-category="progression">
-          <span class="tab-icon">📈</span>
-          <span class="tab-label">Fortschritt</span>
-        </button>
-        <button class="hub-tab-btn" data-category="crafting">
-          <span class="tab-icon">⚒️</span>
-          <span class="tab-label">Handwerk</span>
-        </button>
-        <button class="hub-tab-btn" data-category="collection">
-          <span class="tab-icon">📚</span>
-          <span class="tab-label">Sammlung</span>
-        </button>
-        <button class="hub-tab-btn" data-category="social">
-          <span class="tab-icon">👥</span>
-          <span class="tab-label">Gemeinschaft</span>
-        </button>
-      </div>
+        <!-- ==========================================================
+        HUB – DASHBOARD
+        ========================================================== -->
+        <section id="hub-container" class="fade-in" style="display: none;" role="main" aria-label="Archiv-Hub">
+            <!-- Header -->
+            <header id="hub-header" class="glass-panel">
+                <div class="hub-header-left">
+                    <div class="hub-title-group">
+                        <span class="hub-icon" aria-hidden="true">🏛️</span>
+                        <div>
+                            <h2 class="hub-title glow-text">Archiv des Vergessens</h2>
+                            <p class="hub-subtitle">Der Mneme-Bund</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="hub-header-right">
+                    <div class="hub-player-card">
+                        <div class="hub-avatar" aria-hidden="true">⚔️</div>
+                        <div class="hub-player-info">
+                            <div id="hub-hero-name" class="hub-player-name">Held</div>
+                            <div class="hub-player-stats">
+                                <span>Stufe <span id="hub-level">1</span></span>
+                                <span class="hub-stat-divider" aria-hidden="true">·</span>
+                                <span>Prestige <span id="hub-prestige">0</span></span>
+                                <span class="hub-stat-divider" aria-hidden="true">·</span>
+                                <span id="hub-guild-badge" style="display:none;" aria-hidden="true">🏛️</span>
+                            </div>
+                        </div>
+                        <div class="hub-player-level">
+                            <div class="hub-level-ring">
+                                <span id="hub-level-number">1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-      <div id="hub-content">
-        <!-- KERN -->
-        <div id="hub-category-core" class="hub-category">
-          <div class="hub-grid">
-            <button class="hub-btn primary" id="hub-archive">
-              <span class="icon">📜</span>
-              <span class="cinzel text-lg">Archiv</span>
-              <span class="label">Hauptspiel betreten</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-hero">
-              <span class="icon">👤</span>
-              <span class="cinzel text-lg">Mein Held</span>
-              <span class="label">Ausrüstung &amp; Stats</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-story">
-              <span class="icon">📖</span>
-              <span class="cinzel text-lg">Story &amp; Bosse</span>
-              <span class="label">Kapitel &amp; Kämpfe</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-skills">
-              <span class="icon">🌳</span>
-              <span class="cinzel text-lg">Talentbaum</span>
-              <span class="label">Prestige-Punkte nutzen</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-          </div>
-        </div>
+            <!-- Tab-Navigation -->
+            <nav class="hub-tab-bar" aria-label="Hub-Kategorien">
+                <button class="hub-tab-btn active" data-category="core" type="button">
+                    <span class="tab-icon" aria-hidden="true">⚔️</span>
+                    <span class="tab-label">Kern</span>
+                </button>
+                <button class="hub-tab-btn" data-category="progression" type="button">
+                    <span class="tab-icon" aria-hidden="true">📈</span>
+                    <span class="tab-label">Fortschritt</span>
+                </button>
+                <button class="hub-tab-btn" data-category="crafting" type="button">
+                    <span class="tab-icon" aria-hidden="true">⚒️</span>
+                    <span class="tab-label">Handwerk</span>
+                </button>
+                <button class="hub-tab-btn" data-category="collection" type="button">
+                    <span class="tab-icon" aria-hidden="true">📚</span>
+                    <span class="tab-label">Sammlung</span>
+                </button>
+                <button class="hub-tab-btn" data-category="social" type="button">
+                    <span class="tab-icon" aria-hidden="true">👥</span>
+                    <span class="tab-label">Gemeinschaft</span>
+                </button>
+            </nav>
 
-        <!-- FORTSCHRITT -->
-        <div id="hub-category-progression" class="hub-category" style="display: none;">
-          <div class="hub-grid">
-            <button class="hub-btn" id="hub-leaderboard">
-              <span class="icon">🏆</span>
-              <span class="cinzel text-lg">Ruhmeshalle</span>
-              <span class="label">Persönliche Rekorde</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-relic">
-              <span class="icon">💎</span>
-              <span class="cinzel text-lg">Relikt-Jagd</span>
-              <span class="label">Relikte finden</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn hub-btn-danger span-2" id="hub-challenges">
-              <span class="icon">🔥</span>
-              <span class="cinzel text-lg text-danger">Anomalien</span>
-              <span class="label">Extreme Herausforderungen</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-          </div>
-          </div>
-          
-          <!-- HANDWERK -->
-          <div id="hub-category-crafting" class="hub-category" style="display: none;">
-            <div class="hub-grid">
-              <button class="hub-btn" id="hub-artifact">
-                <span class="icon">⚒️</span>
-                <span class="cinzel text-lg">Artefakt-Schmiede</span>
-                <span class="label">Ausrüstung herstellen</span>
-                <span class="hub-btn-glow"></span>
-              </button>
-              <button class="hub-btn" id="hub-crafting">
-                <span class="icon">🏭</span>
-                <span class="cinzel text-lg">Meisterwerkstatt</span>
-                <span class="label">Komplexes Crafting</span>
-                <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-library" style="display: none;">
-              <span class="icon">📚</span>
-              <span class="cinzel text-lg">Bibliothek</span>
-              <span class="label">Endlose Forschungen</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-          </div>
-        </div>
+            <!-- Hub-Inhalt -->
+            <section id="hub-content">
+                <!-- KERN -->
+                <div id="hub-category-core" class="hub-category">
+                    <div class="hub-grid">
+                        <button class="hub-btn primary" id="hub-archive" type="button">
+                            <span class="icon" aria-hidden="true">📜</span>
+                            <span class="cinzel text-lg">Archiv</span>
+                            <span class="label">Hauptspiel betreten</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-hero" type="button">
+                            <span class="icon" aria-hidden="true">👤</span>
+                            <span class="cinzel text-lg">Mein Held</span>
+                            <span class="label">Ausrüstung &amp; Stats</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-story" type="button">
+                            <span class="icon" aria-hidden="true">📖</span>
+                            <span class="cinzel text-lg">Story &amp; Bosse</span>
+                            <span class="label">Kapitel &amp; Kämpfe</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-skills" type="button">
+                            <span class="icon" aria-hidden="true">🌳</span>
+                            <span class="cinzel text-lg">Talentbaum</span>
+                            <span class="label">Prestige-Punkte nutzen</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                    </div>
+                </div>
 
-        <!-- SAMMLUNG -->
-        <div id="hub-category-collection" class="hub-category" style="display: none;">
-          <div class="hub-grid">
-            <button class="hub-btn" id="hub-codex">
-              <span class="icon">📚</span>
-              <span class="cinzel text-lg">Codex</span>
-              <span class="label">Tagebuch &amp; Lore</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-story-branch">
-              <span class="icon">📖</span>
-              <span class="cinzel text-lg">Story</span>
-              <span class="label">Entscheidungen treffen</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-          </div>
-        </div>
+                <!-- FORTSCHRITT -->
+                <div id="hub-category-progression" class="hub-category" style="display: none;">
+                    <div class="hub-grid">
+                        <button class="hub-btn" id="hub-leaderboard" type="button">
+                            <span class="icon" aria-hidden="true">🏆</span>
+                            <span class="cinzel text-lg">Ruhmeshalle</span>
+                            <span class="label">Persönliche Rekorde</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-relic" type="button">
+                            <span class="icon" aria-hidden="true">💎</span>
+                            <span class="cinzel text-lg">Relikt-Jagd</span>
+                            <span class="label">Relikte finden</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn hub-btn-danger span-2" id="hub-challenges" type="button">
+                            <span class="icon" aria-hidden="true">🔥</span>
+                            <span class="cinzel text-lg text-danger">Anomalien</span>
+                            <span class="label">Extreme Herausforderungen</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                    </div>
+                </div>
 
-        <!-- GEMEINSCHAFT -->
-        <div id="hub-category-social" class="hub-category" style="display: none;">
-          <div class="hub-grid">
-            <button class="hub-btn" id="hub-guild">
-              <span class="icon">🏛️</span>
-              <span class="cinzel text-lg">Gilde</span>
-              <span class="label">Clan &amp; Mitglieder</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-friends">
-              <span class="icon">👥</span>
-              <span class="cinzel text-lg">Freunde</span>
-              <span class="label">Freundesliste</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-            <button class="hub-btn" id="hub-chat">
-              <span class="icon">💬</span>
-              <span class="cinzel text-lg">Chat</span>
-              <span class="label">Globaler Chat</span>
-              <span class="hub-btn-glow"></span>
-            </button>
-          </div>
-        </div>
-      </div>
+                <!-- HANDWERK -->
+                <div id="hub-category-crafting" class="hub-category" style="display: none;">
+                    <div class="hub-grid">
+                        <button class="hub-btn" id="hub-artifact" type="button">
+                            <span class="icon" aria-hidden="true">⚒️</span>
+                            <span class="cinzel text-lg">Artefakt-Schmiede</span>
+                            <span class="label">Ausrüstung herstellen</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-crafting" type="button">
+                            <span class="icon" aria-hidden="true">🏭</span>
+                            <span class="cinzel text-lg">Meisterwerkstatt</span>
+                            <span class="label">Komplexes Crafting</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-library" type="button">
+                            <span class="icon" aria-hidden="true">📚</span>
+                            <span class="cinzel text-lg">Bibliothek</span>
+                            <span class="label">Forschungen</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                    </div>
+                </div>
 
-      <div id="hub-footer">
-        <button class="hub-back-btn glass-btn" id="hub-back-to-menu">« Zurück</button>
-        <div id="hub-notifications">
-          <span id="hub-quest-indicator" style="display: none;">📋 Mission aktiv</span>
-          <span id="hub-guild-indicator" style="display: none;">🏛️</span>
-        </div>
-        <div class="hub-version">v1.5</div>
-      </div>
-    </div>
+                <!-- SAMMLUNG -->
+                <div id="hub-category-collection" class="hub-category" style="display: none;">
+                    <div class="hub-grid">
+                        <button class="hub-btn" id="hub-codex" type="button">
+                            <span class="icon" aria-hidden="true">📚</span>
+                            <span class="cinzel text-lg">Codex</span>
+                            <span class="label">Tagebuch &amp; Lore</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-story-branch" type="button">
+                            <span class="icon" aria-hidden="true">📖</span>
+                            <span class="cinzel text-lg">Story</span>
+                            <span class="label">Entscheidungen treffen</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                    </div>
+                </div>
 
-    <!-- ===== IN-GAME SPIEL ===== -->
-    <div id="game-container" class="fade-in" style="display: none;">
-      <div id="game-header">
-        <div class="header-left">
-          <button id="back-to-hub-btn" class="glass-btn primary" title="Zurück zur Übersicht">« Zurück zum Hub</button>
-        </div>
-        <div class="header-center">
-          <h1 class="glow-text text-center">ARCHIV DES VERGESSENS</h1>
-          <div class="subtitle text-center">Der Mneme-Bund</div>
-        </div>
-        <div class="header-right"></div>
-      </div>
+                <!-- GEMEINSCHAFT -->
+                <div id="hub-category-social" class="hub-category" style="display: none;">
+                    <div class="hub-grid">
+                        <button class="hub-btn" id="hub-guild" type="button">
+                            <span class="icon" aria-hidden="true">🏛️</span>
+                            <span class="cinzel text-lg">Gilde</span>
+                            <span class="label">Clan &amp; Mitglieder</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-friends" type="button">
+                            <span class="icon" aria-hidden="true">👥</span>
+                            <span class="cinzel text-lg">Freunde</span>
+                            <span class="label">Freundesliste</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                        <button class="hub-btn" id="hub-chat" type="button">
+                            <span class="icon" aria-hidden="true">💬</span>
+                            <span class="cinzel text-lg">Chat</span>
+                            <span class="label">Globaler Chat</span>
+                            <span class="hub-btn-glow"></span>
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-      <div id="resource-bar" class="resource-bar-flex glass-panel">
-        <div class="resource-group">
-          <div class="resource-item" id="res-particle">
-            <span class="resource-label">Partikel:</span>
-            <span class="resource-value text-gold glow-text" id="particle-display">0</span>
-          </div>
-          <div class="resource-item" id="res-relic">
-            <span class="resource-label">Relikte:</span>
-            <span class="resource-value text-gold glow-text" id="relic-display">0</span>
-          </div>
-          <div class="resource-item" id="res-artifact">
-            <span class="resource-label">Artefakte:</span>
-            <span class="resource-value text-gold glow-text" id="node-artifact-display">0</span>
-          </div>
-        </div>
-        <button id="open-achievements-btn" class="glass-btn primary">🏆 Erfolge ansehen</button>
-      </div>
+            <!-- Hub-Footer -->
+            <footer id="hub-footer">
+                <button class="hub-back-btn glass-btn" id="hub-back-to-menu" type="button">« Zurück</button>
+                <div id="hub-notifications">
+                    <span id="hub-quest-indicator" style="display: none;">📋 Mission aktiv</span>
+                    <span id="hub-guild-indicator" style="display: none;">🏛️</span>
+                </div>
+                <span class="hub-version">v1.6</span>
+            </footer>
+        </section>
 
-      <div class="gather-section">
-        <button id="manual-gather-btn" class="primary epic-pulse text-gold cinzel">✨ Mneme-Partikel extrahieren
-          ✨</button>
-        <button id="upgrade-click-btn" class="glass-btn text-muted">Klick-Stärke verbessern (Kosten: 50
-          Partikel)</button>
-      </div>
+        <!-- ==========================================================
+        IN-GAME – SPIEL
+        ========================================================== -->
+        <section id="game-container" class="fade-in" style="display: none;" role="main" aria-label="Archiv des Vergessens – Spiel">
+            <!-- Game-Header -->
+            <header id="game-header">
+                <div class="header-left">
+                    <button id="back-to-hub-btn" class="glass-btn primary" type="button" title="Zurück zur Übersicht">« Zurück zum Hub</button>
+                </div>
+                <div class="header-center">
+                    <h1 class="glow-text text-center">ARCHIV DES VERGESSENS</h1>
+                    <p class="subtitle text-center">Der Mneme-Bund</p>
+                </div>
+                <div class="header-right" aria-hidden="true"></div>
+            </header>
 
-      <div class="panels-grid">
-        <div id="clan-panel" class="glass-panel" style="padding: 1.5rem;">
-          <h3 class="panel-title cinzel text-gold">Mitglieder des Bundes <span class="text-sm text-muted"
-              style="text-transform: none; font-family: var(--font-body);">(Klick für Expedition)</span></h3>
-          <div class="table-container">
-            <table id="clan-members-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Beruf</th>
-                  <th>Stufe</th>
-                  <th style="width: 30%;">Fortschritt</th>
-                </tr>
-              </thead>
-              <tbody id="members-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="recruitment-panel" class="glass-panel" style="padding: 1.5rem;">
-          <h3 class="panel-title cinzel text-blue text-highlight">Neue Mitglieder anwerben</h3>
-          <div class="recruit-buttons mt-1">
-            <button id="recruit-collector" class="glass-btn flex-between"><span>Sammler</span> <span
-                class="text-gold">(10)</span></button>
-            <button id="recruit-weaver" class="glass-btn flex-between"><span>Weber</span> <span
-                class="text-gold">(25)</span></button>
-            <button id="recruit-guardian" class="glass-btn flex-between"><span>Wächter</span> <span
-                class="text-gold">(40)</span></button>
-          </div>
-        </div>
-      </div>
-
-      <div id="log-panel" style="display: none;"></div>
-
-      <div id="game-footer" class="glass-panel mt-1">
-        <span id="status-display" class="flex-row gap-sm">
-          <span class="status-indicator"></span>
-          <span id="game-state-text" class="text-muted">Running</span>
-          <span id="speed-indicator" class="text-highlight glow-text ml-1" style="font-weight: bold; display: none;">⚡
-            4x Catch-Up</span>
-        </span>
-        <span id="tick-info" class="text-muted text-sm">Tick: 0 | Δ: 0ms</span>
-      </div>
-    </div>
-
-    <!-- MODALS & OVERLAYS -->
-    <!-- QUEST MODAL -->
-    <div id="quest-modal-overlay" class="modal-overlay" style="display: none;">
-      <div id="quest-modal" class="modal-content glass-panel">
-        <button class="modal-close" id="quest-modal-close" aria-label="Schließen">&times;</button>
-        <h2 class="quest-modal-title">Missionslogbuch</h2>
-        <div class="quest-tab-container">
-          <button id="quest-tab-main" class="quest-tab-btn active glass-btn">Hauptmissionen</button>
-          <button id="quest-tab-daily" class="quest-tab-btn glass-btn">Tägliche Missionen</button>
-        </div>
-        <div id="quest-content-main" class="modal-scroll-area mt-1"></div>
-        <div id="quest-content-daily" class="modal-scroll-area mt-1" style="display: none;"></div>
-      </div>
-    </div>
-
-    <!-- EXPEDITION MODAL -->
-    <div id="expedition-modal-overlay" class="modal-overlay" style="display: none;">
-      <div id="expedition-modal" class="modal-content-small glass-panel">
-        <button class="modal-close" id="expedition-modal-close" aria-label="Schließen">&times;</button>
-        <h2 class="glow-text cinzel text-center mb-1">Expedition</h2>
-        <div class="glass-inner-panel mb-1">
-          <div class="flex-between mb-1"><span class="text-muted">Name:</span><span class="text-highlight text-bold"
-              id="expedition-member-name"></span></div>
-          <div class="flex-between mb-1"><span class="text-muted">Beruf:</span><span id="expedition-member-role"></span>
-          </div>
-          <div class="flex-between mb-1"><span class="text-muted">Stufe:</span><span id="expedition-member-level"></span></div>
-          <div class="flex-between mb-1"><span class="text-muted">Erfolgschance:</span><span class="text-gold text-bold"
-              id="expedition-success-chance"></span></div>
-          <div class="flex-between"><span class="text-muted">Dauer:</span><span id="expedition-duration"></span></div>
-        </div>
-        <div id="expedition-progress-container" class="mt-1">
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="expedition-progress-fill"></div>
-            <div class="progress-text" id="expedition-progress-text">0%</div>
-          </div>
-        </div>
-        <div id="expedition-status" class="text-muted mt-1 text-center text-sm">Bereit</div>
-        <div id="expedition-result" class="text-center mt-1 text-bold"></div>
-        <button id="expedition-start-btn" class="glass-btn primary mt-2 w-100">Expedition starten</button>
-      </div>
-    </div>
-
-    <!-- HERO MODAL (AAA RPG UPGRADE - 13 SLOTS, ÜBERLAPPUNGSFREI) -->
-    <div id="hero-overlay" class="modal-overlay" style="display: none;">
-      <div id="hero-modal" class="hero-modal-wide glass-panel">
-        <button class="modal-close" id="hero-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">Mein Held</h2>
-        <div class="hero-split-layout">
-          <div class="hero-avatar-panel glass-inner-panel">
-            <div id="hero-name" class="cinzel text-lg text-gold glow-text mt-1"></div>
-            <div id="hero-level" class="text-muted text-sm mb-1"></div>
-
-            <!-- VERGRÖSSERTER AVATAR-CONTAINER -->
-            <div class="avatar-container">
-              <!-- Rotierender Runen-Ring (Hintergrund) -->
-              <div class="rune-halo"></div>
-
-              <!-- VERGRÖSSERTE SILHOUETTE -->
-              <svg class="silhouette-svg" viewBox="0 0 120 240" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                  <filter id="hero-glow">
-                    <feGaussianBlur stdDeviation="5" result="coloredBlur" />
-                    <feMerge>
-                      <feMergeNode in="coloredBlur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-                <g filter="url(#hero-glow)" opacity="0.4" fill="#c5a059" transform="scale(1.2) translate(-10, -20)">
-                  <circle cx="50" cy="25" r="16" />
-                  <path d="M 28 45 Q 50 38 72 45 L 85 110 L 15 110 Z" />
-                  <path d="M 20 50 L 5 125 L 15 130 L 28 65 Z" />
-                  <path d="M 80 50 L 95 125 L 85 130 L 72 65 Z" />
-                  <path d="M 33 110 L 26 195 L 44 195 L 46 110 Z" />
-                  <path d="M 67 110 L 74 195 L 56 195 L 54 110 Z" />
-                </g>
-              </svg>
-
-              <!-- 13 EQUIPMENT SLOTS - ÜBERLAPPUNGSFREI POSITIONIERT -->
-              <!-- Helm (oben) -->
-              <div class="equip-node" id="node-helmet" style="top: 6%; left: 50%;" title="Helm">⛑️</div>
-              <!-- Amulett (direkt unter Helm) -->
-              <div class="equip-node" id="node-amulet" style="top: 18%; left: 50%;" title="Amulett">📿</div>
-              <!-- Schultern (links und rechts, auf gleicher Höhe) -->
-              <div class="equip-node" id="node-shoulders-l" style="top: 28%; left: 18%;" title="Schultern (links)">🪄</div>
-              <div class="equip-node" id="node-shoulders-r" style="top: 28%; left: 82%;" title="Schultern (rechts)">🪄</div>
-              <!-- Rüstung (Brustmitte) -->
-              <div class="equip-node" id="node-armor" style="top: 46%; left: 50%;" title="Rüstung">🛡️</div>
-              <!-- Schild (links) und Waffe (rechts) -->
-              <div class="equip-node" id="node-shield" style="top: 48%; left: 18%;" title="Schild">🛡️</div>
-              <div class="equip-node" id="node-weapon" style="top: 48%; left: 82%;" title="Waffe">🗡️</div>
-              <!-- Handschuhe (links und rechts, etwas tiefer) -->
-              <div class="equip-node" id="node-gloves-l" style="top: 60%; left: 18%;" title="Handschuhe (links)">🧤</div>
-              <div class="equip-node" id="node-gloves-r" style="top: 60%; left: 82%;" title="Handschuhe (rechts)">🧤</div>
-              <!-- Gürtel (Taille) -->
-              <div class="equip-node" id="node-belt" style="top: 72%; left: 50%;" title="Gürtel">🔗</div>
-              <!-- Ringe (links und rechts, unterhalb des Gürtels) -->
-              <div class="equip-node" id="node-ring" style="top: 80%; left: 22%;" title="Ring (links)">💍</div>
-              <div class="equip-node" id="node-ring2" style="top: 80%; left: 78%;" title="Ring (rechts)">💍</div>
-              <!-- Stiefel (unten) -->
-              <div class="equip-node" id="node-boots" style="top: 88%; left: 50%;" title="Stiefel">👢</div>
+            <!-- Ressourcen-Leiste -->
+            <div id="resource-bar" class="resource-bar-flex glass-panel" role="status" aria-label="Ressourcen">
+                <div class="resource-group">
+                    <div class="resource-item" id="res-particle">
+                        <span class="resource-label">Partikel:</span>
+                        <span class="resource-value text-gold glow-text" id="particle-display">0</span>
+                    </div>
+                    <div class="resource-item" id="res-relic">
+                        <span class="resource-label">Relikte:</span>
+                        <span class="resource-value text-gold glow-text" id="relic-display">0</span>
+                    </div>
+                    <div class="resource-item" id="res-artifact">
+                        <span class="resource-label">Artefakte:</span>
+                        <span class="resource-value text-gold glow-text" id="node-artifact-display">0</span>
+                    </div>
+                </div>
+                <button id="open-achievements-btn" class="glass-btn primary" type="button">🏆 Erfolge ansehen</button>
             </div>
 
-            <div id="hero-exp" class="text-sm text-center text-muted mb-1 w-100"
-              style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;"></div>
-            <div id="hero-stat-points" class="w-100 mb-1"></div>
-            <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-bottom: 0.5rem;">Attribute</h3>
-            <div class="stats-grid w-100 pr-1" style="overflow-y: auto; max-height: 200px;" id="hero-stats"></div>
-          </div>
-          <div class="hero-details-panel">
-            <div class="hero-action-buttons">
-              <button id="hero-prestige-btn" class="glass-btn primary btn-small epic-pulse" style="display: none;">Verewigen</button>
-              <button id="hero-daily-btn" class="glass-btn btn-small">Tägliche Belohnung</button>
+            <!-- Sammel-Bereich -->
+            <div class="gather-section">
+                <button id="manual-gather-btn" class="primary epic-pulse text-gold cinzel" type="button">✨ Mneme-Partikel extrahieren ✨</button>
+                <button id="upgrade-click-btn" class="glass-btn text-muted" type="button">Klick-Stärke verbessern (Kosten: 50 Partikel)</button>
             </div>
-            <div class="tab-container">
-              <button id="hero-tab-resources" class="inv-tab-btn active glass-btn">Ressourcen</button>
-              <button id="hero-tab-equipment" class="inv-tab-btn glass-btn">Ausrüstung</button>
-              <button id="hero-tab-loot" class="inv-tab-btn glass-btn">Loot</button>
+
+            <!-- Panels: Clan & Rekrutierung -->
+            <div class="panels-grid">
+                <!-- Clan-Mitglieder -->
+                <section id="clan-panel" class="glass-panel" style="padding: 1.5rem;">
+                    <h3 class="panel-title cinzel text-gold">
+                        Mitglieder des Bundes
+                        <span class="text-sm text-muted" style="text-transform: none; font-family: var(--font-body);">(Klick für Expedition)</span>
+                    </h3>
+                    <div class="table-container">
+                        <table id="clan-members-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Beruf</th>
+                                    <th>Stufe</th>
+                                    <th style="width: 30%;">Fortschritt</th>
+                                </tr>
+                            </thead>
+                            <tbody id="members-tbody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Rekrutierung -->
+                <section id="recruitment-panel" class="glass-panel" style="padding: 1.5rem;">
+                    <h3 class="panel-title cinzel text-blue text-highlight">Neue Mitglieder anwerben</h3>
+                    <div class="recruit-buttons mt-1">
+                        <button id="recruit-collector" class="glass-btn flex-between" type="button">
+                            <span>Sammler</span>
+                            <span class="text-gold">(10)</span>
+                        </button>
+                        <button id="recruit-weaver" class="glass-btn flex-between" type="button">
+                            <span>Weber</span>
+                            <span class="text-gold">(25)</span>
+                        </button>
+                        <button id="recruit-guardian" class="glass-btn flex-between" type="button">
+                            <span>Wächter</span>
+                            <span class="text-gold">(40)</span>
+                        </button>
+                    </div>
+                </section>
             </div>
-            <div id="hero-bulk-actions" class="bulk-actions-container flex-row" style="display: none;">
-              <select id="inv-filter" class="ui-select">
-                <option value="all">Alle Slots</option>
-                <option value="weapon">Waffen</option>
-                <option value="shield">Schilde</option>
-                <option value="helmet">Helme</option>
-                <option value="shoulders-l">Schultern (links)</option>
-                <option value="shoulders-r">Schultern (rechts)</option>
-                <option value="armor">Rüstungen</option>
-                <option value="gloves-l">Handschuhe (links)</option>
-                <option value="gloves-r">Handschuhe (rechts)</option>
-                <option value="belt">Gürtel</option>
-                <option value="boots">Stiefel</option>
-                <option value="amulet">Amulette</option>
-                <option value="ring">Ringe</option>
-              </select>
-              <select id="inv-sort" class="ui-select">
-                <option value="rarity">Nach Seltenheit</option>
-                <option value="level">Nach Level</option>
-                <option value="name">Nach Name</option>
-              </select>
-              <div style="flex: 1;"></div>
-              <div id="bulk-btn-wrapper"></div>
+
+            <!-- Game-Footer -->
+            <footer id="game-footer" class="glass-panel mt-1">
+                <span id="status-display" class="flex-row gap-sm">
+                    <span class="status-indicator" aria-hidden="true"></span>
+                    <span id="game-state-text" class="text-muted">Running</span>
+                    <span id="speed-indicator" class="text-highlight glow-text ml-1" style="font-weight: bold; display: none;">⚡ 4x Catch-Up</span>
+                </span>
+                <span id="tick-info" class="text-muted text-sm">Tick: 0 | Δ: 0ms</span>
+            </footer>
+        </section>
+
+        <!-- ==========================================================
+        MODALS & OVERLAYS – Alle Container für Preact-UI
+        ========================================================== -->
+
+        <!-- QUEST MODAL -->
+        <div id="quest-modal-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Missionslogbuch">
+            <div id="quest-modal" class="modal-content glass-panel">
+                <button class="modal-close" id="quest-modal-close" aria-label="Schließen">&times;</button>
+                <h2 class="quest-modal-title">Missionslogbuch</h2>
+                <div class="quest-tab-container">
+                    <button id="quest-tab-main" class="quest-tab-btn active glass-btn" type="button">Hauptmissionen</button>
+                    <button id="quest-tab-daily" class="quest-tab-btn glass-btn" type="button">Tägliche Missionen</button>
+                </div>
+                <div id="quest-content-main" class="modal-scroll-area mt-1"></div>
+                <div id="quest-content-daily" class="modal-scroll-area mt-1" style="display: none;"></div>
             </div>
-            <div id="hero-inventory-resources" class="modal-scroll-area glass-inner-panel" style="padding: 1rem;"></div>
-            <div id="hero-inventory-equipment" class="modal-scroll-area" style="display: none;"></div>
-            <div id="hero-inventory-loot" class="modal-scroll-area" style="display: none;"></div>
-          </div>
         </div>
-        <!-- SAUBERES UI-ENDE -->
-        <div class="hero-modal-footer">
-          <span class="text-muted text-sm cinzel">MEMENTO MEMORIAE</span>
-          <div class="footer-gem">✦</div>
-          <span class="text-gold text-sm cinzel">DER MNEME-BUND</span>
+
+        <!-- EXPEDITION MODAL -->
+        <div id="expedition-modal-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Expedition">
+            <div id="expedition-modal" class="modal-content-small glass-panel">
+                <button class="modal-close" id="expedition-modal-close" aria-label="Schließen">&times;</button>
+                <h2 class="glow-text cinzel text-center mb-1">Expedition</h2>
+                <div class="glass-inner-panel mb-1">
+                    <div class="flex-between mb-1"><span class="text-muted">Name:</span><span class="text-highlight text-bold" id="expedition-member-name"></span></div>
+                    <div class="flex-between mb-1"><span class="text-muted">Beruf:</span><span id="expedition-member-role"></span></div>
+                    <div class="flex-between mb-1"><span class="text-muted">Stufe:</span><span id="expedition-member-level"></span></div>
+                    <div class="flex-between mb-1"><span class="text-muted">Erfolgschance:</span><span class="text-gold text-bold" id="expedition-success-chance"></span></div>
+                    <div class="flex-between"><span class="text-muted">Dauer:</span><span id="expedition-duration"></span></div>
+                </div>
+                <div id="expedition-progress-container" class="mt-1">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="expedition-progress-fill"></div>
+                        <div class="progress-text" id="expedition-progress-text">0%</div>
+                    </div>
+                </div>
+                <div id="expedition-status" class="text-muted mt-1 text-center text-sm">Bereit</div>
+                <div id="expedition-result" class="text-center mt-1 text-bold"></div>
+                <button id="expedition-start-btn" class="glass-btn primary mt-2 w-100" type="button">Expedition starten</button>
+            </div>
         </div>
-      </div>
+
+        <!-- HERO MODAL (wird von Preact gerendert, aber Container bleibt für Fallback) -->
+        <div id="hero-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Mein Held">
+            <div id="hero-modal" class="hero-modal-wide glass-panel">
+                <button class="modal-close" id="hero-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text cinzel text-center">Mein Held</h2>
+                <div class="hero-split-layout">
+                    <div class="hero-avatar-panel glass-inner-panel">
+                        <div id="hero-name" class="cinzel text-lg text-gold glow-text mt-1"></div>
+                        <div id="hero-level" class="text-muted text-sm mb-1"></div>
+                        <div class="avatar-container">
+                            <div class="rune-halo"></div>
+                            <svg class="silhouette-svg" viewBox="0 0 120 240" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                                <defs>
+                                    <filter id="hero-glow">
+                                        <feGaussianBlur stdDeviation="5" result="coloredBlur" />
+                                        <feMerge>
+                                            <feMergeNode in="coloredBlur" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+                                <g filter="url(#hero-glow)" opacity="0.4" fill="#c5a059" transform="scale(1.2) translate(-10, -20)">
+                                    <circle cx="50" cy="25" r="16" />
+                                    <path d="M 28 45 Q 50 38 72 45 L 85 110 L 15 110 Z" />
+                                    <path d="M 20 50 L 5 125 L 15 130 L 28 65 Z" />
+                                    <path d="M 80 50 L 95 125 L 85 130 L 72 65 Z" />
+                                    <path d="M 33 110 L 26 195 L 44 195 L 46 110 Z" />
+                                    <path d="M 67 110 L 74 195 L 56 195 L 54 110 Z" />
+                                </g>
+                            </svg>
+                            <div class="equip-node" id="node-helmet" style="top: 6%; left: 50%;" title="Helm">⛑️</div>
+                            <div class="equip-node" id="node-amulet" style="top: 18%; left: 50%;" title="Amulett">📿</div>
+                            <div class="equip-node" id="node-shoulders-l" style="top: 28%; left: 18%;" title="Schultern (links)">🪄</div>
+                            <div class="equip-node" id="node-shoulders-r" style="top: 28%; left: 82%;" title="Schultern (rechts)">🪄</div>
+                            <div class="equip-node" id="node-armor" style="top: 46%; left: 50%;" title="Rüstung">🛡️</div>
+                            <div class="equip-node" id="node-shield" style="top: 48%; left: 18%;" title="Schild">🛡️</div>
+                            <div class="equip-node" id="node-weapon" style="top: 48%; left: 82%;" title="Waffe">🗡️</div>
+                            <div class="equip-node" id="node-gloves-l" style="top: 60%; left: 18%;" title="Handschuhe (links)">🧤</div>
+                            <div class="equip-node" id="node-gloves-r" style="top: 60%; left: 82%;" title="Handschuhe (rechts)">🧤</div>
+                            <div class="equip-node" id="node-belt" style="top: 72%; left: 50%;" title="Gürtel">🔗</div>
+                            <div class="equip-node" id="node-ring" style="top: 80%; left: 22%;" title="Ring (links)">💍</div>
+                            <div class="equip-node" id="node-ring2" style="top: 80%; left: 78%;" title="Ring (rechts)">💍</div>
+                            <div class="equip-node" id="node-boots" style="top: 88%; left: 50%;" title="Stiefel">👢</div>
+                        </div>
+                        <div id="hero-exp" class="text-sm text-center text-muted mb-1 w-100"></div>
+                        <div id="hero-stat-points" class="w-100 mb-1"></div>
+                        <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-bottom: 0.5rem;">Attribute</h3>
+                        <div class="stats-grid w-100 pr-1" id="hero-stats"></div>
+                    </div>
+                    <div class="hero-details-panel">
+                        <div class="hero-action-buttons">
+                            <button id="hero-prestige-btn" class="glass-btn primary btn-small epic-pulse" style="display: none;" type="button">Verewigen</button>
+                            <button id="hero-daily-btn" class="glass-btn btn-small" type="button">Tägliche Belohnung</button>
+                        </div>
+                        <div class="tab-container">
+                            <button id="hero-tab-resources" class="inv-tab-btn active glass-btn" type="button">Ressourcen</button>
+                            <button id="hero-tab-equipment" class="inv-tab-btn glass-btn" type="button">Ausrüstung</button>
+                            <button id="hero-tab-loot" class="inv-tab-btn glass-btn" type="button">Loot</button>
+                        </div>
+                        <div id="hero-bulk-actions" class="bulk-actions-container flex-row" style="display: none;">
+                            <select id="inv-filter" class="ui-select" aria-label="Filter">
+                                <option value="all">Alle Slots</option>
+                                <option value="weapon">Waffen</option>
+                                <option value="shield">Schilde</option>
+                                <option value="helmet">Helme</option>
+                                <option value="shoulders-l">Schultern (links)</option>
+                                <option value="shoulders-r">Schultern (rechts)</option>
+                                <option value="armor">Rüstungen</option>
+                                <option value="gloves-l">Handschuhe (links)</option>
+                                <option value="gloves-r">Handschuhe (rechts)</option>
+                                <option value="belt">Gürtel</option>
+                                <option value="boots">Stiefel</option>
+                                <option value="amulet">Amulette</option>
+                                <option value="ring">Ringe</option>
+                            </select>
+                            <select id="inv-sort" class="ui-select" aria-label="Sortierung">
+                                <option value="rarity">Nach Seltenheit</option>
+                                <option value="level">Nach Level</option>
+                                <option value="name">Nach Name</option>
+                            </select>
+                            <div style="flex: 1;"></div>
+                            <div id="bulk-btn-wrapper"></div>
+                        </div>
+                        <div id="hero-inventory-resources" class="modal-scroll-area glass-inner-panel" style="padding: 1rem;"></div>
+                        <div id="hero-inventory-equipment" class="modal-scroll-area" style="display: none;"></div>
+                        <div id="hero-inventory-loot" class="modal-scroll-area" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="hero-modal-footer">
+                    <span class="text-muted text-sm cinzel">MEMENTO MEMORIAE</span>
+                    <span class="footer-gem" aria-hidden="true">✦</span>
+                    <span class="text-gold text-sm cinzel">DER MNEME-BUND</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STORY MODAL -->
+        <div id="story-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Story &amp; Bosse">
+            <div id="story-modal" class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;">
+                <button class="modal-close" id="story-close" aria-label="Schließen">&times;</button>
+                <h2 class="story-modal-title">📖 Story &amp; Bosse</h2>
+                <div class="story-chapter-nav">
+                    <button id="story-prev-chapter" class="glass-btn btn-small" type="button">◄</button>
+                    <div id="story-chapter-info" class="chapter-title">Kapitel 1</div>
+                    <button id="story-next-chapter" class="glass-btn btn-small" type="button">►</button>
+                </div>
+                <div id="story-content-area" class="mt-1" style="position: relative; min-height: 220px; flex: 1; overflow: hidden;">
+                    <div id="story-boss-list" class="story-boss-list" style="max-height: 220px; padding-right: 0.3rem;"></div>
+                    <div id="story-locked-overlay" class="story-locked-overlay">
+                        <div class="lock-icon">🔒</div>
+                        <div class="lock-title">KAPITEL GESPERRT</div>
+                        <div class="lock-hint">Besiege die Bosse des vorherigen Kapitels.</div>
+                    </div>
+                </div>
+                <div id="story-current-boss" class="story-current-boss">
+                    <div class="boss-header">AKTUELLES ZIEL</div>
+                    <div id="story-current-boss-name" class="boss-name-display"></div>
+                    <div class="boss-stats-grid">
+                        <div class="boss-stat"><span class="stat-label">❤️ HP</span><span id="story-boss-hp" class="stat-value hp">-</span></div>
+                        <div class="boss-stat"><span class="stat-label">⚔️ Angriff</span><span id="story-boss-atk" class="stat-value atk">-</span></div>
+                        <div class="boss-stat"><span class="stat-label">🛡️ Verteidigung</span><span id="story-boss-def" class="stat-value def">-</span></div>
+                    </div>
+                    <div id="story-fight-result" class="story-fight-result"></div>
+                    <button id="story-fight-btn" class="glass-btn primary story-fight-btn" type="button">⚔️ Bosskampf starten</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ARTEFAKT-SCHMIEDE -->
+        <div id="forge-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Artefakt-Schmiede">
+            <div id="forge-modal" class="modal-content-wide glass-panel">
+                <button class="modal-close" id="forge-close" aria-label="Schließen">&times;</button>
+                <h2 class="glow-text text-gold cinzel text-center">Artefakt-Schmiede</h2>
+                <p class="text-center text-muted mb-1">Schmiede und werte Ausrüstung auf</p>
+                <div id="forge-resources" class="glass-inner-panel flex-between text-sm mb-2" style="padding: 0.8rem 2rem;"></div>
+                <div class="forge-split-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="forge-column glass-inner-panel">
+                        <h3 class="options-header text-center">Rezepte</h3>
+                        <div id="forge-recipes" class="modal-scroll-area"></div>
+                    </div>
+                    <div class="forge-column glass-inner-panel">
+                        <h3 class="options-header text-center" style="color: var(--color-blue);">Ausrüstung Aufwerten</h3>
+                        <div id="forge-upgrades" class="modal-scroll-area"></div>
+                    </div>
+                </div>
+                <div id="forge-result" class="text-center mt-1 text-bold"></div>
+            </div>
+        </div>
+
+        <!-- MEISTERWERKSTATT -->
+        <div id="crafting-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Meisterwerkstatt">
+            <div id="crafting-modal" class="modal-content-wide glass-panel" style="max-width: 900px;">
+                <button class="modal-close" id="crafting-close" aria-label="Schließen">&times;</button>
+                <h2 class="glow-text text-gold cinzel text-center">Meisterwerkstatt</h2>
+                <p class="text-muted text-sm text-center mb-1">Hier schmiedest du die mächtigsten Artefakte.</p>
+                <div id="crafting-resources" class="glass-inner-panel mb-1"></div>
+                <div id="crafting-skill" class="glass-inner-panel mb-1"></div>
+                <div id="crafting-recipes" class="modal-scroll-area" style="max-height: 40vh;"></div>
+                <div id="crafting-result" class="text-center mt-1 text-bold"></div>
+            </div>
+        </div>
+
+        <!-- NEUES SPIEL DIALOG -->
+        <div id="new-game-modal-overlay" class="modal-overlay" style="display: none; z-index: 9999;" role="dialog" aria-label="Neues Spiel">
+            <div id="new-game-modal" class="modal-content-small glass-panel">
+                <h2 class="glow-text text-gold cinzel text-center">NEUES ARCHIV ÖFFNEN</h2>
+                <p class="text-muted text-center mb-2">Wie lautet der Name deines Helden?</p>
+                <input type="text" id="new-game-hero-name" class="ui-select w-100 mb-2 text-center text-lg" style="padding: 1rem; color: var(--color-gold);" value="Der Mneme-Bund" autocomplete="off" spellcheck="false" aria-label="Heldenname" />
+                <div class="flex-row gap-md">
+                    <button id="new-game-cancel-btn" class="glass-btn" style="flex: 1;" type="button">Abbrechen</button>
+                    <button id="new-game-start-btn" class="glass-btn primary" style="flex: 1.5;" type="button">Reise beginnen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RELIKT-JAGD -->
+        <div id="relic-hunt-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Relikt-Jagd">
+            <div id="relic-hunt-modal" class="modal-content-small glass-panel">
+                <button class="modal-close" id="relic-hunt-close" aria-label="Schließen">&times;</button>
+                <h2 class="glow-text text-highlight cinzel text-center">RELIKT-JAGD</h2>
+                <p class="text-muted text-center mb-1">Suche nach verlorenen Erinnerungen</p>
+                <div id="relic-hunt-status-area" class="relic-status-area">
+                    <div class="relic-status-item">
+                        <span class="text-muted">Kosten</span>
+                        <span class="text-gold text-bold">25 Partikel</span>
+                    </div>
+                    <div class="relic-status-item">
+                        <span class="text-muted">Erfolgschance</span>
+                        <span id="relic-hunt-chance" class="text-highlight">50%</span>
+                    </div>
+                    <div class="relic-status-item">
+                        <span class="text-muted">Kampfkraft</span>
+                        <span id="relic-hunt-power" class="text-highlight">0</span>
+                    </div>
+                    <div class="relic-status-item">
+                        <span class="text-muted">Status</span>
+                        <span class="text-muted">Bereit</span>
+                    </div>
+                </div>
+                <div id="relic-hunt-cooldown" class="relic-cooldown-panel" style="display: none;">
+                    <div id="relic-hunt-cooldown-text" class="relic-cooldown-text">Wartezeit: 5s</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="relic-hunt-cooldown-fill"></div>
+                    </div>
+                </div>
+                <button id="relic-hunt-start-btn" class="glass-btn primary w-100 epic-pulse" type="button">SUCHE STARTEN</button>
+                <div id="relic-hunt-result" class="text-center mt-2 text-bold"></div>
+            </div>
+        </div>
+
+        <!-- TALENTBAUM -->
+        <div id="skilltree-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Talentbaum">
+            <div id="skilltree-modal" class="modal-content glass-panel" style="width: 700px;">
+                <button class="modal-close" id="skilltree-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text text-success cinzel text-center">Talentbaum der Erinnerung</h2>
+                <div class="skilltree-points-display">
+                    <span class="text-muted">Verfügbare Prestige-Punkte:</span>
+                    <span id="skilltree-points" class="text-gold text-bold text-lg glow-text ml-1">0</span>
+                </div>
+                <div id="skilltree-container" class="modal-scroll-area mt-1"></div>
+            </div>
+        </div>
+
+        <!-- ANOMALIEN -->
+        <div id="challenges-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Anomalien">
+            <div id="challenges-modal" class="modal-content glass-panel" style="width: 700px;">
+                <button class="modal-close" id="challenges-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text text-danger cinzel text-center">Erinnerungs-Anomalien</h2>
+                <div class="text-muted text-sm mb-1 glass-inner-panel text-center">
+                    Meistere extreme Herausforderungen für permanente Belohnungen.<br />
+                    <span class="text-danger">Anomalien können nur direkt nach einem Prestige gestartet werden.</span>
+                </div>
+                <div id="challenges-container" class="modal-scroll-area mt-1"></div>
+            </div>
+        </div>
+
+        <!-- BIBLIOTHEK -->
+        <div id="library-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Bibliothek">
+            <div id="library-modal" class="modal-content glass-panel" style="width: 700px;">
+                <button class="modal-close" id="library-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text text-highlight cinzel text-center">Die Archiv-Bibliothek</h2>
+                <div class="text-muted text-sm mb-1 glass-inner-panel text-center">
+                    Erweitere dein Wissen für permanente Boni.<br />
+                    Forschungen können unbegrenzt aufgewertet werden.
+                </div>
+                <div id="library-container" class="modal-scroll-area mt-1"></div>
+            </div>
+        </div>
+
+        <!-- NPC-DIALOG -->
+        <div id="dialog-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="NPC-Dialog">
+            <div id="dialog-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 80vh;">
+                <button class="modal-close" id="dialog-close" aria-label="Schließen">&times;</button>
+                <div class="dialog-npc-header">
+                    <span id="dialog-npc-portrait" class="dialog-npc-portrait" aria-hidden="true">👤</span>
+                    <div class="dialog-npc-info">
+                        <div id="dialog-npc-name" class="dialog-npc-name"></div>
+                        <div id="dialog-npc-title" class="dialog-npc-title"></div>
+                    </div>
+                </div>
+                <div id="dialog-text" class="modal-scroll-area"></div>
+                <div id="dialog-options" class="flex-column modal-scroll-area"></div>
+            </div>
+        </div>
+
+        <!-- CODEX -->
+        <div id="codex-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Codex">
+            <div id="codex-modal" class="modal-content-wide glass-panel" style="max-width: 1000px; max-height: 85vh;">
+                <button class="modal-close" id="codex-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text cinzel text-center">📚 Codex – Das Tagebuch des Archivs</h2>
+                <p class="hub-subtitle text-center mb-1">Alle entdeckten Geheimnisse und Erinnerungen</p>
+                <div style="display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; flex: 1; min-height: 0; height: calc(100% - 130px); max-height: 60vh;">
+                    <div class="glass-inner-panel" style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+                        <div id="codex-categories" class="flex-row gap-sm mb-1" style="flex-wrap: wrap;"></div>
+                        <input id="codex-search" type="text" placeholder="🔍 Suchen..." class="ui-select w-100 mb-1" style="padding: 0.5rem;" aria-label="Codex durchsuchen" />
+                        <div id="codex-container" class="modal-scroll-area" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
+                    </div>
+                    <div class="glass-inner-panel" style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
+                        <div class="text-muted text-sm mb-1" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; flex-shrink: 0;">Details</div>
+                        <div id="codex-entry-detail" class="modal-scroll-area" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
+                    </div>
+                </div>
+                <div class="text-center text-muted text-sm mt-1" style="flex-shrink: 0; padding-top: 0.5rem;">
+                    Fortschritt: <span id="codex-progress">0</span>% freigeschaltet
+                </div>
+            </div>
+        </div>
+
+        <!-- GILDE -->
+        <div id="guild-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Gilde">
+            <div id="guild-modal" class="modal-content glass-panel" style="width: 650px; max-width: 95vw; max-height: 85vh;">
+                <button class="modal-close" id="guild-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text cinzel text-center">🏛️ Gilde</h2>
+                <div id="guild-container" class="modal-scroll-area" style="max-height: 70vh;"></div>
+            </div>
+        </div>
+
+        <!-- FREUNDE -->
+        <div id="friend-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Freunde">
+            <div id="friend-modal" class="modal-content glass-panel" style="width: 500px; max-width: 95vw; max-height: 85vh;">
+                <button class="modal-close" id="friend-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text cinzel text-center">👥 Freunde</h2>
+                <div id="friend-container" class="modal-scroll-area" style="max-height: 70vh;"></div>
+            </div>
+        </div>
+
+        <!-- GLOBALER CHAT -->
+        <div id="chat-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Globaler Chat">
+            <div id="chat-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 85vh;">
+                <button class="modal-close" id="chat-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text cinzel text-center">💬 Globaler Chat</h2>
+                <div id="chat-messages" class="modal-scroll-area" style="max-height: 50vh; margin-bottom: 0.5rem;"></div>
+                <div class="chat-input-row">
+                    <input id="chat-input" type="text" placeholder="Nachricht..." class="ui-select" aria-label="Chat-Nachricht" />
+                    <button class="glass-btn primary btn-small" id="chat-send-btn" type="button">Senden</button>
+                    <button class="glass-btn btn-danger btn-small" id="chat-clear-btn" type="button">🗑️ Leeren</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BESTENLISTE -->
+        <div id="leaderboard-overlay" class="modal-overlay" style="display: none;" role="dialog" aria-label="Bestenliste">
+            <div id="leaderboard-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw;">
+                <button class="modal-close" id="leaderboard-close" aria-label="Schließen">&times;</button>
+                <h2 class="modal-title glow-text cinzel text-center">🏆 Persönliche Bestenliste</h2>
+                <p class="hub-subtitle text-center mb-1">Deine Rekorde – gespeichert in deinem Browser</p>
+                <div id="leaderboard-container" class="modal-scroll-area" style="max-height: 50vh;"></div>
+                <button id="leaderboard-reset-btn" class="glass-btn btn-danger btn-small mt-2" style="display: none; margin: 0 auto;" type="button">Rekorde zurücksetzen</button>
+            </div>
+        </div>
+
+        <!-- OFFLINE-WILLKOMMEN -->
+        <div id="offline-modal-overlay" class="modal-overlay" style="display: none; z-index: 1000;" role="dialog" aria-label="Offline-Belohnungen">
+            <div id="offline-modal" class="modal-content-small glass-panel">
+                <h2 class="glow-text text-gold cinzel text-center">WILLKOMMEN ZURÜCK!</h2>
+                <p class="text-muted text-center mb-2">Das Archiv ruhte nie, während du fort warst.</p>
+                <div class="glass-inner-panel mb-2">
+                    <div class="flex-between mb-1"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val" class="text-bold text-highlight">0s</span></div>
+                    <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Partikel:</span><span id="offline-particles-val" class="text-gold text-bold">0</span></div>
+                    <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Relikte:</span><span id="offline-relics-val" class="text-gold text-bold">0</span></div>
+                    <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Artefakte:</span><span id="offline-artifacts-val" class="text-gold text-bold">0</span></div>
+                    <div class="flex-between"><span class="text-muted">+ Stufenaufstiege:</span><span id="offline-levels-val" class="text-success text-bold">0</span></div>
+                </div>
+                <button id="offline-close-btn" class="glass-btn primary w-100" type="button">Archiv betreten</button>
+            </div>
+        </div>
+
+        <!-- ACHIEVEMENT PREACT ROOT -->
+        <div id="preact-root"></div>
+
+        <!-- MISSION TRACKER (HUD) -->
+        <div id="quest-tracker-container" class="quest-tracker-container" style="display: none;">
+            <button id="quest-tracker-btn" class="quest-tracker-btn glass-btn" aria-label="Missionen">Missionen</button>
+        </div>
+
+        <!-- ACHIEVEMENT TOAST CONTAINER -->
+        <div id="achievement-toast-container"></div>
+
+        <!-- CUSTOM TOOLTIP -->
+        <div id="custom-tooltip" class="custom-tooltip glass-panel"></div>
+
     </div>
 
-    <!-- STORY MODAL -->
-    <div id="story-overlay" class="modal-overlay" style="display: none;">
-      <div id="story-modal" class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;">
-        <button class="modal-close" id="story-close" aria-label="Schließen">&times;</button>
-        <h2 class="story-modal-title">📖 Story &amp; Bosse</h2>
-        <div class="story-chapter-nav">
-          <button id="story-prev-chapter" class="glass-btn btn-small">◄</button>
-          <div id="story-chapter-info" class="chapter-title">Kapitel 1</div>
-          <button id="story-next-chapter" class="glass-btn btn-small">►</button>
-        </div>
-        <div id="story-content-area" style="position: relative; min-height: 220px; flex: 1; overflow: hidden;" class="mt-1">
-          <div id="story-boss-list" class="story-boss-list" style="max-height: 220px; padding-right: 0.3rem;"></div>
-          <div id="story-locked-overlay" class="story-locked-overlay">
-            <div class="lock-icon">🔒</div>
-            <div class="lock-title">KAPITEL GESPERRT</div>
-            <div class="lock-hint">Besiege die Bosse des vorherigen Kapitels.</div>
-          </div>
-        </div>
-        <div id="story-current-boss" class="story-current-boss">
-          <div class="boss-header">AKTUELLES ZIEL</div>
-          <div id="story-current-boss-name" class="boss-name-display"></div>
-          <div class="boss-stats-grid">
-            <div class="boss-stat"><span class="stat-label">❤️ HP</span><span id="story-boss-hp" class="stat-value hp">-</span></div>
-            <div class="boss-stat"><span class="stat-label">⚔️ Angriff</span><span id="story-boss-atk" class="stat-value atk">-</span></div>
-            <div class="boss-stat"><span class="stat-label">🛡️ Verteidigung</span><span id="story-boss-def" class="stat-value def">-</span></div>
-          </div>
-          <div id="story-fight-result" class="story-fight-result"></div>
-          <button id="story-fight-btn" class="glass-btn primary story-fight-btn">⚔️ Bosskampf starten</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ARTEFAKT-SCHMIEDE -->
-    <div id="forge-overlay" class="modal-overlay" style="display: none;">
-      <div id="forge-modal" class="modal-content-wide glass-panel">
-        <button class="modal-close" id="forge-close" aria-label="Schließen">&times;</button>
-        <h2 class="glow-text text-gold cinzel text-center">Artefakt-Schmiede</h2>
-        <div class="text-center text-muted mb-1">Schmiede und werte Ausrüstung auf</div>
-        <div id="forge-resources" class="glass-inner-panel flex-between text-sm mb-2" style="padding: 0.8rem 2rem;">
-        </div>
-        <div class="forge-split-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div class="forge-column glass-inner-panel">
-            <h3 class="options-header text-center">Rezepte</h3>
-            <div id="forge-recipes" class="modal-scroll-area"></div>
-          </div>
-          <div class="forge-column glass-inner-panel">
-            <h3 class="options-header text-center" style="color: var(--color-blue);">Ausrüstung Aufwerten</h3>
-            <div id="forge-upgrades" class="modal-scroll-area"></div>
-          </div>
-        </div>
-        <div id="forge-result" class="text-center mt-1 text-bold"></div>
-      </div>
-    </div>
-
-    <!-- MASTERWERKSTATT -->
-    <div id="crafting-overlay" class="modal-overlay" style="display: none;">
-      <div id="crafting-modal" class="modal-content-wide glass-panel" style="max-width: 900px;">
-        <button class="modal-close" id="crafting-close" aria-label="Schließen">&times;</button>
-        <h2 class="glow-text text-gold cinzel text-center"> Meisterwerkstatt</h2>
-        <div class="text-muted text-sm text-center mb-1">Hier schmiedest du die mächtigsten Artefakte.</div>
-        <div id="crafting-resources" class="glass-inner-panel mb-1"></div>
-        <div id="crafting-skill" class="glass-inner-panel mb-1"></div>
-        <div id="crafting-recipes" class="modal-scroll-area" style="max-height: 40vh;"></div>
-        <div id="crafting-result" class="text-center mt-1 text-bold"></div>
-      </div>
-    </div>
-
-    <!-- NEW GAME DIALOG -->
-    <div id="new-game-modal-overlay" class="modal-overlay" style="display: none; z-index: 9999;">
-      <div id="new-game-modal" class="modal-content-small glass-panel">
-        <h2 class="glow-text text-gold cinzel text-center">NEUES ARCHIV ÖFFNEN</h2>
-        <div class="text-muted text-center mb-2">Wie lautet der Name deines Helden?</div>
-        <input type="text" id="new-game-hero-name" class="ui-select w-100 mb-2 text-center text-lg"
-          style="padding: 1rem; color: var(--color-gold);" value="Der Mneme-Bund" autocomplete="off"
-          spellcheck="false" />
-        <div class="flex-row gap-md">
-          <button id="new-game-cancel-btn" class="glass-btn" style="flex: 1;">Abbrechen</button>
-          <button id="new-game-start-btn" class="glass-btn primary" style="flex: 1.5;">Reise beginnen</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- RELIC HUNT -->
-    <div id="relic-hunt-overlay" class="modal-overlay" style="display: none;">
-      <div id="relic-hunt-modal" class="modal-content-small glass-panel">
-        <button class="modal-close" id="relic-hunt-close" aria-label="Schließen">&times;</button>
-        <h2 class="glow-text text-highlight cinzel text-center">RELIKT-JAGD</h2>
-        <div class="text-muted text-center mb-1">Suche nach verlorenen Erinnerungen</div>
-        <div id="relic-hunt-status-area" class="relic-status-area">
-          <div class="relic-status-item">
-            <span class="text-muted">Kosten</span>
-            <span class="text-gold text-bold">25 Partikel</span>
-          </div>
-          <div class="relic-status-item">
-            <span class="text-muted">Erfolgschance</span>
-            <span id="relic-hunt-chance" class="text-highlight">50%</span>
-          </div>
-          <div class="relic-status-item">
-            <span class="text-muted">Kampfkraft</span>
-            <span id="relic-hunt-power" class="text-highlight">0</span>
-          </div>
-          <div class="relic-status-item">
-            <span class="text-muted">Status</span>
-            <span class="text-muted">Bereit</span>
-          </div>
-        </div>
-        <div id="relic-hunt-cooldown" class="relic-cooldown-panel" style="display: none;">
-          <div id="relic-hunt-cooldown-text" class="relic-cooldown-text">Wartezeit: 5s</div>
-          <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="relic-hunt-cooldown-fill"></div>
-          </div>
-        </div>
-        <button id="relic-hunt-start-btn" class="glass-btn primary w-100 epic-pulse">SUCHE STARTEN</button>
-        <div id="relic-hunt-result" class="text-center mt-2 text-bold"></div>
-      </div>
-    </div>
-
-    <!-- TALENTBAUM -->
-    <div id="skilltree-overlay" class="modal-overlay" style="display: none;">
-      <div id="skilltree-modal" class="modal-content glass-panel" style="width: 700px;">
-        <button class="modal-close" id="skilltree-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text text-success cinzel text-center">Talentbaum der Erinnerung</h2>
-        <div class="skilltree-points-display">
-          <span class="text-muted">Verfügbare Prestige-Punkte:</span>
-          <span id="skilltree-points" class="text-gold text-bold text-lg glow-text ml-1">0</span>
-        </div>
-        <div id="skilltree-container" class="modal-scroll-area mt-1"></div>
-      </div>
-    </div>
-
-    <!-- ANOMALIEN -->
-    <div id="challenges-overlay" class="modal-overlay" style="display: none;">
-      <div id="challenges-modal" class="modal-content glass-panel" style="width: 700px;">
-        <button class="modal-close" id="challenges-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text text-danger cinzel text-center">Erinnerungs-Anomalien</h2>
-        <div class="text-muted text-sm mb-1 glass-inner-panel text-center">
-          Meistere extreme Herausforderungen für permanente Belohnungen.<br>
-          <span class="text-danger">Anomalien können nur direkt nach einem Prestige gestartet werden.</span>
-        </div>
-        <div id="challenges-container" class="modal-scroll-area mt-1"></div>
-      </div>
-    </div>
-
-    <!-- BIBLIOTHEK -->
-    <div id="library-overlay" class="modal-overlay" style="display: none;">
-      <div id="library-modal" class="modal-content glass-panel" style="width: 700px;">
-        <button class="modal-close" id="library-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text text-highlight cinzel text-center">Die Archiv-Bibliothek</h2>
-        <div class="text-muted text-sm mb-1 glass-inner-panel text-center">
-          Erweitere dein Wissen für permanente Boni.<br>
-          Forschungen können unbegrenzt aufgewertet werden.
-        </div>
-        <div id="library-container" class="modal-scroll-area mt-1"></div>
-      </div>
-    </div>
-
-    <!-- DIALOG (NPC INTERACTION) -->
-    <div id="dialog-overlay" class="modal-overlay" style="display: none;">
-      <div id="dialog-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 80vh;">
-        <button class="modal-close" id="dialog-close" aria-label="Schließen">&times;</button>
-        <div class="dialog-npc-header">
-          <span id="dialog-npc-portrait" class="dialog-npc-portrait">👤</span>
-          <div class="dialog-npc-info">
-            <div id="dialog-npc-name" class="dialog-npc-name"></div>
-            <div id="dialog-npc-title" class="dialog-npc-title"></div>
-          </div>
-        </div>
-        <div id="dialog-text" class="modal-scroll-area"></div>
-        <div id="dialog-options" class="flex-column modal-scroll-area"></div>
-      </div>
-    </div>
-
-    <!-- CODEX -->
-    <div id="codex-overlay" class="modal-overlay" style="display: none;">
-      <div id="codex-modal" class="modal-content-wide glass-panel" style="max-width: 1000px; max-height: 85vh;">
-        <button class="modal-close" id="codex-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">📚 Codex – Das Tagebuch des Archivs</h2>
-        <div class="hub-subtitle text-center mb-1">Alle entdeckten Geheimnisse und Erinnerungen</div>
-        <div style="display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; flex: 1; min-height: 0; height: calc(100% - 130px); max-height: 60vh;">
-          <div class="glass-inner-panel" style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
-            <div id="codex-categories" class="flex-row gap-sm mb-1" style="flex-wrap: wrap;"></div>
-            <input id="codex-search" type="text" placeholder="🔍 Suchen..." class="ui-select w-100 mb-1" style="padding: 0.5rem;" />
-            <div id="codex-container" class="modal-scroll-area" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
-          </div>
-          <div class="glass-inner-panel" style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;">
-            <div class="text-muted text-sm mb-1" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.3rem; flex-shrink: 0;">Details</div>
-            <div id="codex-entry-detail" class="modal-scroll-area" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 0.3rem;"></div>
-          </div>
-        </div>
-        <div class="text-center text-muted text-sm mt-1" style="flex-shrink: 0; padding-top: 0.5rem;">
-          Fortschritt: <span id="codex-progress">0</span>% freigeschaltet
-        </div>
-      </div>
-    </div>
-
-    <!-- GILDEN -->
-    <div id="guild-overlay" class="modal-overlay" style="display: none;">
-      <div id="guild-modal" class="modal-content glass-panel" style="width: 650px; max-width: 95vw; max-height: 85vh;">
-        <button class="modal-close" id="guild-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">🏛️ Gilde</h2>
-        <div id="guild-container" class="modal-scroll-area" style="max-height: 70vh;"></div>
-      </div>
-    </div>
-
-    <!-- FREUNDE -->
-    <div id="friend-overlay" class="modal-overlay" style="display: none;">
-      <div id="friend-modal" class="modal-content glass-panel" style="width: 500px; max-width: 95vw; max-height: 85vh;">
-        <button class="modal-close" id="friend-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">👥 Freunde</h2>
-        <div id="friend-container" class="modal-scroll-area" style="max-height: 70vh;"></div>
-      </div>
-    </div>
-
-    <!-- GLOBAL CHAT -->
-    <div id="chat-overlay" class="modal-overlay" style="display: none;">
-      <div id="chat-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 85vh;">
-        <button class="modal-close" id="chat-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">💬 Globaler Chat</h2>
-        <div id="chat-messages" class="modal-scroll-area" style="max-height: 50vh; margin-bottom: 0.5rem;"></div>
-        <div class="chat-input-row">
-          <input id="chat-input" type="text" placeholder="Nachricht..." class="ui-select" />
-          <button class="glass-btn primary btn-small" id="chat-send-btn">Senden</button>
-          <button class="glass-btn btn-danger btn-small" id="chat-clear-btn">🗑️ Leeren</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- BESTENLISTE -->
-    <div id="leaderboard-overlay" class="modal-overlay" style="display: none;">
-      <div id="leaderboard-modal" class="modal-content glass-panel" style="width: 600px; max-width: 95vw;">
-        <button class="modal-close" id="leaderboard-close" aria-label="Schließen">&times;</button>
-        <h2 class="modal-title glow-text cinzel text-center">🏆 Persönliche Bestenliste</h2>
-        <div class="hub-subtitle text-center mb-1">Deine Rekorde – gespeichert in deinem Browser</div>
-        <div id="leaderboard-container" class="modal-scroll-area" style="max-height: 50vh;"></div>
-        <button id="leaderboard-reset-btn" class="glass-btn btn-danger btn-small mt-2" style="display: none; margin: 0 auto;">Rekorde zurücksetzen</button>
-      </div>
-    </div>
-
-    <!-- OFFLINE WELCOME -->
-    <div id="offline-modal-overlay" class="modal-overlay" style="display: none; z-index: 1000;">
-      <div id="offline-modal" class="modal-content-small glass-panel">
-        <h2 class="glow-text text-gold cinzel text-center">WILLKOMMEN ZURÜCK!</h2>
-        <div class="text-muted text-center mb-2">Das Archiv ruhte nie, während du fort warst.</div>
-        <div class="glass-inner-panel mb-2">
-          <div class="flex-between mb-1"><span class="text-muted">Abwesenheitszeit:</span><span id="offline-time-val"
-              class="text-bold text-highlight">0s</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Partikel:</span><span id="offline-particles-val"
-              class="text-gold text-bold">0</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Relikte:</span><span id="offline-relics-val"
-              class="text-gold text-bold">0</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">+ Mneme-Artefakte:</span><span id="offline-artifacts-val"
-              class="text-gold text-bold">0</span></div>
-          <div class="flex-between"><span class="text-muted">+ Stufenaufstiege:</span><span id="offline-levels-val"
-              class="text-success text-bold">0</span></div>
-        </div>
-        <button id="offline-close-btn" class="glass-btn primary w-100">Archiv betreten</button>
-        </div>
-        </div>
-
-    <div id="preact-root"></div>
-  </div>
-  <script type="module" src="js/main.js"></script>
+    <!-- ============================================================
+    JAVASCRIPT – NEUER EINSTIEGSPUNKT (Game Boot)
+    ============================================================ -->
+    <script type="module" src="js/controllers/game-boot.js"></script>
 </body>
-
 </html>
