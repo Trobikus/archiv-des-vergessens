@@ -1,6 +1,7 @@
-// --- START OF FILE core/CodexManager.js ---
-
-import { CODEX_ENTRIES, getCodexEntry } from '../data/codex_entries.js';
+// ============================================================
+// FILE: js/core/CodexManager.js – Codex (Lore & Wissen)
+// ============================================================
+import { CODEX_ENTRIES } from '../data/codex_entries.js';
 import { EVENTS } from './events.js';
 
 export default class CodexManager {
@@ -9,7 +10,6 @@ export default class CodexManager {
         this.hero = hero;
         this.entries = this._initializeEntries();
 
-        // Events abonnieren
         this.eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, this._onBossDefeated.bind(this));
         this.eventBus.subscribe(EVENTS.STORY_BRANCH_CHANGED, this._onBranchChanged.bind(this));
         this.eventBus.subscribe(EVENTS.FORGE_CRAFTED, this._onCrafted.bind(this));
@@ -43,7 +43,6 @@ export default class CodexManager {
             entry: this.entries[id]
         });
 
-        // Log-Eintrag
         this.eventBus.publish(EVENTS.UI_ADD_LOG, {
             text: `📖 Codex-Eintrag freigeschaltet: ${this.entries[id].title}`,
             type: 'event'
@@ -84,7 +83,7 @@ export default class CodexManager {
 
     _onBossDefeated(data) {
         const boss = data.boss;
-        // Boss-Einträge freischalten
+        // Boss-Einträge freischalten (basierend auf Boss-Namen)
         const bossEntries = Object.values(this.entries).filter(e =>
             e.category === 'bosses' && e.title.toLowerCase().includes(boss.name.toLowerCase())
         );
@@ -92,38 +91,43 @@ export default class CodexManager {
             this.unlockEntry(entry.id);
         }
 
-        // Zusätzlich: Schalte verwandte Lore-Einträge frei
+        // Zusätzliche Lore-Einträge
         if (boss.id === 1) this.unlockEntry('origin_of_mneme');
         if (boss.id === 5) this.unlockEntry('the_great_forgetting');
         if (boss.id === 10) this.unlockEntry('the_covenant');
     }
 
     _onBranchChanged(data) {
+        // Kann genutzt werden, um Story-bezogene Einträge freizuschalten
+        // z.B. wenn der Spieler einen bestimmten Pfad wählt
         const node = data.node;
-        if (!node) return;
-
-        // Story-Knoten als Codex-Eintrag speichern
-        const nodeEntryId = `story_${node.id}`;
-        // Eigentlich brauchen wir hier eine dynamische Erstellung – wir speichern einfach die besuchten Knoten
+        if (node && node.flags) {
+            // Beispiel: Wenn der Spieler den Heldenpfad wählt
+            if (node.flags.hero_path) {
+                // Einen entsprechenden Codex-Eintrag freischalten
+            }
+        }
     }
 
     _onCrafted(data) {
         const item = data.item;
-        if (item && item.rarity === 'legendary') {
-            this.unlockEntry('mneme_crown');
-        }
-        if (item && item.rarity === 'epic' && item.slot === 'weapon') {
-            this.unlockEntry('ancient_blade');
+        if (item) {
+            if (item.rarity === 'legendary') {
+                this.unlockEntry('mneme_crown');
+            }
+            if (item.rarity === 'epic' && item.slot === 'weapon') {
+                this.unlockEntry('ancient_blade');
+            }
         }
     }
 
     _onAchievement(data) {
-        // Achievement-Einträge freischalten – hier könnte man spezifische Einträge hinzufügen
+        // Kann verwendet werden, um Codex-Einträge für Erfolge freizuschalten
     }
 
     _onEnding(data) {
         const endingId = data.endingId;
-        // Ende-Eintrag freischalten
+        // Ende-Eintrag freischalten (z.B. 'ending_victory', 'ending_sacrifice')
         const entry = Object.values(this.entries).find(e =>
             e.category === 'endings' && e.id === endingId
         );
@@ -133,7 +137,6 @@ export default class CodexManager {
     // ---- MANUELLES FREISCHALTEN (für NPCs) ----
 
     unlockFromNPC(npcId) {
-        // Spezifische Einträge durch NPC-Dialoge freischalten
         const npcMap = {
             'archivist': ['origin_of_mneme', 'the_great_forgetting'],
             'merchant': ['mneme_crown', 'forgotten_chamber'],

@@ -1,4 +1,6 @@
-// --- START OF FILE core/CloudSaveManager.js ---
+// ============================================================
+// FILE: js/core/CloudSaveManager.js – Cloud-Synchronisation
+// ============================================================
 
 export default class CloudSaveManager {
     constructor(eventBus) {
@@ -6,17 +8,15 @@ export default class CloudSaveManager {
         this.STORAGE_KEY = 'archiv_cloud_save';
         this.ENABLED_KEY = 'archiv_cloud_enabled';
         this.autoSync = true;
-        this.syncInterval = 60000; // 1 Minute
+        this.syncInterval = 60000;
         this.lastSync = null;
         this.pending = false;
         this.syncTimer = null;
 
-        // Status
         this.isEnabled = localStorage.getItem(this.ENABLED_KEY) === 'true';
         this.isSynced = false;
         this.userId = this._getUserId();
 
-        // Auto-Sync starten
         if (this.isEnabled && this.autoSync) {
             this.startAutoSync();
         }
@@ -31,8 +31,6 @@ export default class CloudSaveManager {
         return id;
     }
 
-    // ---- STATUS ----
-
     isCloudEnabled() { return this.isEnabled; }
 
     setEnabled(enabled) {
@@ -46,8 +44,6 @@ export default class CloudSaveManager {
         }
         return this.isEnabled;
     }
-
-    // ---- AUTO-SYNC ----
 
     startAutoSync() {
         this.stopAutoSync();
@@ -64,8 +60,6 @@ export default class CloudSaveManager {
         }
     }
 
-    // ---- SYNC ----
-
     async sync(saveData = null) {
         if (!this.isEnabled) return false;
         if (this.pending) return false;
@@ -75,13 +69,11 @@ export default class CloudSaveManager {
         try {
             let data = saveData;
             if (!data) {
-                // Hole aktuellen Spielstand
                 const importData = await import('./savegame.js');
                 data = await importData.default.loadGame();
                 if (!data) data = { timestamp: Date.now(), version: '1.5' };
             }
 
-            // Cloud-Speicher (lokal simuliert)
             const cloudData = {
                 userId: this.userId,
                 timestamp: Date.now(),
@@ -90,7 +82,6 @@ export default class CloudSaveManager {
                 device: navigator.userAgent || 'unknown'
             };
 
-            // Lokale "Cloud" speichern
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cloudData));
             this.lastSync = Date.now();
             this.isSynced = true;
@@ -117,7 +108,6 @@ export default class CloudSaveManager {
             const raw = localStorage.getItem(this.STORAGE_KEY);
             if (!raw) return null;
             const cloudData = JSON.parse(raw);
-
             if (cloudData.saveData) {
                 return cloudData.saveData;
             }
@@ -142,8 +132,6 @@ export default class CloudSaveManager {
         } catch { return null; }
     }
 
-    // ---- MANUELLE METHODEN ----
-
     async forceSync(saveData) {
         return await this.sync(saveData);
     }
@@ -156,8 +144,6 @@ export default class CloudSaveManager {
             this.eventBus.publish('cloud:cleared', {});
         }
     }
-
-    // ---- SAVE / LOAD ----
 
     toJSON() {
         return {

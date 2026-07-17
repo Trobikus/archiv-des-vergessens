@@ -1,5 +1,6 @@
-// --- START OF FILE core/ChatManager.js ---
-
+// ============================================================
+// FILE: js/core/ChatManager.js – Chat-Verwaltung (Global & Gilde)
+// ============================================================
 import { EVENTS } from './events.js';
 
 export default class ChatManager {
@@ -11,8 +12,8 @@ export default class ChatManager {
 
         this.maxMessages = 100;
         this.messages = {
-            global: [], // { id, player, message, timestamp, type }
-            guild: []   // { id, player, message, timestamp }
+            global: [],
+            guild: []
         };
         this.messageId = 0;
 
@@ -141,6 +142,13 @@ export default class ChatManager {
         if (!data) return;
         this.messages = data.messages || { global: [], guild: [] };
         this.messageId = data.messageId || 0;
+        // Sicherstellen, dass die Arrays nicht über die maximale Länge hinausgehen
+        if (this.messages.global.length > this.maxMessages) {
+            this.messages.global = this.messages.global.slice(-this.maxMessages);
+        }
+        if (this.messages.guild.length > this.maxMessages) {
+            this.messages.guild = this.messages.guild.slice(-this.maxMessages);
+        }
         this._save();
     }
 }

@@ -1,5 +1,6 @@
-// --- START OF FILE core/GuildManager.js ---
-
+// ============================================================
+// FILE: js/core/GuildManager.js – Gildenverwaltung
+// ============================================================
 import { EVENTS } from './events.js';
 
 export default class GuildManager {
@@ -8,12 +9,10 @@ export default class GuildManager {
         this.hero = hero;
         this.STORAGE_KEY = 'archiv_guild_data';
 
-        // Gilden-Daten
-        this.guilds = {}; // { guildId: { id, name, description, level, members, created } }
-        this.memberGuilds = {}; // { playerName: guildId }
+        this.guilds = {};
+        this.memberGuilds = {};
         this.nextGuildId = 1;
 
-        // Events abonnieren
         this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, () => this._onPrestige());
 
         this._load();
@@ -44,8 +43,6 @@ export default class GuildManager {
             console.warn('[GuildManager] Save failed:', e);
         }
     }
-
-    // ---- GILDEN-CRUD ----
 
     createGuild(name, description = '') {
         const playerName = this.hero.name;
@@ -115,9 +112,7 @@ export default class GuildManager {
             return { success: true, message: 'Gilde nicht mehr vorhanden.' };
         }
 
-        // Prüfen, ob der Spieler der einzige Mitglied ist
         if (guild.members.length === 1 && guild.members[0] === playerName) {
-            // Gilde löschen
             delete this.guilds[guildId];
             delete this.memberGuilds[playerName];
             this._save();
@@ -126,7 +121,6 @@ export default class GuildManager {
             return { success: true, message: 'Gilde aufgelöst.' };
         }
 
-        // Mitglied entfernen
         guild.members = guild.members.filter(m => m !== playerName);
         delete this.memberGuilds[playerName];
 
@@ -158,16 +152,11 @@ export default class GuildManager {
         return guild.members;
     }
 
-    // ---- GILDEN-BONUS ----
-
     getGuildBonus() {
         const guild = this.getPlayerGuild();
         if (!guild) return 0;
-        // +5% pro Gilden-Level
         return guild.level * 0.05;
     }
-
-    // ---- GILDEN-LEVEL ----
 
     addGuildExperience(amount) {
         const guild = this.getPlayerGuild();
@@ -183,13 +172,9 @@ export default class GuildManager {
         this._save();
     }
 
-    // ---- EVENT-REAKTIONEN ----
-
     _onPrestige() {
         // Gilden-Bonus bleibt erhalten
     }
-
-    // ---- SPEICHERN / LADEN ----
 
     toJSON() {
         return {

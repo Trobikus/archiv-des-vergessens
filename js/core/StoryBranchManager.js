@@ -1,5 +1,6 @@
-// --- START OF FILE core/StoryBranchManager.js ---
-
+// ============================================================
+// FILE: js/core/StoryBranchManager.js – Story-Verzweigungen
+// ============================================================
 import { STORY_BRANCHES, getStoryNode, isEndingNode } from '../data/story_branches.js';
 import { EVENTS } from './events.js';
 
@@ -13,7 +14,6 @@ export default class StoryBranchManager {
         this.branchHistory = [];
         this.endingReached = false;
 
-        // Events abonnieren
         this.eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, this._onBossDefeated.bind(this));
         this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, this._onPrestige.bind(this));
     }
@@ -51,24 +51,20 @@ export default class StoryBranchManager {
         const option = node.options.find(o => o.id === optionId);
         if (!option) return { success: false, message: 'Option nicht gefunden.' };
 
-        // Prüfe Boss-Anforderungen
         if (node.bossRequired && this.hero.bossProgress < node.bossRequired) {
             return { success: false, message: `Du musst zuerst mehr Bosse besiegen (${node.bossRequired} benötigt).` };
         }
 
-        // Flags setzen
         if (node.flags) {
             for (const [key, value] of Object.entries(node.flags)) {
                 this.flags[key] = value;
             }
         }
 
-        // Aktion ausführen (z.B. Handel)
         if (option.action) {
             this._executeAction(option.action);
         }
 
-        // Zur nächsten Node wechseln
         const nextNodeId = option.next;
         const nextNode = getStoryNode(nextNodeId);
 
@@ -76,12 +72,10 @@ export default class StoryBranchManager {
             return { success: false, message: `Zielknoten "${nextNodeId}" nicht gefunden.` };
         }
 
-        // Prüfe, ob Zielknoten Boss-Anforderung hat
         if (nextNode.bossRequired && this.hero.bossProgress < nextNode.bossRequired) {
             return { success: false, message: `Du musst erst mehr Bosse besiegen (${nextNode.bossRequired} benötigt).` };
         }
 
-        // History speichern
         this.branchHistory.push({
             from: this.currentNodeId,
             option: optionId,
@@ -92,7 +86,6 @@ export default class StoryBranchManager {
         this.currentNodeId = nextNodeId;
         this.visitedNodes.push(nextNodeId);
 
-        // Prüfen, ob es ein Ende ist
         if (nextNode.isEnding) {
             this.endingReached = true;
             this.eventBus.publish('story:endingReached', { endingId: nextNodeId, node: nextNode });
@@ -119,13 +112,12 @@ export default class StoryBranchManager {
     // ---- PRIVATE METHODEN ----
 
     _onBossDefeated(data) {
-        // Prüfe, ob der Boss neue Story-Knoten freischaltet
-        const bossId = data.boss.id;
-        // Automatische Fortschritte können hier eingebaut werden
+        // Kann verwendet werden, um Story-Fortschritt zu triggern
     }
 
     _onPrestige() {
-        // Optional: Bei Prestige die Story zurücksetzen oder Flags erhalten
+        // Bei Prestige kann die Story zurückgesetzt werden (optional)
+        // Aktuell lassen wir sie bestehen
     }
 
     _executeAction(action) {
@@ -160,7 +152,6 @@ export default class StoryBranchManager {
     }
 
     getProgress() {
-        // Fortschritt: Wie viele Knoten besucht / Gesamt
         const totalNodes = Object.keys(STORY_BRANCHES).length;
         const visited = this.visitedNodes.length;
         return Math.min(100, Math.floor((visited / totalNodes) * 100));

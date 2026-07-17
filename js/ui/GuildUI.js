@@ -1,5 +1,6 @@
-// --- START OF FILE ui/GuildUI.js ---
-
+// ============================================================
+// FILE: js/ui/GuildUI.js – Gilden
+// ============================================================
 import BaseModalUI from './basemodal.js';
 import { EVENTS } from '../core/events.js';
 

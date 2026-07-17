@@ -1,269 +1,263 @@
-/* ==========================================================================
-   QUEST UI - Missionslogbuch (AAA)
-   ========================================================================== */
+/* ============================================================
+   FILE: css/quest.css – Missionslogbuch (AAA)
+   ============================================================ */
 
-/* ---- MODAL HEADER ---- */
+/* ---- Modal Header ---- */
 .quest-modal-title {
-  font-family: var(--font-header);
-  font-size: 1.8rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  text-align: center;
-  color: var(--color-gold);
-  text-shadow: 0 0 20px var(--color-gold-glow);
-  border-bottom: 1px solid rgba(197, 160, 89, 0.15);
-  padding-bottom: 1rem;
-  margin-bottom: 0.5rem;
+    font-family: var(--font-header);
+    font-size: 1.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+    color: var(--color-gold);
+    text-shadow: 0 0 20px var(--color-gold-glow);
+    border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+    padding-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-/* ---- TABS ---- */
+/* ---- Tabs ---- */
 .quest-tab-container {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin: 0.5rem 0 1rem 0;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin: 0.5rem 0 1rem 0;
 }
 
 .quest-tab-btn {
-  background: linear-gradient(180deg, #0c0c10 0%, #050507 100%);
-  border: 1px solid rgba(197, 160, 89, 0.08);
-  border-bottom: 2px solid transparent;
-  border-radius: 3px 3px 0 0;
-  padding: 0.6rem 1.8rem;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-family: var(--font-header);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-size: 0.8rem;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background: linear-gradient(180deg, #0c0c10 0%, #050507 100%);
+    border: 1px solid rgba(197, 160, 89, 0.08);
+    border-bottom: 2px solid transparent;
+    border-radius: 3px 3px 0 0;
+    padding: 0.6rem 1.8rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-family: var(--font-header);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 0.8rem;
+    transition: all var(--transition-default);
 }
 
 .quest-tab-btn:hover {
-  color: var(--color-gold-hover);
-  background: linear-gradient(180deg, #16161e 0%, #08080b 100%);
-  border-color: rgba(197, 160, 89, 0.2);
+    color: var(--color-gold-hover);
+    background: linear-gradient(180deg, #16161e 0%, #08080b 100%);
+    border-color: rgba(197, 160, 89, 0.2);
 }
 
 .quest-tab-btn.active {
-  color: var(--color-gold);
-  border-color: var(--color-gold);
-  border-bottom-color: var(--color-gold);
-  background: linear-gradient(180deg, #1d1b17 0%, #0a0a0d 100%);
-  box-shadow: inset 0 2px 12px var(--color-gold-glow);
-  text-shadow: 0 0 8px rgba(197, 160, 89, 0.2);
+    color: var(--color-gold);
+    border-color: var(--color-gold);
+    border-bottom-color: var(--color-gold);
+    background: linear-gradient(180deg, #1d1b17 0%, #0a0a0d 100%);
+    box-shadow: inset 0 2px 12px var(--color-gold-glow);
+    text-shadow: 0 0 8px rgba(197, 160, 89, 0.2);
 }
 
-/* ---- QUEST CARDS ---- */
+/* ---- Quest Cards ---- */
 .quest-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.8rem 1.2rem;
-  margin-bottom: 0.6rem;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(197, 160, 89, 0.06);
-  border-left: 3px solid var(--color-text-muted);
-  border-radius: 2px;
-  transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    margin-bottom: 0.6rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(197, 160, 89, 0.06);
+    border-left: 3px solid var(--color-text-muted);
+    border-radius: 2px;
+    transition: all var(--transition-default);
 }
 
 .quest-card:hover {
-  background: rgba(197, 160, 89, 0.04);
-  border-color: rgba(197, 160, 89, 0.15);
+    background: rgba(197, 160, 89, 0.04);
+    border-color: rgba(197, 160, 89, 0.15);
 }
 
-/* ---- STATUS: BEREIT ---- */
+/* ---- Status: Ready ---- */
 .quest-card.ready {
-  border-left-color: var(--color-gold);
-  background: rgba(197, 160, 89, 0.05);
-  box-shadow: 0 0 20px rgba(197, 160, 89, 0.05);
+    border-left-color: var(--color-gold);
+    background: rgba(197, 160, 89, 0.05);
+    box-shadow: 0 0 20px rgba(197, 160, 89, 0.05);
 }
 
 .quest-card.ready .quest-title {
-  color: var(--color-gold) !important;
-  text-shadow: 0 0 10px rgba(197, 160, 89, 0.15);
+    color: var(--color-gold) !important;
+    text-shadow: 0 0 10px rgba(197, 160, 89, 0.15);
 }
 
 .quest-card.ready:hover {
-  background: rgba(197, 160, 89, 0.08);
-  box-shadow: 0 0 30px rgba(197, 160, 89, 0.1);
+    background: rgba(197, 160, 89, 0.08);
+    box-shadow: 0 0 30px rgba(197, 160, 89, 0.1);
 }
 
-/* ---- STATUS: AKTIV ---- */
+/* ---- Status: Active ---- */
 .quest-card.active {
-  border-left-color: var(--color-blue);
+    border-left-color: var(--color-blue);
 }
 
 .quest-card.active .quest-title {
-  color: var(--color-blue) !important;
+    color: var(--color-blue) !important;
 }
 
-/* ---- STATUS: GESPERRT ---- */
+/* ---- Status: Locked ---- */
 .quest-card.locked {
-  opacity: 0.5;
-  border-left-color: var(--color-text-muted);
-  filter: grayscale(0.3);
+    opacity: 0.5;
+    border-left-color: var(--color-text-muted);
+    filter: grayscale(0.3);
 }
 
 .quest-card.locked .quest-title {
-  color: var(--color-text-muted) !important;
+    color: var(--color-text-muted) !important;
 }
 
-/* ---- STATUS: ABGEHOLT ---- */
+/* ---- Status: Claimed ---- */
 .quest-card.claimed {
-  border-left-color: var(--color-success);
-  opacity: 0.7;
+    border-left-color: var(--color-success);
+    opacity: 0.7;
 }
 
 .quest-card.claimed .quest-title {
-  color: var(--color-success) !important;
+    color: var(--color-success) !important;
 }
 
-/* ---- QUEST-INHALTE ---- */
+/* ---- Quest Content ---- */
 .quest-info {
-  flex: 1;
-  min-width: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 .quest-title {
-  font-family: var(--font-header);
-  font-size: 1rem;
-  color: var(--color-text-main);
-  transition: color 0.3s ease;
+    font-family: var(--font-header);
+    font-size: 1rem;
+    color: var(--color-text-main);
+    transition: color var(--transition-default);
 }
 
 .quest-reward {
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  margin-top: 0.1rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    margin-top: 0.1rem;
 }
 
 .quest-reward .text-gold {
-  color: var(--color-gold);
+    color: var(--color-gold);
 }
 
-/* ---- FORTSCHRITTSBALKEN (erbt globales Styling) ---- */
+/* ---- Progress Bar ---- */
 .quest-progress {
-  margin-top: 0.4rem;
-  max-width: 250px;
+    margin-top: 0.4rem;
+    max-width: 250px;
 }
 
 .quest-progress .progress-bar-container {
-  height: 14px;
+    height: 14px;
 }
 
 .quest-progress .progress-text {
-  font-size: 0.6rem;
+    font-size: 0.6rem;
 }
 
-/* ---- QUEST-ACTION (Button/Status) ---- */
+/* ---- Action ---- */
 .quest-action {
-  flex-shrink: 0;
-  margin-left: 1rem;
-  min-width: 80px;
-  text-align: center;
+    flex-shrink: 0;
+    margin-left: 1rem;
+    min-width: 80px;
+    text-align: center;
 }
 
 .quest-action .glass-btn {
-  padding: 0.3rem 0.8rem;
-  font-size: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
 }
 
 .quest-action .glass-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .quest-status-text {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .quest-status-text.active {
-  color: var(--color-blue);
+    color: var(--color-blue);
 }
 
 .quest-status-text.ready {
-  color: var(--color-gold);
+    color: var(--color-gold);
 }
 
 .quest-status-text.claimed {
-  color: var(--color-success);
+    color: var(--color-success);
 }
 
 .quest-status-text.locked {
-  color: var(--color-text-muted);
+    color: var(--color-text-muted);
 }
 
-/* ---- EMPTY STATE ---- */
+/* ---- Empty State ---- */
 .quest-empty-state {
-  text-align: center;
-  padding: 2.5rem 1rem;
-  color: var(--color-text-muted);
-  font-style: italic;
-  border: 1px dashed rgba(197, 160, 89, 0.1);
-  border-radius: 2px;
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    border: 1px dashed rgba(197, 160, 89, 0.1);
+    border-radius: 2px;
 }
 
 .quest-empty-state .quest-empty-icon {
-  font-size: 2.5rem;
-  display: block;
-  margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
 }
 
 .quest-empty-state .quest-empty-text {
-  font-size: 1rem;
+    font-size: 1rem;
 }
 
 .quest-empty-state .quest-empty-hint {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.3rem;
 }
 
-/* ---- RESPONSIVE ---- */
+/* ---- Responsive (innerhalb Quest) ---- */
 @media (max-width: 600px) {
-  .quest-card {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-
-  .quest-action {
-    margin-left: 0;
-    text-align: right;
-  }
-
-  .quest-tab-btn {
-    padding: 0.4rem 1rem;
-    font-size: 0.7rem;
-  }
-
-  .quest-modal-title {
-    font-size: 1.4rem;
-  }
-
-  .quest-progress {
-    max-width: 100%;
-  }
+    .quest-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    .quest-action {
+        margin-left: 0;
+        text-align: right;
+    }
+    .quest-tab-btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.7rem;
+    }
+    .quest-modal-title {
+        font-size: 1.4rem;
+    }
+    .quest-progress {
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 400px) {
-  .quest-tab-btn {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.6rem;
-    letter-spacing: 0.5px;
-  }
-
-  .quest-card {
-    padding: 0.6rem 0.8rem;
-  }
-
-  .quest-title {
-    font-size: 0.85rem;
-  }
+    .quest-tab-btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.6rem;
+        letter-spacing: 0.5px;
+    }
+    .quest-card {
+        padding: 0.6rem 0.8rem;
+    }
+    .quest-title {
+        font-size: 0.85rem;
+    }
 }

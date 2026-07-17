@@ -1,10 +1,12 @@
-// --- START OF FILE core/Logger.js ---
+// ============================================================
+// FILE: js/core/Logger.js – Zentrales Logging
+// ============================================================
 
 export default class Logger {
     constructor() {
         this.logs = [];
         this.maxLogs = 200;
-        this.level = 'info'; // 'debug', 'info', 'warn', 'error'
+        this.level = 'info';
         this.handlers = [];
         this.eventBus = null;
     }
@@ -42,7 +44,6 @@ export default class Logger {
             this.logs.shift();
         }
 
-        // Konsolenausgabe
         const prefix = `[${level.toUpperCase()}] ${new Date(entry.timestamp).toISOString()}`;
         if (level === 'error') {
             console.error(prefix, message, data || '');
@@ -52,7 +53,6 @@ export default class Logger {
             console.log(prefix, message, data || '');
         }
 
-        // Event-Bus
         if (this.eventBus) {
             this.eventBus.publish('logger:log', entry);
             if (level === 'error') {
@@ -64,7 +64,6 @@ export default class Logger {
             }
         }
 
-        // Handler aufrufen
         for (const handler of this.handlers) {
             try { handler(entry); } catch (e) { /* ignore */ }
         }
@@ -83,10 +82,9 @@ export default class Logger {
         this.logs = [];
     }
 
-    // Für SaveGameManager
     toJSON() {
         return {
-            logs: this.logs.slice(-50), // nur letzte 50 speichern
+            logs: this.logs.slice(-50),
             level: this.level
         };
     }

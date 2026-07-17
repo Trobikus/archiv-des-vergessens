@@ -1,5 +1,6 @@
-// --- START OF FILE ui/FriendUI.js ---
-
+// ============================================================
+// FILE: js/ui/FriendUI.js – Freunde
+// ============================================================
 import BaseModalUI from './basemodal.js';
 import { EVENTS } from '../core/events.js';
 

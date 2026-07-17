@@ -1,5 +1,6 @@
-// --- START OF FILE ui/ChatUI.js ---
-
+// ============================================================
+// FILE: js/ui/ChatUI.js – Globaler Chat
+// ============================================================
 import BaseModalUI from './basemodal.js';
 import { EVENTS } from '../core/events.js';
 

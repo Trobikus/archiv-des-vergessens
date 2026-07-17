@@ -1,5 +1,6 @@
-// --- START OF FILE ui/DialogUI.js ---
-
+// ============================================================
+// FILE: js/ui/DialogUI.js – NPC-Dialoge
+// ============================================================
 import BaseModalUI from './basemodal.js';
 import { getNPC, getDialog } from '../data/dialogs.js';
 import { EVENTS } from '../core/events.js';

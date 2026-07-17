@@ -1,5 +1,6 @@
-// --- START OF FILE ui/craftingui.js ---
-
+// ============================================================
+// FILE: js/ui/craftingui.js – Meisterwerkstatt
+// ============================================================
 import { EVENTS } from '../core/events.js';
 import { formatNumber } from '../utils/format.js';
 import BaseModalUI from './basemodal.js';
@@ -17,23 +18,29 @@ export default class CraftingUI extends BaseModalUI {
         this.skillContainer = document.getElementById('crafting-skill');
         this.resultContainer = document.getElementById('crafting-result');
 
+        this._recipeCards = new Map();
+        this._renderScheduled = false;
+
         this.eventBus.subscribe('ui:openCrafting', () => this.open());
-        this.eventBus.subscribe(EVENTS.RESOURCES_UPDATED, () => {
-            if (this.isOpen) {
-                this._renderResources();
-                this._updateRecipeButtons();
-            }
-        });
-        this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => {
-            if (this.isOpen) {
-                this._renderSkill();
-                this._renderRecipes();
-            }
+        this.eventBus.subscribe(EVENTS.RESOURCES_UPDATED, () => this._scheduleRender());
+        this.eventBus.subscribe(EVENTS.HERO_UPDATED, () => this._scheduleRender());
+    }
+
+    _scheduleRender() {
+        if (this._renderScheduled || !this.isOpen) return;
+        this._renderScheduled = true;
+        requestAnimationFrame(() => {
+            this._renderScheduled = false;
+            if (this.isOpen) this.render();
         });
     }
 
     onOpen() {
         this.resultContainer.textContent = '';
+        this.render();
+    }
+
+    render() {
         this._renderResources();
         this._renderSkill();
         this._renderRecipes();
@@ -74,20 +81,33 @@ export default class CraftingUI extends BaseModalUI {
 
     _renderRecipes() {
         const recipes = this.craftingManager.getAvailableRecipes();
-        this.recipesContainer.innerHTML = '';
         const fragment = document.createDocumentFragment();
 
         if (recipes.length === 0) {
             const emptyMsg = document.createElement('div');
             emptyMsg.className = 'crafting-empty-state';
             emptyMsg.innerHTML = '🔒 Noch keine Rezepte freigeschaltet.<br><span class="text-sm">Besiege Bosse, um neue Rezepte zu erhalten.</span>';
-            this.recipesContainer.appendChild(emptyMsg);
+            this.recipesContainer.replaceChildren(emptyMsg);
             return;
         }
 
-        recipes.forEach(recipe => {
-            const div = document.createElement('div');
-            div.className = 'crafting-recipe-card glass-inner-panel';
+        for (const recipe of recipes) {
+            let div = this._recipeCards.get(recipe.id);
+            if (!div) {
+                div = document.createElement('div');
+                div.className = 'crafting-recipe-card glass-inner-panel';
+                div.innerHTML = `
+                    <div class="crafting-recipe-info">
+                        <div class="crafting-recipe-name"></div>
+                        <div class="crafting-recipe-desc"></div>
+                        <div class="crafting-recipe-cost"></div>
+                        <div class="crafting-recipe-unlock"></div>
+                    </div>
+                    <button class="glass-btn primary btn-small craft-btn" data-id="${recipe.id}">Herstellen</button>
+                `;
+                div.querySelector('.craft-btn').addEventListener('click', () => this._craft(recipe.id));
+                this._recipeCards.set(recipe.id, div);
+            }
 
             const cost = this.craftingManager.getRecipeCost(recipe);
             let costStr = [];
@@ -95,53 +115,51 @@ export default class CraftingUI extends BaseModalUI {
                 costStr.push(`${formatNumber(amount)} ${res}`);
             }
 
-            div.innerHTML = `
-                <div class="crafting-recipe-info">
-                    <div class="crafting-recipe-name">${recipe.name} ${recipe.isResourceRecipe ? '<span class="text-sm text-muted">(Ressource)</span>' : ''}</div>
-                    <div class="crafting-recipe-desc">${recipe.desc}</div>
-                    <div class="crafting-recipe-cost">Kosten: ${costStr.join(' | ')}</div>
-                    ${recipe.unlockBoss ? `<div class="crafting-recipe-unlock">🔓 Freischaltung: Boss ${recipe.unlockBoss}</div>` : ''}
-                </div>
-                <button class="glass-btn primary btn-small craft-btn" data-id="${recipe.id}">
-                    ${recipe.isResourceRecipe ? '⚗️ Herstellen' : '🔨 Herstellen'}
-                </button>
-            `;
-
-            const btn = div.querySelector('.craft-btn');
-            btn.addEventListener('click', () => {
-                const result = this.craftingManager.craftMasterRecipe(recipe.id);
-                if (result.success) {
-                    this.resultContainer.innerHTML = `
-                        <div class="crafting-result-success">
-                            <span class="text-gold glow-text">✦ ${result.message} ✦</span>
-                            ${result.item ? `<br><span class="text-muted text-sm">Qualität: ${result.quality}%</span>` : ''}
-                        </div>
-                    `;
-                } else {
-                    this.resultContainer.innerHTML = `<div class="crafting-result-error">❌ ${result.message}</div>`;
-                }
-                this._updateRecipeButtons();
-            });
-
+            div.querySelector('.crafting-recipe-name').textContent = recipe.name + (recipe.isResourceRecipe ? ' (Ressource)' : '');
+            div.querySelector('.crafting-recipe-desc').textContent = recipe.desc;
+            div.querySelector('.crafting-recipe-cost').textContent = `Kosten: ${costStr.join(' | ')}`;
+            const unlockEl = div.querySelector('.crafting-recipe-unlock');
+            unlockEl.textContent = recipe.unlockBoss ? `🔓 Freischaltung: Boss ${recipe.unlockBoss}` : '';
             fragment.appendChild(div);
-        });
+        }
 
-        this.recipesContainer.appendChild(fragment);
-        this._updateRecipeButtons();
+        this.recipesContainer.replaceChildren(fragment);
+        this._updateButtons();
     }
 
-    _updateRecipeButtons() {
+    _updateButtons() {
         const res = this.resourceManager.getResources();
-        const buttons = this.recipesContainer.querySelectorAll('.craft-btn');
-        buttons.forEach(btn => {
-            const recipe = this.craftingManager.getAvailableRecipes().find(r => r.id === btn.dataset.id);
-            if (!recipe) return;
+        const recipes = this.craftingManager.getAvailableRecipes();
+
+        for (const [id, div] of this._recipeCards) {
+            const recipe = recipes.find(r => r.id === id);
+            if (!recipe) continue;
             const cost = this.craftingManager.getRecipeCost(recipe);
             let canAfford = true;
             for (const [key, amount] of Object.entries(cost)) {
                 if ((res[key] || 0) < amount) { canAfford = false; break; }
             }
-            btn.disabled = !canAfford;
-        });
+            div.querySelector('.craft-btn').disabled = !canAfford;
+        }
+    }
+
+    _craft(recipeId) {
+        const result = this.craftingManager.craftMasterRecipe(recipeId);
+        if (result.success) {
+            this.resultContainer.innerHTML = `
+                <div class="crafting-result-success">
+                    <span class="text-gold glow-text">✦ ${result.message} ✦</span>
+                    ${result.item ? `<br><span class="text-muted text-sm">Qualität: ${result.quality}%</span>` : ''}
+                </div>
+            `;
+        } else {
+            this.resultContainer.innerHTML = `<div class="crafting-result-error">❌ ${result.message}</div>`;
+        }
+        this._scheduleRender();
+    }
+
+    destroy() {
+        this._recipeCards.clear();
+        super.destroy();
     }
 }

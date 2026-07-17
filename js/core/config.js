@@ -1,3 +1,7 @@
+// ============================================================
+// FILE: js/core/config.js – Zentrale Konfiguration
+// ============================================================
+
 export const CONFIG = {
     GATHER: {
         BASE_AMOUNT: 1,
@@ -29,7 +33,7 @@ export const CONFIG = {
         BASE_EXP_REWARD: 20
     },
     CLAN: {
-        TICK_RATE_MS: 10000, // 10 Sekunden für 100% Progress
+        TICK_RATE_MS: 10000,
         COLLECTOR_RATE: 2.0,
         WEAVER_RATE: 1.2,
         GUARDIAN_RATE: 0.8,
@@ -38,6 +42,16 @@ export const CONFIG = {
     },
     SYSTEM: {
         LOGIC_TICK_MS: 100,
-        MAX_OFFLINE_MS: 12 * 60 * 60 * 1000 // 12 Stunden
+        SLOW_TICK_MS: 500,
+        MAX_OFFLINE_MS: 12 * 60 * 60 * 1000
     }
 };
+
+// Freeze für Unveränderlichkeit
+Object.freeze(CONFIG);
+Object.freeze(CONFIG.GATHER);
+Object.freeze(CONFIG.RELIC_HUNT);
+Object.freeze(CONFIG.HERO);
+Object.freeze(CONFIG.STORY);
+Object.freeze(CONFIG.CLAN);
+Object.freeze(CONFIG.SYSTEM);

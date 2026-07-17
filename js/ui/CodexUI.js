@@ -1,5 +1,6 @@
-// --- START OF FILE ui/CodexUI.js ---
-
+// ============================================================
+// FILE: js/ui/CodexUI.js – Codex
+// ============================================================
 import BaseModalUI from './basemodal.js';
 import { EVENTS } from '../core/events.js';
 
@@ -24,7 +25,6 @@ export default class CodexUI extends BaseModalUI {
             if (this.isOpen) this.render();
         });
 
-        // Kategorie-Buttons
         const categories = ['all', 'bosses', 'locations', 'items', 'lore', 'endings'];
         if (this.categoryContainer) {
             this.categoryContainer.innerHTML = '';
@@ -97,10 +97,10 @@ export default class CodexUI extends BaseModalUI {
 
         if (entries.length === 0) {
             this.container.innerHTML = `
-        <div class="text-muted text-center text-italic" style="padding: 2rem;">
-          Keine Einträge gefunden.
-        </div>
-      `;
+                <div class="text-muted text-center text-italic" style="padding: 2rem;">
+                    Keine Einträge gefunden.
+                </div>
+            `;
             return;
         }
 
@@ -157,47 +157,47 @@ export default class CodexUI extends BaseModalUI {
 
         if (!this.currentEntryId) {
             this.entryDetailContainer.innerHTML = `
-        <div class="text-muted text-center text-italic" style="padding: 2rem;">
-          Wähle einen Eintrag aus, um mehr zu erfahren.
-        </div>
-      `;
+                <div class="text-muted text-center text-italic" style="padding: 2rem;">
+                    Wähle einen Eintrag aus, um mehr zu erfahren.
+                </div>
+            `;
             return;
         }
 
         const entry = this.codexManager.getEntry(this.currentEntryId);
         if (!entry || !entry.unlocked) {
             this.entryDetailContainer.innerHTML = `
-        <div class="text-muted text-center text-italic" style="padding: 2rem;">
-          Dieser Eintrag ist noch nicht freigeschaltet.
-        </div>
-      `;
+                <div class="text-muted text-center text-italic" style="padding: 2rem;">
+                    Dieser Eintrag ist noch nicht freigeschaltet.
+                </div>
+            `;
             return;
         }
 
         let html = `
-      <div class="glass-inner-panel" style="padding: 1.2rem;">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-          <span style="font-size: 2rem;">${entry.icon || '📄'}</span>
-          <div>
-            <div class="text-gold text-bold text-lg cinzel" style="font-size: 1.2rem;">${entry.title}</div>
-            <div class="text-muted text-sm">${entry.category.charAt(0).toUpperCase() + entry.category.slice(1)}</div>
-          </div>
-        </div>
-        <div class="text-muted mb-1">${entry.description}</div>
-        ${entry.lore ? `<div class="text-sm mt-1" style="border-top: 1px solid rgba(197,160,89,0.1); padding-top: 0.5rem;">${entry.lore}</div>` : ''}
-        ${entry.stats ? `
-          <div class="mt-1 text-sm" style="border-top: 1px solid rgba(197,160,89,0.1); padding-top: 0.5rem;">
-            <span class="text-muted">Stats:</span>
-            <span class="text-highlight">HP: ${entry.stats.hp || '?'}</span>
-            <span class="text-danger">⚔️ ${entry.stats.attack || '?'}</span>
-            <span class="text-blue">🛡️ ${entry.stats.defense || '?'}</span>
-          </div>
-        ` : ''}
-        <div class="text-muted text-sm mt-1" style="border-top: 1px solid rgba(197,160,89,0.1); padding-top: 0.5rem;">
-          Freigeschaltet: ${entry.unlockedAt ? new Date(entry.unlockedAt).toLocaleDateString() : 'Unbekannt'}
-        </div>
-      </div>
-    `;
+            <div class="glass-inner-panel" style="padding: 1.2rem;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 2rem;">${entry.icon || '📄'}</span>
+                    <div>
+                        <div class="text-gold text-bold text-lg cinzel" style="font-size: 1.2rem;">${entry.title}</div>
+                        <div class="text-muted text-sm">${entry.category.charAt(0).toUpperCase() + entry.category.slice(1)}</div>
+                    </div>
+                </div>
+                <div class="text-muted mb-1">${entry.description}</div>
+                ${entry.lore ? `<div class="text-sm mt-1" style="border-top: 1px solid rgba(197,160,89,0.1); padding-top: 0.5rem;">${entry.lore}</div>` : ''}
+                ${entry.stats ? `
+                    <div class="mt-1 text-sm" style="border-top: 1px solid rgba(197,160,89,0.1); padding-top: 0.5rem;">
+                        <span class="text-muted">Stats:</span>
+                        <span class="text-highlight">HP: ${entry.stats.hp || '?'}</span>
+                        <span class="text-danger">⚔️ ${entry.stats.attack || '?'}</span>
+                        <span class="text-blue">🛡️ ${entry.stats.defense || '?'}</span>
+                    </div>
+                ` : ''}
+                <div class="text-muted text-sm mt-1" style="border-top: 1px solid rgba(197,160,89,0.1); padding-top: 0.5rem;">
+                    Freigeschaltet: ${entry.unlockedAt ? new Date(entry.unlockedAt).toLocaleDateString() : 'Unbekannt'}
+                </div>
+            </div>
+        `;
 
         this.entryDetailContainer.innerHTML = html;
     }

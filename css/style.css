@@ -1,6 +1,6 @@
-/* ==========================================================================
-   ARCHIV DES VERGESSENS - MASTER STYLESHEET
-   ========================================================================== */
+/* ============================================================
+   FILE: css/style.css – MASTER STYLESHEET (AAA)
+   ============================================================ */
 
 /* 1. Grundlagen & Variablen */
 @import url('variables.css');
@@ -8,76 +8,68 @@
 /* 2. Layout & Hintergründe */
 @import url('layout.css');
 
-/* 3. UI-Komponenten (Buttons, Panels, Inputs, Progress-Bars, Tooltips, Floating-Button) */
+/* 3. UI-Komponenten (Buttons, Panels, Inputs, Progress-Bars, Tooltips) */
 @import url('components.css');
 
-/* 4. Hauptmenü */
-@import url('menu.css');
-
-/* 5. Hub-Dashboard */
-@import url('hub.css');
-
-/* 6. Gameplay-Screen */
-@import url('game.css');
-
-/* 7. Modals & Overlays */
-@import url('modals.css');
-
-/* 8. Hero-Stat-Screen */
-@import url('hero.css');
-
-/* ==========================================================================
-   UI-KOMPONENTEN - EINZELNE MECHANIKEN (AAA)
-   ========================================================================== */
-
-/* 9. Artefakt-Schmiede */
-@import url('forge.css');
-
-/* 10. Meisterwerkstatt */
-@import url('crafting.css');
-
-/* 11. Relikt-Jagd */
-@import url('relic-hunt.css');
-
-/* 12. Talentbaum */
-@import url('skilltree.css');
-
-/* 13. Anomalien */
-@import url('challenges.css');
-
-/* 14. Bibliothek */
-@import url('library.css');
-
-/* 15. Bestenliste */
-@import url('leaderboard.css');
-
-/* 16. Dialoge (NPC-Interaktion) */
-@import url('dialog.css');
-
-/* 17. Gilde */
-@import url('guild.css');
-
-/* 18. Freunde */
-@import url('friend.css');
-
-/* 19. Globaler Chat */
-@import url('chat.css');
-
-/* 20. Missionslogbuch */
-@import url('quest.css');
-
-/* 21. Erfolge & Meilensteine */
-@import url('achievement.css');
-
-/* 22. Story & Bosse (Neu) */
-@import url('story.css');
-
-/* ==========================================================================
-   ANIMATIONEN & RESPONSIVE
-   ========================================================================== */
-
-/* 23. Animationen (Float-Text, Toasts, Pulse, etc.) */
+/* 4. Animationen (Float-Text, Toasts, Pulse) */
 @import url('animations.css');
 
-/* 24. Responsive - alle Media-Queries */
+/* 5. Hauptmenü */
+@import url('menu.css');
+
+/* 6. Hub-Dashboard */
+@import url('hub.css');
+
+/* 7. Gameplay-Screen */
+@import url('game.css');
+
+/* 8. Modals & Overlays */
+@import url('modals.css');
+
+/* 9. Helden-UI */
+@import url('hero.css');
+
+/* 10. Artefakt-Schmiede */
+@import url('forge.css');
+
+/* 11. Meisterwerkstatt */
+@import url('crafting.css');
+
+/* 12. Relikt-Jagd */
+@import url('relic-hunt.css');
+
+/* 13. Talentbaum */
+@import url('skilltree.css');
+
+/* 14. Anomalien */
+@import url('challenges.css');
+
+/* 15. Bibliothek */
+@import url('library.css');
+
+/* 16. Bestenliste */
+@import url('leaderboard.css');
+
+/* 17. NPC-Dialoge */
+@import url('dialog.css');
+
+/* 18. Gilde */
+@import url('guild.css');
+
+/* 19. Freunde */
+@import url('friend.css');
+
+/* 20. Globaler Chat */
+@import url('chat.css');
+
+/* 21. Missionslogbuch */
+@import url('quest.css');
+
+/* 22. Erfolge & Meilensteine */
+@import url('achievement.css');
+
+/* 23. Story & Bosse */
+@import url('story.css');
+
+/* 24. Responsive – alle Media-Queries */
 @import url('responsive.css');

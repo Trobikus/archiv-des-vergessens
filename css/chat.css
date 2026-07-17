@@ -1,58 +1,58 @@
-/* ==========================================================================
-   CHAT UI - Globaler Chat (AAA)
-   ========================================================================== */
+/* ============================================================
+   FILE: css/chat.css – Globaler Chat (AAA)
+   ============================================================ */
 
-/* ---- CHAT MESSAGES ---- */
+/* ---- Chat Messages ---- */
 .chat-message {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.3rem 0.8rem;
-  margin-bottom: 0.2rem;
-  border-left: 2px solid var(--color-text-muted);
-  background: rgba(0, 0, 0, 0.15);
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.3rem 0.8rem;
+    margin-bottom: 0.2rem;
+    border-left: 2px solid var(--color-text-muted);
+    background: rgba(0, 0, 0, 0.15);
 }
 
 .chat-message.self {
-  border-left-color: var(--color-gold);
-  background: rgba(197, 160, 89, 0.05);
+    border-left-color: var(--color-gold);
+    background: rgba(197, 160, 89, 0.05);
 }
 
 .chat-time {
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
-  min-width: 60px;
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    min-width: 60px;
 }
 
 .chat-player {
-  font-weight: bold;
-  color: var(--color-highlight);
+    font-weight: bold;
+    color: var(--color-highlight);
 }
 
 .chat-message.self .chat-player {
-  color: var(--color-gold);
+    color: var(--color-gold);
 }
 
 .chat-text {
-  color: var(--color-text-main);
-  word-break: break-word;
+    color: var(--color-text-main);
+    word-break: break-word;
 }
 
-/* ---- EMPTY STATE ---- */
+/* ---- Empty State ---- */
 .chat-empty {
-  padding: 1rem;
-  color: var(--color-text-muted);
-  font-style: italic;
-  text-align: center;
+    padding: 1rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    text-align: center;
 }
 
-/* ---- INPUT ROW ---- */
+/* ---- Input Row ---- */
 .chat-input-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 .chat-input-row .ui-select {
-  flex: 1;
-  padding: 0.5rem;
+    flex: 1;
+    padding: 0.5rem;
 }

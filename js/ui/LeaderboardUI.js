@@ -1,5 +1,6 @@
-// --- START OF FILE ui/LeaderboardUI.js ---
-
+// ============================================================
+// FILE: js/ui/LeaderboardUI.js – Bestenliste
+// ============================================================
 import BaseModalUI from './basemodal.js';
 import { formatNumber } from '../utils/format.js';
 

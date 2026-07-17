@@ -1,4 +1,7 @@
-// core/di.js
+// ============================================================
+// FILE: js/core/di.js – Dependency Injection Container
+// ============================================================
+
 export class DIContainer {
     constructor() {
         this._instances = new Map();

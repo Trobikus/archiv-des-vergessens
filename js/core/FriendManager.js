@@ -1,5 +1,6 @@
-// --- START OF FILE core/FriendManager.js ---
-
+// ============================================================
+// FILE: js/core/FriendManager.js – Freundesliste
+// ============================================================
 import { EVENTS } from './events.js';
 
 export default class FriendManager {
@@ -8,8 +9,8 @@ export default class FriendManager {
         this.hero = hero;
         this.STORAGE_KEY = 'archiv_friends_data';
 
-        this.friends = []; // Array von Friend-Objekten { name, added, status }
-        this.pendingRequests = []; // { from, to, timestamp }
+        this.friends = [];
+        this.pendingRequests = [];
         this.maxFriends = 50;
 
         this._load();
@@ -39,8 +40,6 @@ export default class FriendManager {
         }
     }
 
-    // ---- FREUNDE ----
-
     addFriend(name) {
         const playerName = this.hero.name;
         if (name === playerName) {
@@ -53,13 +52,11 @@ export default class FriendManager {
             return { success: false, message: 'Du hast die maximale Anzahl an Freunden erreicht.' };
         }
 
-        // Prüfen, ob bereits eine Anfrage existiert
         const existing = this.pendingRequests.find(r => r.from === name && r.to === playerName);
         if (existing) {
             return { success: false, message: 'Du hast bereits eine Anfrage von dieser Person.' };
         }
 
-        // Anfrage senden (lokal simuliert)
         this.pendingRequests.push({ from: name, to: playerName, timestamp: Date.now() });
         this._save();
 
@@ -113,8 +110,6 @@ export default class FriendManager {
         const playerName = this.hero.name;
         return this.pendingRequests.filter(r => r.from === playerName);
     }
-
-    // ---- SPEICHERN / LADEN ----
 
     toJSON() {
         return {

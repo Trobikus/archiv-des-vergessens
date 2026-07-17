@@ -1,103 +1,107 @@
-/* ==========================================================================
-   LAYOUT - App-Shell, Canvas, Vignette, View-States
-   ========================================================================== */
+/* ============================================================
+   FILE: css/layout.css – App-Shell, Canvas, Vignette, View-States
+   ============================================================ */
 
-/* Base Reset */
+/* ---- Reset ---- */
 *,
 *::before,
 *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text-main);
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.5;
-  overflow: hidden;
-  user-select: none;
-  -webkit-font-smoothing: antialiased;
-  background-image: radial-gradient(circle at 50% 0%, #15151c 0%, #050507 80%);
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    overflow: hidden;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    background-image: radial-gradient(circle at 50% 0%, #15151c 0%, #050507 80%);
 }
 
-/* Custom Scrollbars - Dark Metal */
+/* ---- Custom Scrollbars (Dark Metal) ---- */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0a0a0c;
-  border-left: 1px solid #1a1a20;
+    background: #0a0a0c;
+    border-left: 1px solid #1a1a20;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #2a2a35;
-  border: 1px solid #111;
+    background: #2a2a35;
+    border: 1px solid #111;
+    border-radius: 2px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold);
+    background: var(--color-gold);
 }
 
-/* APP SHELL */
+/* ---- App Container ---- */
 #app-container {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .fullscreen-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
 }
 
-/* Cinematic Vignette with subtle noise texture */
+/* ---- Cinematic Vignette ---- */
 .vignette-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  background:
-    radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.95) 100%),
-    url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.03"/%3E%3C/svg%3E');
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    background:
+        radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.95) 100%),
+        url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.03"/%3E%3C/svg%3E');
 }
 
-/* VIEW STATES */
+/* ---- View States ---- */
 .fade-in {
-  animation: fadeInEffect 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: fadeInEffect 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes fadeInEffect {
-  from { opacity: 0; transform: scale(0.98) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.98) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .center-layout {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  box-sizing: border-box;
-  padding: 2rem;
-  text-align: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: 2rem;
+    text-align: center;
 }

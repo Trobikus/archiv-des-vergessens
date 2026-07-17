@@ -1,9 +1,12 @@
-// --- START OF FILE core/events.js ---
+// ============================================================
+// FILE: js/core/events.js – Event-Definitionen
+// ============================================================
 
 export const EVENTS = {
     // === GAME ===
     GAME_RENDER_TICK: 'game:renderTick',
     GAME_LOGIC_TICK: 'game:logicTick',
+    GAME_SLOW_TICK: 'game:slowTick',
     GAME_STATE_CHANGED: 'game:stateChanged',
 
     // === HERO ===
@@ -16,6 +19,7 @@ export const EVENTS = {
     // === CLAN ===
     CLAN_MEMBERS_UPDATED: 'clan:membersUpdated',
     CLAN_RECRUIT_MEMBER: 'clan:recruitMember',
+    CLAN_PROGRESS_UPDATED: 'clan:progressUpdated',
     MEMBER_LEVEL_UP: 'member:levelUp',
 
     // === EXPEDITION ===
@@ -106,3 +110,6 @@ export const EVENTS = {
     CHAT_GUILD_MESSAGE: 'chat:guildMessage',
     CHAT_CLEARED: 'chat:cleared'
 };
+
+// Freeze für Unveränderlichkeit
+Object.freeze(EVENTS);

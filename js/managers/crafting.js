@@ -1,9 +1,11 @@
-// --- START OF FILE managers/crafting.js ---
-
+// ============================================================
+// FILE: js/managers/crafting.js
+// ============================================================
 import { EVENTS } from '../core/events.js';
 import { Item } from '../models/item.js';
 import { MASTER_RECIPES } from '../data/crafting_recipes.js';
 import RNG from '../utils/rng.js';
+import { Sanitizer } from '../core/security.js';
 
 export default class CraftingManager {
     constructor(context) {
@@ -19,25 +21,24 @@ export default class CraftingManager {
         this.unlockedRecipes = ['basic_weapon', 'basic_armor'];
         this.autoOrders = [];
 
-        // Binde Event-Handler
         this._onBossDefeated = this._onBossDefeated.bind(this);
         this._onPrestige = this._onPrestige.bind(this);
         this._onTick = this._onTick.bind(this);
 
         this.eventBus.subscribe(EVENTS.STORY_BOSS_DEFEATED, this._onBossDefeated);
         this.eventBus.subscribe(EVENTS.HERO_PRESTIGE, this._onPrestige);
-        this.eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, this._onTick);
+        this.eventBus.subscribe(EVENTS.GAME_SLOW_TICK, this._onTick);
     }
 
     _onBossDefeated(data) {
         const boss = data.boss;
         const recipes = Object.values(MASTER_RECIPES).filter(r => r.unlockBoss === boss.id);
-        recipes.forEach(r => {
+        for (const r of recipes) {
             if (!this.unlockedRecipes.includes(r.id)) {
                 this.unlockedRecipes.push(r.id);
                 this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `🔓 Neues Meister-Rezept: ${r.name}`, type: 'event' });
             }
-        });
+        }
     }
 
     _onPrestige() {
@@ -47,7 +48,9 @@ export default class CraftingManager {
     getCraftingLevel() { return this.craftingLevel; }
 
     addCraftingExp(amount) {
-        this.craftingExp += amount;
+        const safeAmount = Sanitizer.sanitizeNumber(amount, 0);
+        if (safeAmount <= 0) return;
+        this.craftingExp += safeAmount;
         while (this.craftingExp >= this.craftingExpToNext) {
             this.craftingExp -= this.craftingExpToNext;
             this.craftingLevel++;
@@ -68,7 +71,7 @@ export default class CraftingManager {
             quality *= 1.5;
             this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `✨ Kritischer Erfolg! Qualität verdoppelt!`, type: 'event' });
         }
-        return Math.min(100, Math.max(0, Math.floor(quality)));
+        return Sanitizer.clamp(Math.floor(quality), 0, 100);
     }
 
     getAvailableRecipes() {
@@ -78,7 +81,7 @@ export default class CraftingManager {
     getRecipeCost(recipe) {
         const cost = {};
         for (const [res, amount] of Object.entries(recipe.cost)) {
-            cost[res] = amount;
+            cost[res] = Sanitizer.sanitizeNumber(amount, 0);
         }
         return cost;
     }
@@ -154,12 +157,12 @@ export default class CraftingManager {
         this.addCraftingExp(expGain);
 
         if (recipe.unlocks) {
-            recipe.unlocks.forEach(id => {
+            for (const id of recipe.unlocks) {
                 if (!this.unlockedRecipes.includes(id)) {
                     this.unlockedRecipes.push(id);
                     this.eventBus.publish(EVENTS.UI_ADD_LOG, { text: `🔓 Neues Rezept freigeschaltet: ${MASTER_RECIPES[id].name}`, type: 'event' });
                 }
-            });
+            }
         }
 
         this.eventBus.publish(EVENTS.FORGE_CRAFTED, { recipe, item, quality });
@@ -205,10 +208,10 @@ export default class CraftingManager {
 
     fromJSON(data) {
         if (!data) return;
-        this.craftingLevel = data.craftingLevel || 0;
-        this.craftingExp = data.craftingExp || 0;
-        this.craftingExpToNext = data.craftingExpToNext || 100;
-        this.unlockedRecipes = data.unlockedRecipes || ['basic_weapon', 'basic_armor'];
-        this.autoOrders = data.autoOrders || [];
+        this.craftingLevel = Sanitizer.clamp(Sanitizer.sanitizeNumber(data.craftingLevel, 0), 0, 999);
+        this.craftingExp = Sanitizer.sanitizeNumber(data.craftingExp, 0);
+        this.craftingExpToNext = Math.max(1, Sanitizer.sanitizeNumber(data.craftingExpToNext, 100));
+        this.unlockedRecipes = Sanitizer.sanitizeArray(data.unlockedRecipes, ['basic_weapon', 'basic_armor']);
+        this.autoOrders = Sanitizer.sanitizeArray(data.autoOrders, []);
     }
 }
