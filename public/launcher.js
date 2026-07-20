@@ -2,8 +2,6 @@
    LAUNCHER.JS - Logik & Interaktion für den Game Launcher
    ============================================================ */
 
-'use strict';
-
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[Launcher] Initialisiere Interaktionslogik...');
 
