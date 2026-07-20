@@ -33,6 +33,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** Manuell nach Updates suchen (z.B. aus einem Einstellungsmenü) */
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),
 
+  /** Startet den Download des Updates */
+  startDownload: () => ipcRenderer.send('updater:start-download'),
+
+  /** Beendet die App und installiert das heruntergeladene Update */
+  quitAndInstall: () => ipcRenderer.send('updater:quit-and-install'),
+
   /**
    * Auf Update-Events lauschen.
    * @param {'update:available'|'update:not-available'|'update:progress'|'update:downloaded'|'update:error'} channel

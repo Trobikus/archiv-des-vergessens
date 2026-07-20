@@ -100,17 +100,6 @@ function startAutoUpdater() {
   autoUpdater.on('update-available', (info) => {
     console.log('[AutoUpdater] Update verfügbar:', info.version);
     mainWindow?.webContents.send('update:available', { version: info.version });
-
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: '🔄 Update verfügbar',
-      message: `Version ${info.version} ist verfügbar!`,
-      detail: 'Das Update wird jetzt im Hintergrund heruntergeladen.\nDas Spiel läuft währenddessen normal weiter.',
-      buttons: ['OK'],
-      icon: ICON_PATH
-    });
-
-    autoUpdater.downloadUpdate();
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -133,38 +122,12 @@ function startAutoUpdater() {
     console.log('[AutoUpdater] Update heruntergeladen:', info.version);
     mainWindow?.setProgressBar(-1);
     mainWindow?.webContents.send('update:downloaded', { version: info.version });
-
-    dialog.showMessageBox(mainWindow, {
-      type: 'question',
-      title: '✅ Update bereit',
-      message: `Version ${info.version} wurde heruntergeladen.`,
-      detail: 'Möchtest du das Spiel jetzt neu starten, um das Update zu installieren?\nDein Spielstand wird dabei nicht gelöscht.',
-      buttons: ['Jetzt neu starten', 'Später'],
-      defaultId: 0,
-      cancelId: 1,
-      icon: ICON_PATH
-    }).then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall(false, true);
-      }
-    });
   });
 
   autoUpdater.on('error', (err) => {
     console.error('[AutoUpdater] Fehler:', err.message);
     mainWindow?.setProgressBar(-1);
     mainWindow?.webContents.send('update:error', { message: err.message });
-
-    const isNetworkError = err.message.includes('net::') || err.message.includes('ENOTFOUND');
-    if (!isNetworkError) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Update-Fehler',
-        message: 'Das automatische Update konnte nicht durchgeführt werden.',
-        detail: err.message,
-        buttons: ['OK']
-      });
-    }
   });
 
   autoUpdater.checkForUpdates().catch((err) => {
@@ -173,8 +136,20 @@ function startAutoUpdater() {
 }
 
 // ============================================================
-// IPC-HANDLER
+// IPC-HANDLER & COMMANDS
 // ============================================================
+
+ipcMain.on('updater:start-download', () => {
+  console.log('[AutoUpdater] Download per User-Aktion gestartet');
+  autoUpdater.downloadUpdate().catch(err => {
+    console.error('[AutoUpdater] Download-Start fehlgeschlagen:', err.message);
+  });
+});
+
+ipcMain.on('updater:quit-and-install', () => {
+  console.log('[AutoUpdater] Neustart und Installation gestartet');
+  autoUpdater.quitAndInstall(false, true);
+});
 
 ipcMain.handle('updater:check', async () => {
   if (IS_DEV) return { status: 'dev-mode' };

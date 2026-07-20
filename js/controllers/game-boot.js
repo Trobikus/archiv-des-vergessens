@@ -659,9 +659,108 @@ export async function bootGame() {
       }, 800);
     };
 
-    // Intro nach exakt 5 Sekunden beenden
-    // Intro nach 7 Sekunden beenden (Aufbau ~5s + ~2s Anzeigezeit)
-    setTimeout(finishIntro, 7000);
+    // Timer für das automatische Beenden des Intros
+    let introTimeoutId = setTimeout(finishIntro, 7000);
+
+    // ============================================================
+    // ELECTRON AUTO-UPDATER INTEGRATION (IN-GAME UI)
+    // ============================================================
+    const updateOverlay = document.getElementById('update-overlay');
+    const updateTitle = document.getElementById('update-title');
+    const updateMessage = document.getElementById('update-message');
+    const updateConfirmBtn = document.getElementById('update-confirm-btn');
+    const updateCancelBtn = document.getElementById('update-cancel-btn');
+    const loadingBar = document.querySelector('.intro-loading-bar');
+    const loadingText = document.getElementById('intro-loading-text');
+
+    if (window.electronAPI) {
+      // 1. Wenn ein Update verfügbar ist
+      window.electronAPI.onUpdateEvent('update:available', (info) => {
+        logger.info(`[Update] Neue Version ${info.version} verfügbar.`);
+        
+        // Intro-Beendigungstimer stoppen, damit das Spiel auf der Intro-Page wartet
+        if (introTimeoutId) {
+          clearTimeout(introTimeoutId);
+          introTimeoutId = null;
+        }
+
+        // Custom Modal mit Grimoire-Spieldesign anzeigen
+        updateTitle.innerText = "Neue Offenbarung";
+        updateMessage.innerText = `Eine neue Version (${info.version}) wurde im Archiv gesichtet. Möchtest du die neuen Fragmente jetzt herunterladen?`;
+        updateConfirmBtn.innerText = "Herunterladen";
+        updateCancelBtn.innerText = "Später";
+        updateOverlay.style.display = 'flex';
+
+        // Download starten bei Klick
+        updateConfirmBtn.onclick = () => {
+          updateOverlay.style.display = 'none';
+
+          // Intro-Ladebalken pausieren und für echten Download-Fortschritt vorbereiten
+          if (loadingBar) {
+            loadingBar.classList.add('manual-progress');
+            loadingBar.style.width = '0%';
+          }
+          if (loadingText) {
+            loadingText.style.opacity = '1';
+            loadingText.innerText = "Lade Archiv-Fragmente herunter (0%)...";
+          }
+
+          // IPC-Signal zum Starten des Downloads senden
+          window.electronAPI.startDownload();
+        };
+
+        // Überspringen (Später updaten)
+        updateCancelBtn.onclick = () => {
+          updateOverlay.style.display = 'none';
+          finishIntro();
+        };
+      });
+
+      // 2. Download-Fortschritt visualisieren
+      window.electronAPI.onUpdateEvent('update:progress', (progress) => {
+        const percent = progress.percent || 0;
+        if (loadingBar) {
+          loadingBar.style.width = `${percent}%`;
+        }
+        if (loadingText) {
+          loadingText.innerText = `Lade Archiv-Fragmente herunter (${percent}%)...`;
+        }
+      });
+
+      // 3. Download fertiggestellt
+      window.electronAPI.onUpdateEvent('update:downloaded', (info) => {
+        logger.info(`[Update] Version ${info.version} vollständig heruntergeladen.`);
+
+        // Bestätigung für die direkte Installation und den Neustart
+        updateTitle.innerText = "Download Abgeschlossen";
+        updateMessage.innerText = `Das Update für Version ${info.version} ist bereit. Soll die Installation durchgeführt und das Spiel neu gestartet werden?`;
+        updateConfirmBtn.innerText = "Jetzt installieren";
+        updateCancelBtn.innerText = "Später";
+        updateOverlay.style.display = 'flex';
+
+        updateConfirmBtn.onclick = () => {
+          updateOverlay.style.display = 'none';
+          window.electronAPI.quitAndInstall();
+        };
+
+        updateCancelBtn.onclick = () => {
+          updateOverlay.style.display = 'none';
+          finishIntro();
+        };
+      });
+
+      // 4. Update-Fehler abfangen
+      window.electronAPI.onUpdateEvent('update:error', (err) => {
+        logger.error('[Update-Fehler]', err.message);
+        if (loadingText) {
+          loadingText.innerText = "Fehler beim Update. Initialisiere Archiv...";
+        }
+        // Nach kurzer Anzeige der Fehlermeldung normal fortfahren
+        setTimeout(() => {
+          finishIntro();
+        }, 3000);
+      });
+    }
   } else {
     // Fallback falls kein Intro-Container existiert
     navigation.showMenu();

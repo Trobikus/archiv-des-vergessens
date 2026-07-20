@@ -271,6 +271,12 @@
     position: relative;
 }
 
+.intro-loading-bar.manual-progress {
+    animation: none !important;
+    width: 0%;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Leucht-Punkt am Ende des Ladebalkens */
 .intro-loading-bar::after {
     content: '';
