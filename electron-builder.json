@@ -31,13 +31,11 @@
         "target": "nsis",
         "arch": ["x64"]
       }
-    ],
-    "artifactName": "Archiv-des-Vergessens-Setup-${version}.exe",
-    "publisherName": "Grimoire Interactive",
-    "verifyUpdateCodeSignature": false
+    ]
   },
 
   "nsis": {
+    "include": "electron/installer/installer.nsh",
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "allowElevation": true,
@@ -47,9 +45,6 @@
     "installerIcon": "icon.ico",
     "uninstallerIcon": "icon.ico",
     "installerHeaderIcon": "icon.ico",
-    "installerHeader": "electron/installer/installerHeader.bmp",
-    "installerSidebar": "electron/installer/installerSidebar.bmp",
-    "uninstallerSidebar": "electron/installer/installerSidebar.bmp",
     "deleteAppDataOnUninstall": false,
     "menuCategory": "Grimoire Interactive",
     "runAfterFinish": true,

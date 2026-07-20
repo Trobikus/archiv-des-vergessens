@@ -54,7 +54,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, handler);
     // Gibt eine Cleanup-Funktion zurück
     return () => ipcRenderer.removeListener(channel, handler);
-  }
+  },
+
+  // --- Launcher-Steuerung ---
+  /** Startet das Hauptspiel und schließt den Launcher */
+  launchGame: () => ipcRenderer.send('launcher:launch-game'),
+
+  /** Minimiert das Launcher-Fenster */
+  minimizeLauncher: () => ipcRenderer.send('launcher:minimize'),
+
+  /** Schließt den Launcher (und damit die App) */
+  closeLauncher: () => ipcRenderer.send('launcher:close')
 });
 
 // ---- Konsolenausgabe bei erfolgreichem Laden ----

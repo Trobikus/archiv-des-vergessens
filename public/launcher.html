@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archiv des Vergessens - Launcher</title>
+  <!-- Google Fonts: Cinzel für das Logo, Inter für die UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="launcher.css">
+</head>
+<body>
+  <div class="launcher-container">
+    
+    <!-- Drag-Zone (Draggable Window Area, ca. 40px hoch) -->
+    <div class="drag-zone">
+      <!-- Close Button (Not Draggable) -->
+      <button id="close-btn" class="close-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+
+    <!-- Glow overlays for the magical rings on the sides -->
+    <div class="magic-glow left" aria-hidden="true"></div>
+    <div class="magic-glow right" aria-hidden="true"></div>
+
+    <!-- Container for dynamic floating particles -->
+    <div id="particles-container" class="particles-container" aria-hidden="true"></div>
+
+    <!-- Main Central Interface Area -->
+    <main class="central-ui">
+      <!-- Logo: Text "Archiv des Vergessens" (Gleiche Schriftart wie im Hauptmenü) -->
+      <h1 class="game-logo">Archiv des Vergessens</h1>
+
+      <!-- UI State 1: Action Button -->
+      <button id="action-btn" class="action-btn">INSTALL GAME</button>
+
+      <!-- UI State 2: Progress Bar (Hidden by default) -->
+      <div id="progress-container" class="progress-container">
+        <div id="progress-label" class="progress-label">Downloading... 0%</div>
+        <div class="progress-bar-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="launcher.js"></script>
+</body>
+</html>
