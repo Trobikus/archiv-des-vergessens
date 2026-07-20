@@ -6,6 +6,7 @@
 
 import { h, html, useStateSelector, useEventBus, useState } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
+import { Item } from '../../../models/item.js';
 
 export function ForgeUI({ stateManager, eventBus, services }) {
   const { forgeService, resourceService, heroService } = services;

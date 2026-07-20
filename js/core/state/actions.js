@@ -8,8 +8,8 @@
  * ============================================================
  */
 
-import { deepClone, deepMerge } from '../utils/object-utils.js';
-import { sanitizeNumber, sanitizeString, sanitizeArray, clamp } from '../utils/sanitizer.js';
+import { deepClone, deepMerge } from '../../utils/object-utils.js';
+import { sanitizeNumber, sanitizeString, sanitizeArray, clamp } from '../../utils/sanitizer.js';
 
 // ============================================================
 // HERO-ACTIONS
@@ -126,6 +126,19 @@ export function equipItem(slot, item) {
   };
 }
 
+/**
+ * Setzt den aktiven Titel des Helden.
+ */
+export function setHeroTitle(title) {
+  return (state) => ({
+    ...state,
+    hero: {
+      ...state.hero,
+      title: sanitizeString(title, 100, '')
+    }
+  });
+}
+
 // ============================================================
 // RESOURCE-ACTIONS
 // ============================================================
@@ -202,6 +215,98 @@ export function addRelics(amount) {
   };
 }
 
+/**
+ * Entfernt Relikte (prüft vorher, ob genug vorhanden sind).
+ */
+export function removeRelics(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const resources = state.resources;
+    const current = BigInt(resources.relics || '0');
+    const remove = BigInt(safeAmount);
+
+    if (current < remove) return state;
+
+    return {
+      ...state,
+      resources: {
+        ...resources,
+        relics: String(current - remove)
+      }
+    };
+  };
+}
+
+/**
+ * Fügt Artefakte hinzu.
+ */
+export function addArtifacts(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const resources = state.resources;
+    const current = BigInt(resources.artifacts || '0');
+    const add = BigInt(safeAmount);
+
+    return {
+      ...state,
+      resources: {
+        ...resources,
+        artifacts: String(current + add)
+      }
+    };
+  };
+}
+
+/**
+ * Fügt Erinnerungsstaub (Memory Dust) hinzu.
+ */
+export function addMemoryDust(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const resources = state.resources;
+    const current = BigInt(resources.memoryDust || '0');
+    const add = BigInt(safeAmount);
+
+    return {
+      ...state,
+      resources: {
+        ...resources,
+        memoryDust: String(current + add)
+      }
+    };
+  };
+}
+
+/**
+ * Entfernt Erinnerungsstaub (Memory Dust), sofern genug vorhanden ist.
+ */
+export function removeMemoryDust(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const resources = state.resources;
+    const current = BigInt(resources.memoryDust || '0');
+    const remove = BigInt(safeAmount);
+
+    if (current < remove) return state;
+
+    return {
+      ...state,
+      resources: {
+        ...resources,
+        memoryDust: String(current - remove)
+      }
+    };
+  };
+}
+
 // ============================================================
 // CLAN-ACTIONS
 // ============================================================
@@ -222,7 +327,7 @@ export function recruitClanMember(name, role, cost) {
     
     const newMember = {
       id,
-      name: sanitizeString(name, 20, `Mitglied ${id}`),
+      name: sanitizeString(name, 50, `Mitglied ${id}`),
       role: sanitizeString(role, 20, 'collector'),
       level: 1,
       experience: 0,
@@ -301,6 +406,33 @@ export function setSavingStatus(isSaving) {
   });
 }
 
+/**
+ * Setzt den Tutorial-Schritt.
+ */
+export function setTutorialStep(step) {
+  return (state) => ({
+    ...state,
+    system: {
+      ...state.system,
+      tutorialStep: sanitizeNumber(step, 0)
+    }
+  });
+}
+
+/**
+ * Beendet das Tutorial.
+ */
+export function finishTutorial() {
+  return (state) => ({
+    ...state,
+    system: {
+      ...state.system,
+      tutorialFinished: true,
+      tutorialStep: -1
+    }
+  });
+}
+
 // ============================================================
 // BATCH-ACTIONS
 // ============================================================
@@ -324,6 +456,7 @@ export function batch(actions) {
 
 export default {
   setHeroName,
+  setHeroTitle,
   addHeroExperience,
   spendStatPoint,
   equipItem,
@@ -334,5 +467,7 @@ export default {
   updateClanMemberProgress,
   setCurrentView,
   setSavingStatus,
+  setTutorialStep,
+  finishTutorial,
   batch
 };

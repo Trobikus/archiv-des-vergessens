@@ -38,12 +38,12 @@ describe('HeroService', () => {
   });
 
   test('addExperience increases experience and levels up', () => {
-    heroService.addExperience(50);
+    heroService.addExperience(30);
     let hero = heroService.getHero();
-    expect(hero.experience).toBe(50);
+    expect(hero.experience).toBe(30);
     expect(hero.level).toBe(1);
 
-    heroService.addExperience(50);
+    heroService.addExperience(20);
     hero = heroService.getHero();
     expect(hero.level).toBe(2);
     expect(hero.experience).toBe(0);
@@ -83,5 +83,24 @@ describe('HeroService', () => {
     expect(cStats.maxHp).toBeGreaterThan(100);
     expect(cStats.damageReduction).toBeGreaterThan(0);
     expect(cStats.critChance).toBeGreaterThan(0);
+  });
+
+  test('setTitle sets active title correctly', () => {
+    // Add some titles to mock unlocked titles
+    stateManager.dispatch((state) => ({
+      ...state,
+      hero: {
+        ...state.hero,
+        titles: ['Sammler', 'Reliktwächter']
+      }
+    }), 'hero/mockTitles');
+
+    // Set title
+    heroService.setTitle('Sammler');
+    expect(heroService.getHero().title).toBe('Sammler');
+
+    // Set empty title
+    heroService.setTitle('');
+    expect(heroService.getHero().title).toBe('');
   });
 });

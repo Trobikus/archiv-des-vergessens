@@ -14,8 +14,13 @@ import StateManager from '../state/manager.js';
 import * as Actions from '../state/actions.js';
 import { selectClanMembers, selectClanMember, selectClanMemberExpeditionStatus } from '../state/selectors.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
-import RNG from '../utils/rng.js';
+import RNG from '../../utils/rng.js';
 import { CONFIG } from '../../data/config.js';
+import { EVENTS } from '../events/definitions.js';
+
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./resource-service.js').default} ResourceService */
 
 export class ClanService {
   /**
@@ -34,7 +39,7 @@ export class ClanService {
   }
   
   _bindSlowTick() {
-    this._slowTickSubscription = this._eventBus.subscribe('game:slowTick', (data) => {
+    this._slowTickSubscription = this._eventBus.subscribe(EVENTS.GAME_SLOW_TICK, (data) => {
       this._processTick(data.delta);
     });
   }
@@ -61,16 +66,33 @@ export class ClanService {
   }
   
   /**
+   * Gibt die Details einer aktiven Expedition zurück.
+   */
+  getActiveExpedition(memberId) {
+    return this._activeExpeditions.get(memberId) || null;
+  }
+  
+  /**
    * Rekrutiert ein neues Mitglied.
    */
   recruitMember(role) {
     const cost = role === 'collector' ? 10 : role === 'weaver' ? 25 : 40;
-    const names = ['Lyra', 'Theron', 'Kael', 'Elara', 'Vane', 'Sira', 'Jace', 'Rin'];
-    const name = names[Math.floor(RNG.next() * names.length)] + '_' + Date.now().toString(36);
-    
     const state = this._stateManager.getState();
     const members = state.clan.members;
     const id = state.clan.nextId;
+
+    const firstNames = ['Lyra', 'Theron', 'Kael', 'Elara', 'Vane', 'Sira', 'Jace', 'Rin', 'Valerius', 'Selene', 'Gideon', 'Aurelia', 'Cassian', 'Vespera', 'Helena', 'Lysander'];
+    const lastNames = ['Nebelläufer', 'Schattenweber', 'Geistwächter', 'Traumwandler', 'Staubgeborener', 'Ewigkeitssucher', 'Seelenwächter', 'Gedankenleser', 'Wortweber', 'Schleierbrecher'];
+
+    let name = '';
+    const existingNames = (members || []).map(m => m.name);
+    let attempts = 0;
+    do {
+      const first = firstNames[Math.floor(RNG.next() * firstNames.length)];
+      const last = lastNames[Math.floor(RNG.next() * lastNames.length)];
+      name = first + ' ' + last;
+      attempts++;
+    } while (existingNames.includes(name) && attempts < 100);
     
     // Prüfen, ob genug Partikel vorhanden sind
     const particles = Number(state.resources.particles || '0');
@@ -135,48 +157,111 @@ export class ClanService {
    * Verarbeitet einen Slow-Tick (Produktion + Expeditionen).
    */
   _processTick(delta) {
-    // Clan-Mitglieder produzieren Ressourcen
-    const members = this.getMembers();
-    const hero = this._stateManager.getState().hero;
-    const prestigeBonus = hero.prestige.level * 2;
+    const prestigeBonus = this._stateManager.getState().hero.prestige.level * 2;
     const libraryBonus = this._stateManager.getState().library.upgrades.clan_boost * 0.05;
     
-    let totalProduction = 0;
+    this._pendingEvents = null;
     let needsUpdate = false;
-    
-    for (const member of members) {
-      if (this._activeExpeditions.has(member.id)) continue;
+
+    this._stateManager.dispatch((state) => {
+      const clan = state.clan;
+      // Copy array and shallow clone each member so we do not mutate the frozen store
+      const members = clan.members.map(m => ({ ...m }));
       
-      let rate = member.baseCollectRate * Math.pow(1.05, member.level - 1);
-      rate *= (1 + prestigeBonus / 100);
-      rate *= (1 + libraryBonus);
+      let particlesToCreate = BigInt(0);
+      let relicsToCreate = BigInt(0);
       
-      const increment = (rate * delta) / CONFIG.CLAN.TICK_RATE_MS * 100;
-      const newProgress = member.progress + increment;
+      const memberLevelUps = [];
+      const artifactsFound = [];
       
-      if (newProgress >= 100) {
-        const cycles = Math.floor(newProgress / 100);
-        const remainder = newProgress % 100;
+      for (const member of members) {
+        if (this._activeExpeditions.has(member.id)) continue;
         
-        for (let i = 0; i < cycles; i++) {
-          this._produceResource(member);
-          this._addMemberExperience(member.id, CONFIG.CLAN.EXP_PER_CYCLE);
+        let rate = member.baseCollectRate * Math.pow(1.05, member.level - 1);
+        rate *= (1 + prestigeBonus / 100);
+        rate *= (1 + libraryBonus);
+        
+        const increment = (rate * delta) / CONFIG.CLAN.TICK_RATE_MS * 100;
+        const newProgress = member.progress + increment;
+        
+        if (newProgress >= 100) {
+          const cycles = Math.floor(newProgress / 100);
+          const remainder = newProgress % 100;
+          
+          member.progress = clamp(remainder, 0, 100);
+          needsUpdate = true;
+          
+          for (let i = 0; i < cycles; i++) {
+            // produce resource locally
+            const role = member.role;
+            if (role === 'collector') {
+              particlesToCreate += BigInt(1);
+            } else if (role === 'weaver') {
+              if (RNG.next() < 0.1) {
+                relicsToCreate += BigInt(1);
+              } else {
+                particlesToCreate += BigInt(2);
+              }
+            } else if (role === 'guardian') {
+              if (RNG.next() < 0.05) {
+                artifactsFound.push(member.id);
+              } else {
+                particlesToCreate += BigInt(3);
+              }
+            }
+            
+            // add experience locally
+            member.experience += CONFIG.CLAN.EXP_PER_CYCLE;
+            while (member.experience >= member.expToNextLevel) {
+              member.experience -= member.expToNextLevel;
+              member.level++;
+              member.expToNextLevel = Math.floor(member.expToNextLevel * 1.15);
+              memberLevelUps.push({ memberId: member.id, newLevel: member.level });
+            }
+          }
+        } else {
+          member.progress = clamp(newProgress, 0, 100);
+          needsUpdate = true;
         }
-        
-        // Progress aktualisieren
-        this._stateManager.dispatch(
-          Actions.updateClanMemberProgress(member.id, remainder),
-          'clan/progressUpdate'
-        );
-        needsUpdate = true;
-      } else {
-        this._stateManager.dispatch(
-          Actions.updateClanMemberProgress(member.id, newProgress),
-          'clan/progressUpdate'
-        );
-        needsUpdate = true;
       }
-    }
+      
+      // Update resources in state
+      let resources = state.resources;
+      if (particlesToCreate > BigInt(0) || relicsToCreate > BigInt(0)) {
+        const currentParticles = BigInt(resources.particles || '0');
+        const totalParticles = BigInt(resources.totalParticles || '0');
+        const currentRelics = BigInt(resources.relics || '0');
+        const totalRelics = BigInt(resources.totalRelics || '0');
+        
+        resources = {
+          ...resources,
+          particles: String(currentParticles + particlesToCreate),
+          totalParticles: String(totalParticles + particlesToCreate),
+          relics: String(currentRelics + relicsToCreate),
+          totalRelics: String(totalRelics + relicsToCreate)
+        };
+      }
+      
+      this._pendingEvents = {
+        memberLevelUps,
+        artifactsFound,
+        particlesToCreate,
+        relicsToCreate
+      };
+      
+      if (needsUpdate || particlesToCreate > BigInt(0) || relicsToCreate > BigInt(0)) {
+        return {
+          ...state,
+          resources,
+          clan: {
+            ...clan,
+            members
+          }
+        };
+      }
+      
+      return state;
+    }, 'clan/processTickBatch');
     
     // Expeditionen abarbeiten
     const completed = [];
@@ -191,7 +276,35 @@ export class ClanService {
       this._completeExpedition(memberId);
     }
     
-    if (needsUpdate || completed.length > 0) {
+    // events publizieren
+    if (this._pendingEvents) {
+      const { memberLevelUps, artifactsFound, particlesToCreate, relicsToCreate } = this._pendingEvents;
+      
+      for (const lvl of memberLevelUps) {
+        this._eventBus.publish('clan:memberLevelUp', lvl);
+      }
+      for (const memberId of artifactsFound) {
+        this._eventBus.publish('clan:artefactFound', { memberId });
+      }
+      if (particlesToCreate > BigInt(0)) {
+        this._eventBus.publish('resources:updated', { 
+          type: 'particles', 
+          amount: Number(particlesToCreate),
+          total: this._stateManager.getState().resources.particles
+        });
+      }
+      if (relicsToCreate > BigInt(0)) {
+        this._eventBus.publish('resources:updated', { 
+          type: 'relics', 
+          amount: Number(relicsToCreate),
+          total: this._stateManager.getState().resources.relics
+        });
+      }
+      
+      this._pendingEvents = null;
+    }
+    
+    if (needsUpdate || completed.length > 0 || (this.getMembers() && this.getMembers().length > 0)) {
       this._eventBus.publish('clan:membersUpdated', { members: this.getMembers() });
     }
   }

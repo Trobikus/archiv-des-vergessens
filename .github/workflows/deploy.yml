@@ -30,7 +30,13 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm install
+
+      - name: Type Check (js/core, js/controllers via JSDoc + tsc)
+        run: npm run typecheck
+
+      - name: Run Tests
+        run: npm test
 
       - name: Build Game with Vite
         run: npm run build

@@ -275,6 +275,7 @@
     gap: 14px;
     transition: all var(--transition-default);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.85);
+    will-change: transform;
 }
 
 .hub-btn .icon {
@@ -457,3 +458,103 @@
         opacity: 0.6;
     }
 }
+
+/* ---- Coming Soon Overlay (Social Tab) ---- */
+.hub-coming-soon-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Dunkler Schleier mit Tiefenwirkung */
+    background:
+        radial-gradient(ellipse at 50% 40%, rgba(10, 6, 20, 0.72) 0%, rgba(5, 5, 7, 0.96) 70%);
+    backdrop-filter: blur(6px) saturate(0.4);
+    -webkit-backdrop-filter: blur(6px) saturate(0.4);
+    border-radius: 3px;
+    /* Subtiler goldener Rand, der den Tab umrahmt */
+    border: 1px solid rgba(197, 160, 89, 0.08);
+    box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.6);
+    animation: fadeInEffect 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Verhindert versehentliche Klicks auf darunter liegende Buttons */
+    pointer-events: all;
+    cursor: default;
+}
+
+/* Sicherstellen, dass hub-category-social position:relative hat */
+#hub-category-social {
+    position: relative;
+    /* Mindesthöhe damit das Overlay gut sichtbar ist */
+    min-height: 320px;
+}
+
+.hub-coming-soon-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    text-align: center;
+    padding: 3rem 4rem;
+    /* Glasmorphismus-Panel */
+    background: linear-gradient(160deg, rgba(20, 16, 30, 0.85) 0%, rgba(8, 7, 12, 0.9) 100%);
+    border: 1px solid rgba(197, 160, 89, 0.18);
+    border-top: 2px solid rgba(197, 160, 89, 0.5);
+    border-radius: 4px;
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.9),
+        0 0 40px rgba(197, 160, 89, 0.06),
+        inset 0 1px 0 rgba(197, 160, 89, 0.1);
+}
+
+.hub-coming-soon-rune {
+    font-size: 3.5rem;
+    color: var(--color-gold);
+    opacity: 0.7;
+    filter: drop-shadow(0 0 18px rgba(197, 160, 89, 0.55));
+    animation: commingSoonFloat 3.5s ease-in-out infinite;
+    line-height: 1;
+}
+
+@keyframes commingSoonFloat {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.65;
+    }
+    50% {
+        transform: translateY(-8px) scale(1.08);
+        opacity: 0.9;
+        filter: drop-shadow(0 0 28px rgba(197, 160, 89, 0.8));
+    }
+}
+
+.hub-coming-soon-title {
+    font-family: var(--font-header);
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    /* Gold-Gradient-Text wie der Hub-Titel */
+    background: linear-gradient(to bottom, #ffffff 10%, var(--color-gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.9));
+    margin: 0;
+    /* Langsames Pulsieren des Glows */
+    animation: commingSoonTitlePulse 4s ease-in-out infinite;
+}
+
+@keyframes commingSoonTitlePulse {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(197, 160, 89, 0.15)); }
+    50%       { filter: drop-shadow(0 0 20px rgba(197, 160, 89, 0.45)); }
+}
+
+.hub-coming-soon-sub {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    letter-spacing: 1.5px;
+    line-height: 1.8;
+    text-transform: uppercase;
+    margin: 0;
+    opacity: 0.75;
+}

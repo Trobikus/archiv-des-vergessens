@@ -1,7 +1,7 @@
 // ============================================================
 // FILE: js/core/settings.js – Einstellungen
 // ============================================================
-import { EVENTS } from './events.js';
+import { EVENTS } from './events/definitions.js';
 
 export default class SettingsManager {
     constructor(eventBus) {

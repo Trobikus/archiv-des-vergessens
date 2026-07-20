@@ -13,6 +13,8 @@
 import StateManager from '../state/manager.js';
 import { sanitizeNumber } from '../../utils/sanitizer.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+
 export class LeaderboardService {
   /**
    * @param {StateManager} stateManager

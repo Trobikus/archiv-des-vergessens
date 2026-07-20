@@ -1,0 +1,51 @@
+name: Electron Release Build
+
+# Wird ausgelöst wenn du einen Git-Tag wie "v1.6.0" pushst:
+# git tag v1.6.0
+# git push origin v1.6.0
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write  # Zum Erstellen von GitHub Releases
+
+jobs:
+  release:
+    name: Build & Release Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm test
+
+      - name: Run TypeCheck
+        run: npm run typecheck
+
+      - name: Build Vite + Electron EXE
+        # GH_TOKEN wird automatisch von GitHub bereitgestellt
+        # electron-builder lädt die .exe direkt als GitHub Release hoch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run electron:release
+
+      - name: Upload Installer als Artefakt (Backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Archiv-des-Vergessens-Windows
+          path: release/*.exe
+          retention-days: 30

@@ -14,6 +14,9 @@
 import { EVENTS } from '../events/definitions.js';
 import { CONFIG } from '../../data/config.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+/** @typedef {import('../state/manager.js').default} StateManager */
+
 export class GameLoop {
   /**
    * @param {Object} context
@@ -35,6 +38,8 @@ export class GameLoop {
     this._frameId = null;
     this._catchupActive = false;
     this._speedWarned = false;
+    // Einmalig binden – kein GC-Druck durch neue Funktion pro Frame
+    this._boundTick = this._tick.bind(this);
   }
 
   start() {
@@ -45,7 +50,7 @@ export class GameLoop {
     this._lastLogicTick = now;
     this._lastSlowTick = now;
     this._catchupActive = this._stateManager.getState().resources.timeBank > 0;
-    this._frameId = requestAnimationFrame(this._tick.bind(this));
+    this._frameId = requestAnimationFrame(this._boundTick);
   }
 
   stop() {
@@ -72,9 +77,6 @@ export class GameLoop {
         setTimeout(() => { this._speedWarned = false; }, 10000);
       }
     }
-
-    // Render-Tick (immer)
-    this._eventBus.publish(EVENTS.GAME_RENDER_TICK, { delta, timestamp });
 
     // Logic-Tick (alle 100ms)
     if (timestamp - this._lastLogicTick >= this._logicInterval) {
@@ -127,7 +129,7 @@ export class GameLoop {
       });
     }
 
-    this._frameId = requestAnimationFrame(this._tick.bind(this));
+    this._frameId = requestAnimationFrame(this._boundTick);
   }
 
   isRunning() {

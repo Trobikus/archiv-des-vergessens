@@ -12,8 +12,13 @@
 
 import StateManager from '../state/manager.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
-import RNG from '../utils/rng.js';
+import RNG from '../../utils/rng.js';
 import { CONFIG } from '../../data/config.js';
+
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./resource-service.js').default} ResourceService */
+/** @typedef {import('./hero-service.js').default} HeroService */
 
 export class RelicHuntService {
   /**
@@ -30,14 +35,6 @@ export class RelicHuntService {
     this._cooldownMs = CONFIG.RELIC_HUNT.COOLDOWN_MS;
     this._cost = CONFIG.RELIC_HUNT.COST;
     this._cooldownEnd = 0;
-
-    this._bindSlowTick();
-  }
-
-  _bindSlowTick() {
-    this._eventBus.subscribe('game:slowTick', () => {
-      // Cooldown wird bei jedem Tick geprüft – kein State nötig
-    });
   }
 
   /**

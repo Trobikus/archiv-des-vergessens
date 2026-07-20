@@ -108,6 +108,7 @@
     letter-spacing: 2px;
     margin-bottom: 0.5rem;
     border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+    padding-right: 2.5rem; /* Verhindert Überlappung mit dem Schließen-Button */
     padding-bottom: 1rem;
     text-align: center;
     flex-shrink: 0;
@@ -124,16 +125,15 @@
     min-height: 0;
 }
 
-.modal-scroll-area::-webkit-scrollbar {
-    width: 6px;
-}
-.modal-scroll-area::-webkit-scrollbar-track {
-    background: #0a0a0c;
-}
-.modal-scroll-area::-webkit-scrollbar-thumb {
-    background: #2a2a35;
-    border-radius: 2px;
-}
-.modal-scroll-area::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gold);
+@supports not (-moz-appearance: none) {
+    .modal-scroll-area::-webkit-scrollbar {
+        width: 6px;
+    }
+    .modal-scroll-area::-webkit-scrollbar-track {
+        background: #0a0a0c;
+    }
+    .modal-scroll-area::-webkit-scrollbar-thumb {
+        background: #2a2a35;
+        border-radius: 2px;
+    }
 }

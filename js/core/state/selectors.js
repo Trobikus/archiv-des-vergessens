@@ -8,7 +8,7 @@
  * ============================================================
  */
 
-import { deepClone } from '../utils/object-utils.js';
+import { deepClone } from '../../utils/object-utils.js';
 
 // ============================================================
 // HERO-SELECTOREN

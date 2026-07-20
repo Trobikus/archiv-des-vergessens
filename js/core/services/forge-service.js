@@ -16,8 +16,13 @@ import * as Actions from '../state/actions.js';
 import { selectResources } from '../state/selectors.js';
 import { FORGE_RECIPES } from '../../data/recipes.js';
 import { Item } from '../../models/item.js';
-import RNG from '../utils/rng.js';
+import RNG from '../../utils/rng.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
+
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./resource-service.js').default} ResourceService */
+/** @typedef {import('./hero-service.js').default} HeroService */
 
 export class ForgeService {
   /**
@@ -169,12 +174,17 @@ export class ForgeService {
     }
 
     // Item zum Inventar hinzufügen
-    this._heroService._stateManager.dispatch((state) => {
-      const hero = { ...state.hero };
-      hero.inventory.equipment = [...hero.inventory.equipment, item.toJSON()];
-      hero._craftedRecipeCount = (hero._craftedRecipeCount || 0) + 1;
-      return { ...state, hero };
-    }, 'forge/addItem');
+    this._heroService._stateManager.dispatch((state) => ({
+      ...state,
+      hero: {
+        ...state.hero,
+        inventory: {
+          ...state.hero.inventory,
+          equipment: [...state.hero.inventory.equipment, item.toJSON()]
+        },
+        _craftedRecipeCount: (state.hero._craftedRecipeCount || 0) + 1
+      }
+    }), 'forge/addItem');
 
     this._eventBus.publish('forge:crafted', { recipe, item, autoSalvaged: false });
     this._eventBus.publish('ui:showToast', {
@@ -209,11 +219,16 @@ export class ForgeService {
 
     // Item upgraden
     item.level++;
-    this._stateManager.dispatch((state) => {
-      const hero = { ...state.hero };
-      hero.equipment[slot] = item.toJSON();
-      return { ...state, hero };
-    }, 'forge/upgrade');
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      hero: {
+        ...state.hero,
+        equipment: {
+          ...state.hero.equipment,
+          [slot]: item.toJSON()
+        }
+      }
+    }), 'forge/upgrade');
 
     this._eventBus.publish('forge:upgraded', { slot, item });
     return { success: true, message: `${item.name} auf Level ${item.level} aufgewertet!` };
@@ -237,10 +252,19 @@ export class ForgeService {
 
     // Item entfernen
     this._stateManager.dispatch((state) => {
-      const hero = { ...state.hero };
-      const inv = isLoot ? hero.inventory.loot : hero.inventory.equipment;
-      inv.splice(index, 1);
-      return { ...state, hero };
+      const inventory = { ...state.hero.inventory };
+      if (isLoot) {
+        inventory.loot = state.hero.inventory.loot.filter((_, i) => i !== index);
+      } else {
+        inventory.equipment = state.hero.inventory.equipment.filter((_, i) => i !== index);
+      }
+      return {
+        ...state,
+        hero: {
+          ...state.hero,
+          inventory
+        }
+      };
     }, 'forge/salvage');
 
     // Staub hinzufügen

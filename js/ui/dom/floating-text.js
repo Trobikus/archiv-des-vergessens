@@ -2,6 +2,13 @@
  * ============================================================
  * FILE: ui/dom/floating-text.js – Floating-Text-System (DOM-Pool)
  * ============================================================
+ *
+ * PERFORMANCE (v2.0):
+ * - Ein einziger zentraler RAF-Loop statt N paralleler Loops.
+ *   Bei Klick-Spam (20+ gleichzeitige Texte) läuft weiterhin
+ *   nur genau 1 requestAnimationFrame-Callback pro Frame.
+ * - Loop stoppt automatisch wenn keine Animationen aktiv sind
+ *   (kein Idle-RAF-Overhead).
  */
 
 import DOMPool from '../../core/pool.js';
@@ -23,40 +30,62 @@ export function initFloatingText(eventBus, settingsManager) {
     20
   );
 
-  let activeAnimations = [];
+  // Aktive Animationen: { el, startTime, duration }
+  const activeAnimations = [];
+  let rafId = null;
+
+  // ---- Zentraler Batch-Loop ----
+  function batchLoop(time) {
+    // Alle Animationen dieses Frames updaten
+    for (let i = activeAnimations.length - 1; i >= 0; i--) {
+      const anim = activeAnimations[i];
+      const progress = (time - anim.startTime) / anim.duration;
+
+      if (progress >= 1) {
+        // Animation fertig → Element zurück in Pool, aus Liste entfernen
+        pool.release(anim.el);
+        activeAnimations.splice(i, 1);
+        continue;
+      }
+
+      const eased = 1 - Math.pow(1 - progress, 3);
+      anim.el.style.opacity = 1 - eased;
+      anim.el.style.transform = `translateY(-${eased * 80}px) scale(${0.8 + eased * 0.3})`;
+    }
+
+    // Weiterlaufen solange noch Animationen aktiv, sonst pausieren
+    if (activeAnimations.length > 0) {
+      rafId = requestAnimationFrame(batchLoop);
+    } else {
+      rafId = null;
+    }
+  }
 
   function spawn(text, x, y) {
     if (!settingsManager.get('floatingText')) return;
 
     const el = pool.get();
     el.textContent = text;
-    el.style.left = (x || window.innerWidth / 2) + 'px';
-    el.style.top = (y || window.innerHeight / 2) + 'px';
-    el.style.opacity = '1';
+    el.style.left      = (x || window.innerWidth  / 2) + 'px';
+    el.style.top       = (y || window.innerHeight / 2) + 'px';
+    el.style.opacity   = '1';
     el.style.transform = 'translateY(0) scale(0.8)';
 
-    // Animation über requestAnimationFrame
-    const startTime = performance.now();
-    const duration = 1200;
+    activeAnimations.push({ el, startTime: performance.now(), duration: 1200 });
 
-    function animate(time) {
-      const progress = (time - startTime) / duration;
-      if (progress >= 1) {
-        pool.release(el);
-        return;
-      }
-      const eased = 1 - Math.pow(1 - progress, 3);
-      el.style.opacity = 1 - eased;
-      el.style.transform = `translateY(-${eased * 80}px) scale(${0.8 + eased * 0.3})`;
-      requestAnimationFrame(animate);
+    // Loop starten falls nicht bereits aktiv
+    if (rafId === null) {
+      rafId = requestAnimationFrame(batchLoop);
     }
-
-    requestAnimationFrame(animate);
   }
 
   return {
     spawn,
     destroy: () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
       pool.destroy();
     }
   };

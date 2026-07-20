@@ -66,7 +66,7 @@ export function CraftingUI({ stateManager, eventBus, services }) {
           ${recipes.map(recipe => {
             const cost = craftingService.getRecipeCost(recipe);
             const canAfford = Object.entries(cost).every(([key, amt]) => (resources[key] || 0) >= amt);
-            const isUnlocked = craftingService.unlockedRecipes.includes(recipe.id);
+            const isUnlocked = (crafting.unlockedRecipes || []).includes(recipe.id) || recipe.id === 'catalyst_from_essence';
             return html`
               <div class="crafting-recipe-card glass-inner-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1.2rem; margin-bottom: 0.6rem; border-left: 3px solid ${isUnlocked ? 'var(--color-gold)' : 'var(--color-text-muted)'}; opacity: ${isUnlocked ? 1 : 0.5};">
                 <div class="crafting-recipe-info">

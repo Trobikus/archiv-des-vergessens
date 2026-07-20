@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * FILE: core/state/manager.js – Zentraler State Manager (v2.0)
+ * FILE: core/state/manager.js – Zentraler State Manager (v2.0 FINAL)
  * ============================================================
  * 
  * SINGLE SOURCE OF TRUTH für den gesamten Spielzustand.
@@ -12,8 +12,28 @@
  * ============================================================
  */
 
-import { deepClone, deepFreeze, isPlainObject } from '../utils/object-utils.js';
-import { formatNumber } from '../utils/format.js';
+import { deepClone, deepFreeze, isPlainObject } from '../../utils/object-utils.js';
+
+/**
+ * Friert nur den Root-State und seine direkten Kind-Objekte ein (O(n) statt O(n²)).
+ * Sicher weil: Reducer erstellen neue Objekte per Spread, und unveränderte
+ * Sub-Objekte stammen aus dem bereits tiefgefrorenen Vorgänger-State.
+ * @param {Object} obj
+ * @returns {Object}
+ */
+function shallowFreezeState(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  // Root einfrieren
+  Object.freeze(obj);
+  // Direkte Kind-Objekte einfrieren (eine Ebene tiefer)
+  for (const key in obj) {
+    const val = obj[key];
+    if (val !== null && typeof val === 'object' && !Object.isFrozen(val)) {
+      Object.freeze(val);
+    }
+  }
+  return obj;
+}
 
 /**
  * @typedef {Object} State
@@ -43,10 +63,12 @@ import { formatNumber } from '../utils/format.js';
 
 /**
  * @typedef {Object} Middleware
- * @property {function(State, State): void} [onBefore] - Vor der Änderung
- * @property {function(State, State): void} [onAfter] - Nach der Änderung
- * @property {function(Error, State): void} [onError] - Bei Fehler
+ * @property {function(State, Object): void} [onBefore] - Vor der Änderung
+ * @property {function(State, Object): void} [onAfter] - Nach der Änderung
+ * @property {function(Error, State, Object): void} [onError] - Bei Fehler
  */
+
+/** @typedef {import('../events/bus.js').default} EventBus */
 
 export class StateManager {
   /**
@@ -54,31 +76,22 @@ export class StateManager {
    */
   constructor(eventBus) {
     this._eventBus = eventBus;
-    this._state = this._getInitialState();
-    this._subscribers = new Map(); // id -> callback
+    this._state = null;
+    this._subscribers = new Map();
     this._nextSubscriberId = 0;
     this._middleware = [];
     this._history = [];
     this._maxHistory = 100;
     this._isRecording = true;
     this._isDispatching = false;
-    
-    // Debounce für Subscriber-Benachrichtigungen
+    this._initialized = false;
     this._debounceTimer = null;
-    this._debounceDelay = 16; // ~1 Frame
-    this._pendingNotifications = new Set();
-    
-    // Idle-Tasks
+    this._debounceDelay = 16;
     this._idleTasks = [];
     this._idleScheduled = false;
-    
-    // BigInt-Unterstützung für Ressourcen
     this._useBigInt = typeof BigInt !== 'undefined';
-    
-    // Initialen State einfrieren
-    this._state = deepFreeze(this._state);
   }
-  
+
   /**
    * @returns {State} – Initialer State (tiefgefroren)
    */
@@ -105,7 +118,7 @@ export class StateManager {
         _successfulExpeditions: 0
       },
       resources: {
-        particles: '0', // BigInt als String
+        particles: '0',
         relics: '0',
         artifacts: '0',
         memoryDust: '0',
@@ -145,75 +158,90 @@ export class StateManager {
       codex: { entries: {} },
       storyBranch: { currentNode: 'prologue', flags: {}, visited: ['prologue'], history: [], endingReached: false },
       settings: { particles: true, floatingText: true, autosave: 15000, music: true, sfx: true, volume: 0.7, cloudEnabled: true },
-      system: { currentView: 'menu', isSaving: false, lastSave: null, gameVersion: '1.6' }
+      system: { currentView: 'menu', isSaving: false, lastSave: null, gameVersion: '1.6', tutorialStep: 0, tutorialFinished: false }
     };
   }
-  
+
   // ============================================================
   // PUBLIC API
   // ============================================================
-  
+
+  /**
+   * Initialisiert den State (wird beim Boot aufgerufen).
+   */
+  init(heroData = null, resourceData = null, clanData = null) {
+    const initialState = this._getInitialState();
+    if (heroData) initialState.hero = { ...initialState.hero, ...heroData };
+    if (resourceData) initialState.resources = { ...initialState.resources, ...resourceData };
+    if (clanData) initialState.clan = { ...initialState.clan, ...clanData };
+    this._state = deepFreeze(initialState);
+    this._initialized = true;
+    this._notifySubscribersImmediate();
+    this._eventBus.publish('state:initialized', { state: this._state });
+    return this;
+  }
+
   /**
    * Holt den gesamten State (tiefgefrorene Kopie).
-   * @returns {State}
    */
   getState() {
-    return deepClone(this._state);
+    if (!this._initialized) {
+      console.warn('[StateManager] getState aufgerufen, bevor init() ausgeführt wurde.');
+      return null;
+    }
+    return this._state;
   }
-  
+
   /**
-   * Holt einen Teil des States (tiefgefrorene Kopie).
-   * @param {string} path – Punkt-notation, z.B. 'hero.level'
-   * @returns {*}
+   * Holt einen Teil des States.
    */
   getSlice(path) {
+    if (!this._initialized) return undefined;
     const parts = path.split('.');
     let current = this._state;
     for (const part of parts) {
       if (current === undefined || current === null) return undefined;
       current = current[part];
     }
-    return current !== undefined ? deepClone(current) : undefined;
+    return current;
   }
-  
+
   /**
    * Dispatched eine Aktion (State-Reduktion).
-   * @param {StateReducer|function(State): State} reducer
-   * @param {string} name – Aktion-Name für Debugging
-   * @returns {State} – Neuer State
    */
   dispatch(reducer, name = 'anonymous') {
+    if (!this._initialized) {
+      console.warn('[StateManager] dispatch aufgerufen, bevor init() ausgeführt wurde.');
+      return null;
+    }
     if (this._isDispatching) {
       console.warn('[StateManager] Rekursive Dispatch erkannt – ignoriert');
       return this._state;
     }
-    
+
     this._isDispatching = true;
     const startTime = performance.now();
     const oldState = this._state;
-    
+
     try {
       // Middleware: Before
       for (const mw of this._middleware) {
         if (mw.onBefore) mw.onBefore(oldState, { name });
       }
-      
-      // Reducer anwenden
+
       const newState = reducer(oldState);
-      
-      // Sicherstellen, dass der Reducer einen State zurückgibt
+
       if (!newState || typeof newState !== 'object') {
         throw new Error(`Reducer "${name}" hat keinen gültigen State zurückgegeben`);
       }
-      
-      // State einfrieren
-      const frozenState = deepFreeze(newState);
-      
-      // Änderungen prüfen
+
+      // Shallow-Freeze: Root + direkte Kind-Objekte (O(n) statt O(n²) deepFreeze)
+      // Unveränderte Sub-Objekte sind bereits tiefgefroren (kommen aus oldState).
+      const frozenState = shallowFreezeState(newState);
+
       if (frozenState !== oldState) {
         this._state = frozenState;
-        
-        // History aufzeichnen
+
         if (this._isRecording) {
           this._history.push({
             timestamp: Date.now(),
@@ -226,24 +254,20 @@ export class StateManager {
             this._history.shift();
           }
         }
-        
-        // Benachrichtigungen triggern (debounced)
+
         this._notifySubscribers();
-        
-        // Event-Bus benachrichtigen
         this._eventBus.publish('state:changed', {
           action: name,
           timestamp: Date.now()
         });
       }
-      
-      // Middleware: After
+
       for (const mw of this._middleware) {
         if (mw.onAfter) mw.onAfter(frozenState, { name, duration: performance.now() - startTime });
       }
-      
+
       return frozenState;
-      
+
     } catch (error) {
       console.error(`[StateManager] Dispatch-Fehler in "${name}":`, error);
       this._eventBus.publish('ui:showToast', {
@@ -251,51 +275,46 @@ export class StateManager {
         type: 'error',
         duration: 5000
       });
-      
+
       for (const mw of this._middleware) {
         if (mw.onError) mw.onError(error, this._state, { name });
       }
-      
+
       return this._state;
-      
+
     } finally {
       this._isDispatching = false;
     }
   }
-  
+
   /**
    * Registriert einen Subscriber für State-Änderungen.
-   * @param {function(State): void} callback
-   * @param {string} [path] – Optional: Nur bei Änderungen an diesem Pfad benachrichtigen
-   * @returns {number} – Subscription-ID zum Kündigen
    */
   subscribe(callback, path = null) {
     const id = ++this._nextSubscriberId;
     this._subscribers.set(id, { callback, path });
-    
-    // Sofortige Benachrichtigung mit aktuellem State
-    try {
-      const state = path ? this.getSlice(path) : this.getState();
-      callback(state);
-    } catch (e) {
-      console.error('[StateManager] Subscriber-Initial-Fehler:', e);
+
+    if (this._initialized) {
+      try {
+        const state = path ? this.getSlice(path) : this.getState();
+        callback(state);
+      } catch (e) {
+        console.error('[StateManager] Subscriber-Initial-Fehler:', e);
+      }
     }
-    
+
     return id;
   }
-  
+
   /**
    * Kündigt ein Abonnement.
-   * @param {number} id – Subscription-ID
    */
   unsubscribe(id) {
     this._subscribers.delete(id);
   }
-  
+
   /**
    * Fügt Middleware hinzu.
-   * @param {Middleware} middleware
-   * @returns {StateManager} – Für Chaining
    */
   use(middleware) {
     if (typeof middleware === 'function') {
@@ -305,38 +324,34 @@ export class StateManager {
     }
     return this;
   }
-  
+
   /**
    * Führt eine nicht-kritische Aufgabe im Idle-Callback aus.
-   * @param {function(): void} task
-   * @param {number} [priority=1] – Höhere Priorität = frühere Ausführung
    */
   scheduleIdleTask(task, priority = 1) {
     if (typeof task !== 'function') return;
     this._idleTasks.push({ task, priority });
     this._scheduleIdleProcessing();
   }
-  
+
   /**
    * Time-Travel: Springt zu einem früheren State zurück.
-   * @param {number} index – History-Index
-   * @returns {boolean} – Erfolg
    */
   jumpTo(index) {
+    if (!this._initialized) return false;
     if (index < 0 || index >= this._history.length) return false;
     const entry = this._history[index];
     if (!entry) return false;
-    
-    this._state = deepFreeze(deepClone(entry.prevState));
+
+    this._state = entry.prevState;
     this._history = this._history.slice(0, index + 1);
     this._notifySubscribersImmediate();
     this._eventBus.publish('state:timeTravel', { index, state: this._state });
     return true;
   }
-  
+
   /**
    * Holt die History für Debugging.
-   * @returns {Array}
    */
   getHistory() {
     return this._history.map((entry, index) => ({
@@ -346,58 +361,83 @@ export class StateManager {
       duration: entry.duration
     }));
   }
-  
+
   /**
    * Setzt die Aufzeichnung zurück.
    */
   clearHistory() {
     this._history = [];
   }
-  
+
   /**
    * Aktiviert/Deaktiviert die Aufzeichnung.
-   * @param {boolean} enabled
    */
   setRecording(enabled) {
     this._isRecording = enabled;
   }
-  
+
   /**
    * Setzt den State zurück (Hard-Reset).
    */
   reset() {
+    if (!this._initialized) {
+      this.init();
+      return;
+    }
     this._state = deepFreeze(this._getInitialState());
     this._history = [];
     this._notifySubscribersImmediate();
     this._eventBus.publish('state:reset', {});
   }
-  
+
+  /**
+   * Synchronisiert den State mit aktuellen Manager-Daten.
+   * @param {Object} [hero] - Neue Hero-Daten (ersetzt state.hero, falls angegeben)
+   * @param {Object} [resources] - Neue Ressourcen-Daten (ersetzt state.resources, falls angegeben)
+   * @param {Object} [clan] - Neue Clan-Daten (ersetzt state.clan, falls angegeben)
+   */
+  sync(hero, resources, clan) {
+    this.dispatch((state) => ({
+      ...state,
+      hero: hero || state.hero,
+      resources: resources || state.resources,
+      clan: clan || state.clan,
+      system: { ...state.system, lastSync: Date.now() }
+    }), 'state/sync');
+  }
+
+  /**
+   * Gibt zurück, ob der State initialisiert wurde.
+   */
+  isInitialized() {
+    return this._initialized;
+  }
+
+  /**
+   * Gibt die Anzahl der Subscriber zurück.
+   */
+  getSubscriberCount() {
+    return this._subscribers.size;
+  }
+
   // ============================================================
   // PRIVATE METHODEN
   // ============================================================
-  
-  /**
-   * Benachrichtigt Subscriber (debounced).
-   * Verhindert Layout-Thrashing bei schnellen State-Änderungen.
-   */
+
   _notifySubscribers() {
     if (this._debounceTimer) {
       clearTimeout(this._debounceTimer);
     }
-    
     this._debounceTimer = setTimeout(() => {
       this._debounceTimer = null;
       this._notifySubscribersImmediate();
     }, this._debounceDelay);
   }
-  
-  /**
-   * Benachrichtigt Subscriber sofort (ohne Debounce).
-   * Wird für kritische Updates verwendet.
-   */
+
   _notifySubscribersImmediate() {
+    if (!this._initialized) return;
     const state = this._state;
-    
+
     for (const [id, { callback, path }] of this._subscribers) {
       try {
         if (path) {
@@ -411,13 +451,7 @@ export class StateManager {
       }
     }
   }
-  
-  /**
-   * Holt einen verschachtelten Wert aus dem State.
-   * @param {Object} obj – State-Objekt
-   * @param {string} path – Punkt-notation
-   * @returns {*}
-   */
+
   _getNestedValue(obj, path) {
     const parts = path.split('.');
     let current = obj;
@@ -427,14 +461,11 @@ export class StateManager {
     }
     return current;
   }
-  
-  /**
-   * Plant die Verarbeitung von Idle-Tasks.
-   */
+
   _scheduleIdleProcessing() {
     if (this._idleScheduled) return;
     this._idleScheduled = true;
-    
+
     if (typeof window !== 'undefined' && window.requestIdleCallback) {
       window.requestIdleCallback((deadline) => {
         this._idleScheduled = false;
@@ -448,35 +479,19 @@ export class StateManager {
       }, 50);
     }
   }
-  
-  /**
-   * Verarbeitet Idle-Tasks.
-   * @param {IdleDeadline} deadline
-   */
+
   _processIdleTasks(deadline) {
     this._idleTasks.sort((a, b) => b.priority - a.priority);
-    
+
     while (this._idleTasks.length > 0 && deadline.timeRemaining() > 1) {
       const { task } = this._idleTasks.shift();
       try { task(); } catch (e) { console.error('[StateManager] Idle-Task-Fehler:', e); }
     }
-    
+
     if (this._idleTasks.length > 0) {
       this._scheduleIdleProcessing();
     }
   }
-  
-  /**
-   * Gibt die Anzahl der Subscriber zurück.
-   * @returns {number}
-   */
-  getSubscriberCount() {
-    return this._subscribers.size;
-  }
 }
-
-// ============================================================
-// EXPORT
-// ============================================================
 
 export default StateManager;

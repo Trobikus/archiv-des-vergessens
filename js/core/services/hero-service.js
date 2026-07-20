@@ -15,6 +15,8 @@ import { selectHero, selectHeroAttributes, selectHeroCombatStats, selectHeroLeve
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 import { CONFIG } from '../../data/config.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+
 export class HeroService {
   /**
    * @param {StateManager} stateManager
@@ -62,6 +64,14 @@ export class HeroService {
   }
   
   /**
+   * Setzt den aktiven Titel des Helden.
+   */
+  setTitle(title) {
+    this._stateManager.dispatch(Actions.setHeroTitle(title), 'hero/setTitle');
+    this._eventBus.publish('hero:updated', { title });
+  }
+  
+  /**
    * Fügt Erfahrung hinzu (löst Level-Up aus).
    */
   addExperience(amount) {
@@ -87,15 +97,15 @@ export class HeroService {
    * Verteilt einen Stat-Punkt.
    */
   spendStatPoint(statKey) {
-    const result = this._stateManager.dispatch(
+    const pointsBefore = this.getHero().unspentStatPoints;
+    if (pointsBefore <= 0) return false;
+
+    this._stateManager.dispatch(
       Actions.spendStatPoint(statKey),
       'hero/spendStatPoint'
     );
-    if (result !== this._stateManager.getState()) {
-      this._eventBus.publish('hero:updated', { statKey });
-      return true;
-    }
-    return false;
+    this._eventBus.publish('hero:updated', { statKey });
+    return true;
   }
   
   /**

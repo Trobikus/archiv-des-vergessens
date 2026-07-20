@@ -50,6 +50,10 @@
 
 /* ---- Mobile Landscape & Tablet Portrait ---- */
 @media (max-width: 900px) {
+    #game-container, #hub-container {
+        padding-bottom: 90px;
+    }
+
     .panels-grid {
         grid-template-columns: 1fr;
     }

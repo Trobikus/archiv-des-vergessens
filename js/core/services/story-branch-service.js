@@ -14,6 +14,10 @@
 import StateManager from '../state/manager.js';
 import { STORY_BRANCHES, getStoryNode, isEndingNode } from '../../data/story_branches.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./hero-service.js').default} HeroService */
+
 export class StoryBranchService {
   /**
    * @param {StateManager} stateManager

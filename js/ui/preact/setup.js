@@ -4,15 +4,20 @@
  * ============================================================
  */
 
-import { h, render, Component } from 'https://esm.sh/preact@10.19.3';
+import { h, render, Component } from 'preact';
 import {
   useState,
   useEffect,
   useCallback,
   useMemo,
-  useRef
-} from 'https://esm.sh/preact@10.19.3/hooks';
-import htm from 'https://esm.sh/htm@3.1.1';
+  useRef,
+  useContext, 
+  useReducer,
+  useImperativeHandle,
+  useLayoutEffect,
+  useDebugValue
+} from 'preact/hooks';
+import htm from 'htm';
 
 const html = htm.bind(h);
 
@@ -27,21 +32,44 @@ function useEventBus(eventBus, eventName, callback) {
   }, [eventBus, eventName, callback]);
 }
 
+function shallowEqual(a, b) {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (!Object.prototype.hasOwnProperty.call(b, key) || !Object.is(a[key], b[key])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Custom Hook: Abonniert State-Änderungen (mit Selector).
  */
 function useStateSelector(stateManager, selector) {
   const [value, setValue] = useState(() => {
+    if (!stateManager || !stateManager.isInitialized()) {
+      return selector ? selector({}) : null;
+    }
     const state = stateManager.getState();
     return selector ? selector(state) : state;
   });
 
+  const lastValueRef = useRef(value);
+  lastValueRef.current = value;
+
   useEffect(() => {
-    const unsubscribe = stateManager.subscribe((state) => {
+    if (!stateManager) return;
+    const id = stateManager.subscribe((state) => {
       const newValue = selector ? selector(state) : state;
-      setValue(newValue);
+      if (!shallowEqual(lastValueRef.current, newValue)) {
+        setValue(newValue);
+      }
     });
-    return () => unsubscribe();
+    return () => stateManager.unsubscribe(id);
   }, [stateManager, selector]);
 
   return value;
@@ -56,6 +84,11 @@ export {
   useCallback,
   useMemo,
   useRef,
+  useContext,
+  useReducer,
+  useImperativeHandle,
+  useLayoutEffect,
+  useDebugValue,
   html,
   useEventBus,
   useStateSelector

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  // Einstiegspunkt für die Typprüfung ist js/core/. TypeScript prüft dabei
+  // automatisch auch alle Dateien, die von dort aus importiert werden (z.B.
+  // controllers/navigation.js, ui/dom/particles.js, ui/preact/forge/ForgeUI.js).
+  // Sobald weitere, bisher unabhängige Bereiche (z.B. reine UI-Komponenten
+  // ohne Bezug zu js/core) ebenfalls geprüft werden sollen, hier ergänzen:
+  "include": [
+    "js/core/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "js/_tests_/**"
+  ]
+}

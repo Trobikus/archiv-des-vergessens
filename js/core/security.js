@@ -2,32 +2,7 @@
 // FILE: core/security.js – Sanitizer, Checksum, IntegrityChecker (mit Worker-Support)
 // ============================================================
 
-// ---- Sanitizer bleibt synchron (leichtgewichtig) ----
-export class Sanitizer {
-    static clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
-    static sanitizeNumber(value, fallback = 0) {
-        const num = Number(value);
-        return isNaN(num) ? fallback : num;
-    }
-
-    static sanitizeString(value, maxLength = 100, fallback = '') {
-        if (typeof value !== 'string') return fallback;
-        const trimmed = value.trim();
-        if (trimmed.length === 0) return fallback;
-        return trimmed.slice(0, maxLength);
-    }
-
-    static sanitizeArray(value, fallback = []) {
-        return Array.isArray(value) ? value : fallback;
-    }
-
-    static sanitizeObject(value, fallback = {}) {
-        return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
-    }
-}
+import { clamp } from '../utils/sanitizer.js';
 
 // ---- Checksum (wird nun hauptsächlich über Worker ausgeführt) ----
 export class Checksum {
@@ -102,15 +77,15 @@ export class IntegrityChecker {
             switch (err.component) {
                 case 'hero':
                     if (err.field === 'level') {
-                        context.hero.level = Sanitizer.clamp(err.value, 1, 9999);
+                        context.hero.level = clamp(err.value, 1, 9999);
                         repairs.push('level korrigiert');
                     }
                     if (err.field === 'bossProgress') {
-                        context.hero.bossProgress = Sanitizer.clamp(err.value, 0, 200);
+                        context.hero.bossProgress = clamp(err.value, 0, 200);
                         repairs.push('bossProgress korrigiert');
                     }
                     if (err.field === 'prestigeLevel') {
-                        context.hero.prestigeLevel = Sanitizer.clamp(err.value, 0, 999);
+                        context.hero.prestigeLevel = clamp(err.value, 0, 999);
                         repairs.push('prestigeLevel korrigiert');
                     }
                     if (err.field === 'statPoints') {
@@ -121,11 +96,11 @@ export class IntegrityChecker {
                     break;
                 case 'resources':
                     if (err.field === 'particles') {
-                        context.resourceManager.particles = Sanitizer.clamp(err.value, 0, 1e15);
+                        context.resourceManager.particles = clamp(err.value, 0, 1e15);
                         repairs.push('particles korrigiert');
                     }
                     if (err.field === 'relics') {
-                        context.resourceManager.relics = Sanitizer.clamp(err.value, 0, 1e9);
+                        context.resourceManager.relics = clamp(err.value, 0, 1e9);
                         repairs.push('relics korrigiert');
                     }
                     break;

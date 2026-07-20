@@ -4,8 +4,8 @@
 
 export default class DOMPool {
     constructor(createFn, initialSize = 20) {
-        this.pool = [];
-        this.active = new Set();
+        this.pool = []; // free list (only inactive elements)
+        this.active = new Set(); // active elements
         this.createFn = createFn;
         this._destroyed = false;
         this._cleanupInterval = null;
@@ -26,11 +26,10 @@ export default class DOMPool {
             return this.createFn();
         }
 
-        let el = this.pool.find(e => e.style.display === 'none');
+        let el = this.pool.pop();
         if (!el) {
             el = this.createFn();
             document.body.appendChild(el);
-            this.pool.push(el);
         }
         el.style.display = '';
         el.style.pointerEvents = 'none';
@@ -47,22 +46,27 @@ export default class DOMPool {
         el.style.top = '';
         el.style.pointerEvents = '';
         el.className = el.dataset.baseClass || '';
-        this.active.delete(el);
+        if (this.active.delete(el)) {
+            this.pool.push(el);
+        }
     }
 
     _cleanup() {
         if (this._destroyed) return;
+        // Bereinige aktive Elemente, die manuell ausgeblendet wurden
         for (const el of this.active) {
-            if (el.parentNode && el.style.display === 'none') {
+            if (el.style.display === 'none') {
                 this.active.delete(el);
-                if (el.parentNode) el.parentNode.removeChild(el);
+                this.pool.push(el);
             }
         }
-        if (this.pool.length > 50) {
-            const toRemove = this.pool.splice(50);
+        // Pool verkleinern falls zu groß
+        const totalSize = this.pool.length + this.active.size;
+        if (totalSize > 50 && this.pool.length > 0) {
+            const excess = totalSize - 50;
+            const toRemove = this.pool.splice(0, Math.min(excess, this.pool.length));
             for (const el of toRemove) {
                 if (el.parentNode) el.parentNode.removeChild(el);
-                this.active.delete(el);
             }
         }
     }
@@ -79,6 +83,9 @@ export default class DOMPool {
         for (const el of this.pool) {
             if (el.parentNode) el.parentNode.removeChild(el);
         }
+        for (const el of this.active) {
+            if (el.parentNode) el.parentNode.removeChild(el);
+        }
         this.pool = [];
         this.active.clear();
         this.createFn = null;
@@ -86,9 +93,9 @@ export default class DOMPool {
 
     getStats() {
         return {
-            total: this.pool.length,
+            total: this.pool.length + this.active.size,
             active: this.active.size,
-            available: this.pool.length - this.active.size
+            available: this.pool.length
         };
     }
 }

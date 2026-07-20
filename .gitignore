@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# KI-Coding-Assistent Metadaten (Refact.ai) - lokal, nicht fürs Repo bestimmt
+.refact/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +25,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Electron Build Output – lokale .exe Builds (werden via GitHub Actions + Release verteilt)
+release/
+!release/.gitkeep
+
+# electron-builder Cache
+.electron-builder-cache/

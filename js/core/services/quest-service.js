@@ -15,6 +15,12 @@ import * as Actions from '../state/actions.js';
 import { MAIN_QUESTS_DATA, DAILY_QUESTS_DATA } from '../../data/quests.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./resource-service.js').default} ResourceService */
+/** @typedef {import('./hero-service.js').default} HeroService */
+/** @typedef {import('./clan-service.js').default} ClanService */
+
 export class QuestService {
   /**
    * @param {StateManager} stateManager
@@ -34,13 +40,13 @@ export class QuestService {
     this._dailyDefs = DAILY_QUESTS_DATA;
 
     this._bindEvents();
-    this._checkDailyReset();
   }
 
   _bindEvents() {
     this._eventBus.subscribe('hero:updated', () => this.checkCurrentQuest());
     this._eventBus.subscribe('resources:updated', () => this.checkCurrentQuest());
     this._eventBus.subscribe('clan:membersUpdated', () => this.checkCurrentQuest());
+    this._eventBus.subscribe('expedition:started', () => this.checkCurrentQuest());
     this._eventBus.subscribe('expedition:complete', () => {
       this._incrementDaily('expeditions');
       this.checkCurrentQuest();
@@ -56,6 +62,7 @@ export class QuestService {
     this._eventBus.subscribe('hero:prestige', () => {
       this._resetQuests();
     });
+    this._eventBus.subscribe('game:booted', () => this._checkDailyReset());
   }
 
   // ---- DAILY RESET ----

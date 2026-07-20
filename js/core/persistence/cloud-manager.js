@@ -11,7 +11,10 @@
  * ============================================================
  */
 
-import { sanitizeString, sanitizeNumber } from '../utils/sanitizer.js';
+import { sanitizeString, sanitizeNumber } from '../../utils/sanitizer.js';
+import SaveManager from './save-manager.js';
+
+/** @typedef {import('../events/bus.js').default} EventBus */
 
 export class CloudManager {
   /**
@@ -102,7 +105,6 @@ export class CloudManager {
       if (!data) {
         // Falls keine Daten übergeben, versuche SaveManager zu laden
         try {
-          const { default: SaveManager } = await import('./save-manager.js');
           data = await SaveManager.load();
           if (!data) data = { timestamp: Date.now(), version: '1.6' };
         } catch (e) {

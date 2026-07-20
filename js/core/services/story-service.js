@@ -19,6 +19,12 @@ import { CONFIG } from '../../data/config.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 import { ITEM_TEMPLATES } from '../../data/items.js';
 import { Item } from '../../models/item.js';
+import { EVENTS } from '../events/definitions.js';
+
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./resource-service.js').default} ResourceService */
+/** @typedef {import('./hero-service.js').default} HeroService */
 
 export class StoryService {
   /**
@@ -41,14 +47,14 @@ export class StoryService {
   }
 
   _bindSlowTick() {
-    this._slowTickSubscription = this._eventBus.subscribe('game:slowTick', (data) => {
+    this._slowTickSubscription = this._eventBus.subscribe(EVENTS.GAME_SLOW_TICK, (data) => {
       this._processAutoBoss(data.delta);
       this._processBattleTimer(data.delta);
     });
   }
 
   _bindEvents() {
-    this._eventBus.subscribe('hero:prestige', () => {
+    this._eventBus.subscribe(EVENTS.HERO_PRESTIGE, () => {
       this._abortBattle();
     });
   }
@@ -220,11 +226,16 @@ export class StoryService {
             false,
             1
           );
-          this._heroService._stateManager.dispatch((state) => {
-            const hero = { ...state.hero };
-            hero.inventory.equipment = [...hero.inventory.equipment, item.toJSON()];
-            return { ...state, hero };
-          }, 'story/addItemReward');
+          this._heroService._stateManager.dispatch((state) => ({
+            ...state,
+            hero: {
+              ...state.hero,
+              inventory: {
+                ...state.hero.inventory,
+                equipment: [...state.hero.inventory.equipment, item.toJSON()]
+              }
+            }
+          }), 'story/addItemReward');
         }
       }
     }

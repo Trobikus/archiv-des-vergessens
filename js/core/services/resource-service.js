@@ -15,6 +15,8 @@ import * as Actions from '../state/actions.js';
 import { selectResources, selectParticlesBigInt, selectRelicsBigInt } from '../state/selectors.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+
 export class ResourceService {
   /**
    * @param {StateManager} stateManager
@@ -94,6 +96,26 @@ export class ResourceService {
       amount: safeAmount,
       total: this.getResources().relics
     });
+  }
+
+  /**
+   * Entfernt Relikte (prüft vorher, ob genug vorhanden sind).
+   */
+  removeRelics(amount) {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return false;
+
+    const current = this.getRelicsBigInt();
+    const remove = BigInt(safeAmount);
+    if (current < remove) return false;
+
+    this._stateManager.dispatch(Actions.removeRelics(safeAmount), 'resource/removeRelics');
+    this._eventBus.publish('resources:updated', {
+      type: 'relics',
+      amount: -safeAmount,
+      total: this.getResources().relics
+    });
+    return true;
   }
   
   /**

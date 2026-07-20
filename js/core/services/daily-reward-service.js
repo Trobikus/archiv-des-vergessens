@@ -12,8 +12,13 @@
 
 import StateManager from '../state/manager.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
-import RNG from '../utils/rng.js';
+import RNG from '../../utils/rng.js';
 import { Item } from '../../models/item.js';
+
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./resource-service.js').default} ResourceService */
+/** @typedef {import('./hero-service.js').default} HeroService */
 
 export class DailyRewardService {
   /**
@@ -75,7 +80,18 @@ export class DailyRewardService {
     }
     streak = clamp(streak, 1, 365);
 
+    /**
+     * @typedef {Object} DailyReward
+     * @property {number} [particles]
+     * @property {number} [relics]
+     * @property {number} [artifacts]
+     * @property {string} [title]
+     * @property {boolean} [amulet]
+     * @property {string} [boost]
+     */
+
     // Belohnung generieren
+    /** @type {DailyReward} */
     let reward = null;
     if (streak === 7) {
       // Wöchentliche Bonus-Belohnung
@@ -125,21 +141,29 @@ export class DailyRewardService {
         'Einzigartige tägliche Belohnung.',
         false
       );
-      this._heroService._stateManager.dispatch((state) => {
-        const hero = { ...state.hero };
-        hero.inventory.equipment = [...hero.inventory.equipment, amulet.toJSON()];
-        return { ...state, hero };
-      }, 'daily/addAmulet');
+      this._heroService._stateManager.dispatch((state) => ({
+        ...state,
+        hero: {
+          ...state.hero,
+          inventory: {
+            ...state.hero.inventory,
+            equipment: [...state.hero.inventory.equipment, amulet.toJSON()]
+          }
+        }
+      }), 'daily/addAmulet');
     }
     if (reward.title) {
       this._heroService._stateManager.dispatch((state) => {
-        const hero = { ...state.hero };
-        const titles = hero.titles || [];
-        if (!titles.includes(reward.title)) {
-          hero.titles = [...titles, reward.title];
-          hero.title = reward.title;
-        }
-        return { ...state, hero };
+        const titles = state.hero.titles || [];
+        if (titles.includes(reward.title)) return state;
+        return {
+          ...state,
+          hero: {
+            ...state.hero,
+            titles: [...titles, reward.title],
+            title: reward.title
+          }
+        };
       }, 'daily/addTitle');
     }
 

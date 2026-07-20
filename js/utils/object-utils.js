@@ -11,10 +11,13 @@
 export function deepClone(obj) {
   if (obj === null || typeof obj !== 'object') return obj;
   try {
-    return JSON.parse(JSON.stringify(obj));
+    return structuredClone(obj);
   } catch {
-    // Fallback: manuelle Kopie
-    return { ...obj };
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return { ...obj };
+    }
   }
 }
 
@@ -38,15 +41,13 @@ export function deepMerge(target, source) {
  */
 export function deepFreeze(obj) {
   if (obj === null || typeof obj !== 'object') return obj;
-  const freeze = (o) => {
-    Object.freeze(o);
-    for (const key in o) {
-      if (o[key] && typeof o[key] === 'object') {
-        freeze(o[key]);
-      }
+  if (Object.isFrozen(obj)) return obj;
+  Object.freeze(obj);
+  for (const key in obj) {
+    if (obj[key] && typeof obj[key] === 'object') {
+      deepFreeze(obj[key]);
     }
-  };
-  freeze(obj);
+  }
   return obj;
 }
 

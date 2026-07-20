@@ -1,18 +1,18 @@
 /**
  * ============================================================
- * FILE: core/persistence/save-manager.js – Speichern & Laden
+ * FILE: core/persistence/save-manager.js – Speichern & Laden (v2.0 FINAL)
  * ============================================================
  * 
  * VERANTWORTUNG:
  * - IndexedDB für persistente Speicherung
- * - Prüfsumme zur Korruptionserkennung
+ * - Prüfsumme zur Korruptionserkennung (mit Fehlertoleranz)
  * - Queue für parallele Save/Load-Operationen
  * - Integration mit dem Security-Worker
  * ============================================================
  */
 
 import { Checksum } from '../security.js';
-import RNG from '../utils/rng.js';
+import RNG from '../../utils/rng.js';
 
 const DB_NAME = 'ArchivDB';
 const STORE_NAME = 'saves';
@@ -27,6 +27,7 @@ export class SaveManager {
   static _loadQueue = [];
   static _workerManager = null;
   static _services = {};
+  static _dbReady = false;
 
   /**
    * Setzt den WorkerManager für asynchrone Operationen.
@@ -42,21 +43,37 @@ export class SaveManager {
     this._services = services;
   }
 
+  /**
+   * Öffnet die IndexedDB-Datenbank.
+   */
   static async _getDB() {
-    if (this._db) return this._db;
+    if (this._db && this._dbReady) return this._db;
+    
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, 2);
-      request.onupgradeneeded = (e) => {
-        const db = e.target.result;
+      
+      request.onupgradeneeded = () => {
+        const db = request.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME);
         }
+        console.log('[SaveManager] Datenbank aktualisiert');
       };
+      
       request.onsuccess = () => {
         this._db = request.result;
+        this._dbReady = true;
+        // Fehlerbehandlung für die DB
+        this._db.onerror = (event) => {
+          console.error('[SaveManager] Datenbank-Fehler:', event.target.error);
+        };
         resolve(this._db);
       };
-      request.onerror = () => reject(request.error);
+      
+      request.onerror = () => {
+        console.error('[SaveManager] Datenbank-Öffnen fehlgeschlagen:', request.error);
+        reject(request.error);
+      };
     });
   }
 
@@ -72,12 +89,24 @@ export class SaveManager {
     try {
       const db = await this._getDB();
 
+      const saveTime = Date.now();
+
+      // State-Kopie mit aktualisiertem lastSave & isSaving Status
+      const stateToSave = {
+        ...state,
+        system: {
+          ...state.system,
+          lastSave: saveTime,
+          isSaving: false
+        }
+      };
+
       // Save-Daten vorbereiten
       const saveData = {
-        timestamp: Date.now(),
+        timestamp: saveTime,
         version: LATEST_VERSION,
         rngSeed: RNG.getSeed(),
-        state: state
+        state: stateToSave
       };
 
       // Prüfsumme berechnen (im Worker, wenn verfügbar)
@@ -103,6 +132,18 @@ export class SaveManager {
         req.onerror = () => reject(req.error);
       });
 
+      // In-Memory State synchronisieren
+      if (this._services?.stateManager) {
+        this._services.stateManager.dispatch((s) => ({
+          ...s,
+          system: {
+            ...s.system,
+            lastSave: saveTime,
+            isSaving: false
+          }
+        }), 'setSavingStatus');
+      }
+
       // Queue abarbeiten
       const queue = [...this._saveQueue];
       this._saveQueue = [];
@@ -119,8 +160,10 @@ export class SaveManager {
     }
   }
 
+
+
   /**
-   * Lädt den State asynchron.
+   * Lädt den State asynchron (mit Fehlertoleranz bei Prüfsumme).
    */
   static async load() {
     if (this._loadLock) {
@@ -144,27 +187,35 @@ export class SaveManager {
         return null;
       }
 
-      // Prüfsumme validieren
+      // Prüfsumme validieren (mit Fehlertoleranz)
       if (storedData._checksum) {
+        const expectedChecksum = storedData._checksum;
+        delete storedData._checksum; // Temporär entfernen, da bei der Generierung in save() auch kein _checksum Feld existierte
+
         let valid = false;
         if (this._workerManager && this._workerManager.isAvailable()) {
           try {
             const calculated = await this._workerManager.execute('checksum:calculate', storedData);
-            valid = calculated === storedData._checksum;
+            valid = calculated === expectedChecksum;
           } catch (e) {
             console.warn('[SaveManager] Worker-Checksum-Validierung fehlgeschlagen, Fallback:', e);
-            valid = Checksum.calculate(storedData) === storedData._checksum;
+            valid = Checksum.calculate(storedData) === expectedChecksum;
           }
         } else {
-          valid = Checksum.calculate(storedData) === storedData._checksum;
+          valid = Checksum.calculate(storedData) === expectedChecksum;
         }
 
         if (!valid) {
-          console.error('[SaveManager] Prüfsummen-Fehler!');
-          this._loadQueue = [];
-          return null;
+          console.warn('[SaveManager] Prüfsummen-Fehler! Lade trotzdem (Daten könnten korrupt sein).');
+          // Event-Bus Benachrichtigung
+          if (this._services?.eventBus) {
+            this._services.eventBus.publish('ui:showToast', {
+              message: '⚠️ Spielstand-Checksumme fehlerhaft – wurde trotzdem geladen.',
+              type: 'warning',
+              duration: 5000
+            });
+          }
         }
-        delete storedData._checksum;
       }
 
       // RNG-Seed wiederherstellen
@@ -172,7 +223,6 @@ export class SaveManager {
         RNG.setSeed(storedData.rngSeed);
       }
 
-      // State zurückgeben (wird vom Boot hydriert)
       const state = storedData.state || null;
 
       const queue = [...this._loadQueue];
@@ -237,7 +287,11 @@ export class SaveManager {
     this._saveQueue = [];
     this._loadLock = false;
     this._loadQueue = [];
-    this._db = null;
+    if (this._db) {
+      try { this._db.close(); } catch (e) {}
+      this._db = null;
+    }
+    this._dbReady = false;
     this._services = {};
     this._workerManager = null;
   }

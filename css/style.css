@@ -16,6 +16,7 @@
 
 /* 5. Hauptmenü */
 @import url('menu.css');
+@import url('intro.css');
 
 /* 6. Hub-Dashboard */
 @import url('hub.css');

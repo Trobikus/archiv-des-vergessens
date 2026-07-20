@@ -14,6 +14,7 @@
     border-bottom: 1px solid rgba(197, 160, 89, 0.15);
     padding-bottom: 1rem;
     margin-bottom: 0.5rem;
+    padding-right: 2.5rem; /* Verhindert Überlappung mit dem Schließen-Button */
 }
 
 /* ---- Tabs ---- */

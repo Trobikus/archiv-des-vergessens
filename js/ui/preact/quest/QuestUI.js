@@ -4,26 +4,34 @@
  * ============================================================
  */
 
-import { h, html, useStateSelector, useEventBus, useState } from '../setup.js';
+import { h, html, useStateSelector, useEventBus, useState, useCallback } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
 
 export function QuestUI({ stateManager, eventBus, services }) {
   const { questService } = services;
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('main');
+  const [, setTick] = useState(0);
 
+  const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'menu');
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const quests = useStateSelector(stateManager, (state) => state.quests);
   const mainQuests = questService._mainQuests;
   const currentIndex = quests.mainIndex;
   const dailyQuests = questService.getDailyQuests();
 
-  useEventBus(eventBus, EVENTS.UI_REFRESH_QUEST, () => {});
-  useEventBus(eventBus, 'quest:updated', () => {});
-  useEventBus(eventBus, 'quest:completed', () => {});
+  const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+
+  useEventBus(eventBus, EVENTS.UI_REFRESH_QUEST, forceUpdate);
+  useEventBus(eventBus, EVENTS.QUEST_UPDATED, forceUpdate);
+  useEventBus(eventBus, EVENTS.QUEST_COMPLETED, forceUpdate);
 
   // Quest-Tracker-Button (FAB)
   const handleTrackerClick = () => setIsOpen(true);
+
+  // Hüllen-UIs (Missions FAB / Logbuch) nur im Hub oder Spiel anzeigen
+  const isViewActive = currentView === 'game' || currentView === 'hub';
+  if (!isViewActive) return null;
 
   // Modal-Inhalt
   if (!isOpen) {
@@ -33,11 +41,10 @@ export function QuestUI({ stateManager, eventBus, services }) {
     const hasQuest = !!currentQuest;
 
     return html`
-      <div class="quest-tracker-container" style="position: fixed; bottom: 30px; right: 30px; z-index: 999; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none;">
-        <button class="quest-tracker-btn glass-btn" onClick=${handleTrackerClick} style="pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; padding: 0; font-size: 0; background: radial-gradient(circle at 40% 35%, #1e1e2a, #0a0a0c); border: 2px solid var(--color-gold); box-shadow: 0 10px 35px rgba(0,0,0,0.9), 0 0 25px var(--color-gold-glow); position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-          <span style="font-size: 1.8rem; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.8));">📋</span>
-          ${hasQuest ? html`<span class="quest-badge ${isComplete ? 'ready' : ''}" style="position: absolute; top: -4px; right: -4px; background: ${isComplete ? 'var(--color-success)' : 'var(--color-danger)'}; color: #fff; border-radius: 50%; min-width: 24px; height: 24px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-family: var(--font-header); font-weight: 700; border: 2px solid #000; box-shadow: 0 0 15px ${isComplete ? 'rgba(58,122,69,0.6)' : 'var(--color-danger-glow)'}; padding: 0 4px;">${isComplete ? '✓' : '!'}</span>` : ''}
-          <span class="quest-tooltip" style="position: absolute; bottom: 74px; right: 0; background: rgba(5,5,7,0.95); backdrop-filter: blur(8px); border: 1px solid rgba(197,160,89,0.2); border-radius: 4px; padding: 0.6rem 1.2rem; font-family: var(--font-header); font-size: 0.8rem; color: var(--color-text-main); white-space: nowrap; opacity: 0; transform: translateY(10px); pointer-events: none; transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1); box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+      <div class="quest-tracker-container">
+        <button class="quest-tracker-btn glass-btn" onClick=${handleTrackerClick}>
+          ${hasQuest ? html`<span class="quest-badge ${isComplete ? 'ready' : ''}">${isComplete ? '✓' : '!'}</span>` : ''}
+          <span class="quest-tooltip">
             ${hasQuest ? (isComplete ? '✅ Mission bereit – Klicken zum Abholen' : `📋 ${currentQuest.text}`) : '📋 Keine aktive Mission'}
           </span>
         </button>

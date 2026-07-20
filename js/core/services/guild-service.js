@@ -13,6 +13,10 @@
 import StateManager from '../state/manager.js';
 import { sanitizeString, sanitizeNumber, sanitizeArray } from '../../utils/sanitizer.js';
 
+/** @typedef {import('../events/bus.js').default} EventBus */
+
+/** @typedef {import('./hero-service.js').default} HeroService */
+
 export class GuildService {
   /**
    * @param {StateManager} stateManager

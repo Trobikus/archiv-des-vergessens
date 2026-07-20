@@ -24,21 +24,20 @@ body {
 }
 
 /* ---- Custom Scrollbars (Dark Metal) ---- */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-::-webkit-scrollbar-track {
-    background: #0a0a0c;
-    border-left: 1px solid #1a1a20;
-}
-::-webkit-scrollbar-thumb {
-    background: #2a2a35;
-    border: 1px solid #111;
-    border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gold);
+@supports not (-moz-appearance: none) {
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #0a0a0c;
+        border-left: 1px solid #1a1a20;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #2a2a35;
+        border: 1px solid #111;
+        border-radius: 2px;
+    }
 }
 
 /* Firefox Scrollbar */

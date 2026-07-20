@@ -6,6 +6,7 @@ export default class EventBus {
     constructor() {
         this._listeners = new Map();
         this._globalListeners = [];
+        this._subscriptionMap = new Map(); // id -> event
         this._idCounter = 0;
         this._destroyed = false;
         this._publishing = false;
@@ -27,6 +28,7 @@ export default class EventBus {
         const id = ++this._idCounter;
         this._listeners.get(event).push({ id, callback, priority });
         this._listeners.get(event).sort((a, b) => b.priority - a.priority);
+        this._subscriptionMap.set(id, event);
         return id;
     }
 
@@ -39,16 +41,23 @@ export default class EventBus {
 
     unsubscribe(subscriptionId) {
         if (this._destroyed || subscriptionId === -1) return;
-        for (const [event, subscribers] of this._listeners.entries()) {
-            const index = subscribers.findIndex(sub => sub.id === subscriptionId);
-            if (index !== -1) {
-                subscribers.splice(index, 1);
-                if (subscribers.length === 0) {
-                    this._listeners.delete(event);
+
+        const event = this._subscriptionMap.get(subscriptionId);
+        if (event) {
+            const subscribers = this._listeners.get(event);
+            if (subscribers) {
+                const index = subscribers.findIndex(sub => sub.id === subscriptionId);
+                if (index !== -1) {
+                    subscribers.splice(index, 1);
+                    if (subscribers.length === 0) {
+                        this._listeners.delete(event);
+                    }
                 }
-                return;
             }
+            this._subscriptionMap.delete(subscriptionId);
+            return;
         }
+
         const globalIndex = this._globalListeners.findIndex(sub => sub.id === subscriptionId);
         if (globalIndex !== -1) {
             this._globalListeners.splice(globalIndex, 1);
@@ -69,12 +78,12 @@ export default class EventBus {
         this._publishing = true;
         try {
             this._publishNow(event, data);
+            while (this._queue.length > 0) {
+                const next = this._queue.shift();
+                this._publishNow(next.event, next.data);
+            }
         } finally {
             this._publishing = false;
-            if (this._queue.length > 0) {
-                const next = this._queue.shift();
-                this.publish(next.event, next.data);
-            }
         }
     }
 
@@ -129,6 +138,7 @@ export default class EventBus {
     clear() {
         this._listeners.clear();
         this._globalListeners = [];
+        this._subscriptionMap.clear();
         this._queue = [];
         this._idCounter = 0;
     }
