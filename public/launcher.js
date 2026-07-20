@@ -2,7 +2,7 @@
    LAUNCHER.JS - Logik & Interaktion für den Game Launcher
    ============================================================ */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Launcher] Initialisiere Interaktionslogik...');
 
   // DOM Elemente abrufen
@@ -12,9 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressFill = document.getElementById('progress-fill');
   const progressLabel = document.getElementById('progress-label');
   const particlesContainer = document.getElementById('particles-container');
+  const launcherContainer = document.querySelector('.launcher-container');
 
   let isDevMode = false;
   let updateState = 'checking'; // Zustände: 'checking', 'dev-mode', 'update-available', 'downloading', 'ready-to-install', 'ready-to-play'
+
+  // Hintergrundbild dynamisch per IPC laden (löst das asar-Pfad-Problem)
+  // In Dev: Projekt-Root / In Production: resources/ neben app.asar
+  if (launcherContainer && window.electronAPI && window.electronAPI.getResourcesPath) {
+    try {
+      const resourcesPath = await window.electronAPI.getResourcesPath();
+      // Slashes normalisieren für file:// URLs auf Windows
+      const bgPath = resourcesPath.replace(/\\/g, '/');
+      launcherContainer.style.backgroundImage = `url('file:///${bgPath}/background.png')`;
+      console.log('[Launcher] Hintergrundbild geladen aus:', bgPath);
+    } catch (e) {
+      console.warn('[Launcher] Konnte Hintergrundbild-Pfad nicht laden:', e);
+    }
+  }
 
   // Button anfangs während der Update-Prüfung deaktivieren
   if (actionBtn) {

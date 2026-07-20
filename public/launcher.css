@@ -44,8 +44,8 @@ html, body {
   position: relative;
   background-color: var(--color-bg);
   
-  /* Setze background.png aus dem Root-Ordner als Vollbild-Hintergrund */
-  background-image: url('../background.png');
+  /* Hintergrundbild wird dynamisch per launcher.js via IPC gesetzt */
+  /* (background.png liegt in extraResources, Pfad wird via process.resourcesPath aufgelöst) */
   background-size: cover;
   background-position: center;
   

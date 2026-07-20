@@ -29,6 +29,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   /** @returns {Promise<string>} Aktuelle App-Version */
   getVersion: () => ipcRenderer.invoke('app:version'),
 
+  /** @returns {Promise<string>} Pfad zu den extraResources (background.png etc.) */
+  getResourcesPath: () => ipcRenderer.invoke('app:resources-path'),
+
   // --- Auto-Updater ---
   /** Manuell nach Updates suchen (z.B. aus einem Einstellungsmenü) */
   checkForUpdate: () => ipcRenderer.invoke('updater:check'),

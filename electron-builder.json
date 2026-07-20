@@ -21,6 +21,10 @@
     {
       "from": "icon.ico",
       "to": "icon.ico"
+    },
+    {
+      "from": "background.png",
+      "to": "background.png"
     }
   ],
 

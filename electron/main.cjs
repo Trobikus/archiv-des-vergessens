@@ -257,6 +257,15 @@ ipcMain.handle('updater:check', async () => {
 
 ipcMain.handle('app:version', () => app.getVersion());
 
+// Gibt den Pfad zu den extraResources zurück (background.png etc.)
+// In Production: resources/ neben app.asar
+// In Dev: Projekt-Root
+ipcMain.handle('app:resources-path', () => {
+  return IS_DEV
+    ? path.join(__dirname, '..')
+    : process.resourcesPath;
+});
+
 // ============================================================
 // APP-LIFECYCLE
 // ============================================================
