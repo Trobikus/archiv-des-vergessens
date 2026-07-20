@@ -752,13 +752,41 @@ export async function bootGame() {
       // 4. Update-Fehler abfangen
       window.electronAPI.onUpdateEvent('update:error', (err) => {
         logger.error('[Update-Fehler]', err.message);
-        if (loadingText) {
-          loadingText.innerText = "Fehler beim Update. Initialisiere Archiv...";
+        
+        if (introTimeoutId) {
+          clearTimeout(introTimeoutId);
+          introTimeoutId = null;
         }
+
+        if (loadingText) {
+          loadingText.style.opacity = '1';
+          loadingText.innerText = "Update-Prüfung fehlgeschlagen. Starte Spiel...";
+        }
+        
         // Nach kurzer Anzeige der Fehlermeldung normal fortfahren
         setTimeout(() => {
           finishIntro();
-        }, 3000);
+        }, 2000);
+      });
+
+      // 5. Wenn kein Update verfügbar ist (Spiel ist aktuell)
+      window.electronAPI.onUpdateEvent('update:not-available', () => {
+        logger.info('[Update] Das Spiel ist auf dem neuesten Stand.');
+        
+        if (introTimeoutId) {
+          clearTimeout(introTimeoutId);
+          introTimeoutId = null;
+        }
+
+        if (loadingText) {
+          loadingText.style.opacity = '1';
+          loadingText.innerText = "Das Archiv ist auf dem neuesten Stand.";
+        }
+
+        // Nach einer kurzen Verzögerung normal fortfahren
+        setTimeout(() => {
+          finishIntro();
+        }, 1500);
       });
     }
   } else {
