@@ -92,7 +92,17 @@ export class NavigationController {
     this._elements.btnContinue?.addEventListener('click', () => this._loadGame());
     this._elements.btnOptions?.addEventListener('click', () => this.showOptions());
     this._elements.btnQuit?.addEventListener('click', () => this._quitGame());
-    this._elements.btnOptionsBack?.addEventListener('click', () => this.showMenu());
+    this._elements.btnOptionsBack?.addEventListener('click', () => {
+      // Automatisches Speichern beim Verlassen der Einstellungen
+      this._eventBus.publish('save:started');
+      const state = this._stateManager.getState();
+      this._saveManager.save(state).then(() => {
+        console.log('[Settings] Einstellungen erfolgreich persistent gespeichert.');
+      }).catch((err) => {
+        console.error('[Settings] Fehler beim automatischen Speichern der Einstellungen:', err);
+      });
+      this.showMenu();
+    });
     this._elements.btnHubBack?.addEventListener('click', () => this.showMenu());
     this._elements.btnBackToHub?.addEventListener('click', () => this.showHub());
 
@@ -425,10 +435,10 @@ export class NavigationController {
     if (autosaveEl) autosaveEl.value = String(settings.autosave);
     
     const musicVolEl = /** @type {HTMLInputElement} */ (document.getElementById('opt-music-volume'));
-    if (musicVolEl) musicVolEl.value = String(settings.music ? 40 : 0);
+    if (musicVolEl) musicVolEl.value = String(settings.volume !== undefined ? Math.round(settings.volume * 100) : (settings.music ? 40 : 0));
     
     const sfxVolEl = /** @type {HTMLInputElement} */ (document.getElementById('opt-sfx-volume'));
-    if (sfxVolEl) sfxVolEl.value = String(settings.sfx ? 60 : 0);
+    if (sfxVolEl) sfxVolEl.value = String(settings.sfxVolume !== undefined ? Math.round(settings.sfxVolume * 100) : (settings.sfx ? 60 : 0));
     
     // Audio-Toggle
     const audioBtn = document.getElementById('opt-audio-toggle');
@@ -507,9 +517,10 @@ export class NavigationController {
       const val = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
       const isMuted = val === 0;
       this._settingsManager.set('sfx', !isMuted);
+      this._settingsManager.set('sfxVolume', val / 100);
       this._stateManager.dispatch((state) => ({
         ...state,
-        settings: { ...state.settings, sfx: !isMuted }
+        settings: { ...state.settings, sfx: !isMuted, sfxVolume: val / 100 }
       }), 'settings/updateSfxVolume');
     });
 
