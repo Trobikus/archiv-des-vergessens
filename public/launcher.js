@@ -14,9 +14,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const particlesContainer = document.getElementById('particles-container');
   const launcherContainer = document.querySelector('.launcher-container');
   const updateToast = document.getElementById('update-toast');
+  const versionIndicator = document.getElementById('version-indicator');
 
   let isDevMode = false;
   let updateState = 'checking'; // Zustände: 'checking', 'dev-mode', 'update-available', 'downloading', 'ready-to-install', 'ready-to-play'
+
+  // Aktuelle App-Version asynchron ermitteln und im Indicator setzen
+  let appVersion = '1.6.1';
+  if (window.electronAPI && typeof window.electronAPI.getVersion === 'function') {
+    try {
+      appVersion = await window.electronAPI.getVersion();
+    } catch (e) {
+      console.warn('[Launcher] Konnte Version nicht aus IPC laden:', e);
+    }
+  }
+  if (versionIndicator) {
+    versionIndicator.innerText = `aktuellste Version v${appVersion}`;
+  }
 
   // Hintergrundbild dynamisch per IPC laden (löst das asar-Pfad-Problem)
   // In Dev: Projekt-Root / In Production: resources/ neben app.asar
@@ -126,6 +140,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateToast.classList.add('show');
       } else {
         updateToast.classList.remove('show');
+      }
+    }
+
+    // Steuerung des Version-Indikators
+    if (versionIndicator) {
+      if (state === 'ready-to-play') {
+        versionIndicator.classList.add('show');
+      } else {
+        versionIndicator.classList.remove('show');
       }
     }
   }
