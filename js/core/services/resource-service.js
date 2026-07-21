@@ -55,10 +55,27 @@ export class ResourceService {
     const safeAmount = sanitizeNumber(amount, 0);
     if (safeAmount <= 0) return;
     
-    this._stateManager.dispatch(Actions.addParticles(safeAmount), 'resource/addParticles');
+    // Lore-Bonus (Fluss der Seelen)
+    const state = this._stateManager.getState();
+    let multiplier = 1.0;
+    if (state.lore?.decrypted?.node_cataclysm === 'soulflow') {
+      multiplier *= 1.20;
+    }
+
+    // Finstre Pakte Multiplikatoren
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'greedy_souls') {
+      multiplier *= 2.0;
+    } else if (activePact === 'ruthless_greed') {
+      multiplier *= 0.7;
+    }
+
+    const finalAmount = Math.floor(safeAmount * multiplier);
+    
+    this._stateManager.dispatch(Actions.addParticles(finalAmount), 'resource/addParticles');
     this._eventBus.publish('resources:updated', { 
       type: 'particles', 
-      amount: safeAmount,
+      amount: finalAmount,
       total: this.getResources().particles
     });
   }
@@ -90,10 +107,27 @@ export class ResourceService {
     const safeAmount = sanitizeNumber(amount, 0);
     if (safeAmount <= 0) return;
     
-    this._stateManager.dispatch(Actions.addRelics(safeAmount), 'resource/addRelics');
+    // Lore-Bonus (Stein der Weisen)
+    const state = this._stateManager.getState();
+    let multiplier = 1.0;
+    if (state.lore?.decrypted?.node_cataclysm === 'philosopher') {
+      multiplier *= 1.15;
+    }
+
+    // Finstre Pakte Multiplikatoren
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'greedy_souls') {
+      multiplier *= 0.6;
+    } else if (activePact === 'ruthless_greed') {
+      multiplier *= 1.5;
+    }
+
+    const finalAmount = Math.floor(safeAmount * multiplier);
+    
+    this._stateManager.dispatch(Actions.addRelics(finalAmount), 'resource/addRelics');
     this._eventBus.publish('resources:updated', { 
       type: 'relics', 
-      amount: safeAmount,
+      amount: finalAmount,
       total: this.getResources().relics
     });
   }
@@ -116,6 +150,21 @@ export class ResourceService {
       total: this.getResources().relics
     });
     return true;
+  }
+  
+  /**
+   * Fügt Artefakte hinzu.
+   */
+  addArtifacts(amount) {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return;
+
+    this._stateManager.dispatch(Actions.addArtifacts(safeAmount), 'resource/addArtifacts');
+    this._eventBus.publish('resources:updated', {
+      type: 'artifacts',
+      amount: safeAmount,
+      total: this.getResources().artifacts
+    });
   }
   
   /**

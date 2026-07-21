@@ -19,9 +19,11 @@ import SaveManager from './save-manager.js';
 export class CloudManager {
   /**
    * @param {EventBus} eventBus
+   * @param {import('../services/network-service.js').NetworkService} [networkService]
    */
-  constructor(eventBus) {
+  constructor(eventBus, networkService = null) {
     this._eventBus = eventBus;
+    this._networkService = networkService;
     this._STORAGE_KEY = 'archiv_cloud_save';
     this._ENABLED_KEY = 'archiv_cloud_enabled';
     this._USER_ID_KEY = 'archiv_user_id';
@@ -33,6 +35,11 @@ export class CloudManager {
     this._isSynced = false;
     this._userId = this._getUserId();
     this._syncTimer = null;
+
+    this._pendingSaveResolve = null;
+    this._saveTimeout = null;
+    this._pendingLoadResolve = null;
+    this._loadTimeout = null;
 
     if (this._isEnabled && this._autoSync) {
       this._startAutoSync();
@@ -103,7 +110,6 @@ export class CloudManager {
     try {
       let data = saveData;
       if (!data) {
-        // Falls keine Daten übergeben, versuche SaveManager zu laden
         try {
           data = await SaveManager.load();
           if (!data) data = { timestamp: Date.now(), version: '1.6' };
@@ -121,7 +127,32 @@ export class CloudManager {
         device: navigator.userAgent || 'unknown'
       };
 
+      // Lokales Backup (immer sichern)
       localStorage.setItem(this._STORAGE_KEY, JSON.stringify(cloudData));
+
+      // Falls Netzwerk verbunden, senden wir echtes WebSocket-Paket
+      if (this._networkService && this._networkService.isConnected()) {
+        return new Promise((resolve) => {
+          this._pendingSaveResolve = resolve;
+          // Timeout nach 4s
+          this._saveTimeout = setTimeout(() => {
+            if (this._pendingSaveResolve === resolve) {
+              console.warn('[CloudManager] Cloud-Sichern Zeitüberschreitung, nutze lokales Backup.');
+              this._pendingSaveResolve = null;
+              this._lastSync = Date.now();
+              this._isSynced = true;
+              this._eventBus.publish('cloud:synced', {
+                timestamp: this._lastSync,
+                userId: this._userId
+              });
+              resolve(true);
+            }
+          }, 4000);
+
+          this._networkService.send('cloud:save', { saveData: data });
+        });
+      }
+
       this._lastSync = Date.now();
       this._isSynced = true;
 
@@ -138,20 +169,36 @@ export class CloudManager {
     }
   }
 
-  /**
-   * Lädt den letzten Cloud-Spielstand.
-   * @returns {Promise<Object|null>} – Spielstand oder null
-   */
   async loadFromCloud() {
     if (!this._isEnabled) return null;
 
+    if (this._networkService && this._networkService.isConnected()) {
+      return new Promise((resolve) => {
+        this._pendingLoadResolve = resolve;
+        // Timeout nach 4s
+        this._loadTimeout = setTimeout(() => {
+          if (this._pendingLoadResolve === resolve) {
+            console.warn('[CloudManager] Cloud-Laden Zeitüberschreitung, lade lokales Backup.');
+            this._pendingLoadResolve = null;
+            resolve(this._loadFromLocal());
+          }
+        }, 4000);
+
+        this._networkService.send('cloud:load');
+      });
+    }
+
+    return this._loadFromLocal();
+  }
+
+  _loadFromLocal() {
     try {
       const raw = localStorage.getItem(this._STORAGE_KEY);
       if (!raw) return null;
       const cloudData = JSON.parse(raw);
       return cloudData.saveData || null;
     } catch (error) {
-      console.error('[CloudManager] Laden aus Cloud fehlgeschlagen:', error);
+      console.error('[CloudManager] Laden aus lokalem Backup fehlgeschlagen:', error);
       return null;
     }
   }
@@ -226,10 +273,78 @@ export class CloudManager {
   }
 
   /**
+   * Callbacks von NetworkService bei erfolgreichen Serverantworten
+   */
+  onCloudSaveSuccess(timestamp) {
+    if (this._saveTimeout) clearTimeout(this._saveTimeout);
+    this._lastSync = timestamp || Date.now();
+    this._isSynced = true;
+    console.log('[CloudManager] Spielstand erfolgreich online gesichert!');
+    
+    this._eventBus.publish('cloud:synced', {
+      timestamp: this._lastSync,
+      userId: this._userId
+    });
+
+    if (this._pendingSaveResolve) {
+      const resolve = this._pendingSaveResolve;
+      this._pendingSaveResolve = null;
+      resolve(true);
+    }
+  }
+
+  onCloudSaveError(error) {
+    if (this._saveTimeout) clearTimeout(this._saveTimeout);
+    console.error('[CloudManager] Online-Sichern fehlgeschlagen:', error);
+    this._eventBus.publish('cloud:syncFailed', { error });
+
+    if (this._pendingSaveResolve) {
+      const resolve = this._pendingSaveResolve;
+      this._pendingSaveResolve = null;
+      resolve(false);
+    }
+  }
+
+  onCloudLoadSuccess(payload) {
+    if (this._loadTimeout) clearTimeout(this._loadTimeout);
+    console.log('[CloudManager] Spielstand erfolgreich online geladen!');
+
+    if (payload && payload.saveData) {
+      const cloudData = {
+        userId: this._userId,
+        timestamp: payload.timestamp || Date.now(),
+        saveData: payload.saveData,
+        version: payload.version || '1.6',
+        device: 'cloud-server'
+      };
+      localStorage.setItem(this._STORAGE_KEY, JSON.stringify(cloudData));
+    }
+
+    if (this._pendingLoadResolve) {
+      const resolve = this._pendingLoadResolve;
+      this._pendingLoadResolve = null;
+      resolve(payload ? payload.saveData : null);
+    }
+  }
+
+  onCloudLoadError(error) {
+    if (this._loadTimeout) clearTimeout(this._loadTimeout);
+    console.error('[CloudManager] Online-Laden fehlgeschlagen:', error);
+
+    if (this._pendingLoadResolve) {
+      const resolve = this._pendingLoadResolve;
+      this._pendingLoadResolve = null;
+      resolve(this._loadFromLocal());
+    }
+  }
+
+  /**
    * Zerstört den Service.
    */
   destroy() {
     this._stopAutoSync();
+    if (this._saveTimeout) clearTimeout(this._saveTimeout);
+    if (this._loadTimeout) clearTimeout(this._loadTimeout);
     this._eventBus = null;
   }
 }

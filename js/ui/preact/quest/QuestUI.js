@@ -75,7 +75,7 @@ export function QuestUI({ stateManager, eventBus, services }) {
                 <div class="quest-empty-text">Alle Hauptmissionen abgeschlossen!</div>
                 <div class="quest-empty-hint" style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.3rem;">Du hast alle Herausforderungen gemeistert.</div>
               </div>
-            ` : mainQuests.slice(currentIndex, currentIndex + 10).map((q, idx) => {
+            ` : mainQuests.slice(currentIndex, currentIndex + 3).map((q, idx) => {
               const isCurrent = idx === 0;
               const isReady = isCurrent && isComplete;
               return html`

@@ -14,6 +14,7 @@ import StateManager from '../state/manager.js';
 import { sanitizeObject } from '../../utils/sanitizer.js';
 import { EVENTS } from '../events/definitions.js';
 import { CODEX_ENTRIES } from '../../data/codex_entries.js';
+import { LORE_NODES } from '../../data/lore-nodes.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -285,6 +286,77 @@ export class CodexService {
       };
     }
     return result;
+  }
+
+  /**
+   * Entschlüsselt einen Lore-Chroniken-Knoten.
+   */
+  decryptNode(nodeId, choiceId) {
+    const node = LORE_NODES[nodeId];
+    if (!node) return false;
+
+    const state = this._stateManager.getState();
+    const decrypted = state.lore?.decrypted || {};
+
+    if (decrypted[nodeId]) {
+      this._eventBus.publish('ui:showToast', {
+        message: '⚠️ Dieser Eintrag wurde bereits dechiffriert.',
+        type: 'warning',
+        duration: 3000
+      });
+      return false;
+    }
+
+    const bossProgress = state.hero.prestige?.bossProgress || 0;
+    const prestigeLevel = state.hero.prestige?.level || 0;
+    const currentMaxBoss = (prestigeLevel * 20) + bossProgress;
+    if (currentMaxBoss < node.requiredBoss) {
+      this._eventBus.publish('ui:showToast', {
+        message: `🔒 Benötigt das Besiegen von Boss ${node.requiredBoss}.`,
+        type: 'warning',
+        duration: 3000
+      });
+      return false;
+    }
+
+    const rawParticles = BigInt(state.resources.particles || '0');
+    const cost = BigInt(node.cost);
+    if (rawParticles < cost) {
+      this._eventBus.publish('ui:showToast', {
+        message: '❌ Nicht genügend Mneme-Partikel vorhanden.',
+        type: 'error',
+        duration: 3000
+      });
+      return false;
+    }
+
+    const choice = node.choices.find(c => c.id === choiceId);
+    if (!choice) return false;
+
+    const nextParticles = (rawParticles - cost).toString();
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      resources: {
+        ...state.resources,
+        particles: nextParticles
+      },
+      lore: {
+        ...state.lore,
+        decrypted: {
+          ...state.lore?.decrypted,
+          [nodeId]: choiceId
+        }
+      }
+    }), 'lore/decryptNode');
+
+    this._eventBus.publish('lore:nodeDecrypted', { nodeId, choiceId, effects: choice.effects });
+    this._eventBus.publish('ui:showToast', {
+      message: `🕯️ Chronik dechiffriert: ${node.title}!`,
+      type: 'success',
+      duration: 3000
+    });
+
+    return true;
   }
 }
 

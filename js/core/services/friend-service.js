@@ -49,7 +49,7 @@ export class FriendService {
       return { success: false, message: 'Du hast die maximale Anzahl an Freunden erreicht.' };
     }
     if (state.friends.pending.some(r => r.from === cleanName && r.to === playerName)) {
-      return { success: false, message: 'Du hast bereits eine Anfrage von dieser Person.' };
+      return this.acceptFriend(cleanName);
     }
     if (state.friends.sent.some(r => r.to === cleanName)) {
       return { success: false, message: 'Du hast bereits eine Anfrage an diese Person gesendet.' };
@@ -69,6 +69,33 @@ export class FriendService {
       type: 'info',
       duration: 2000
     });
+
+    // --- SIMULATION ---
+    const simulatedNames = ["Eldor", "Chronos", "Luminos", "Thalia", "Aria", "Kaelen", "Morrigan", "Archivar", "Mnemosyne"];
+    const isSimulated = simulatedNames.map(n => n.toLowerCase()).includes(cleanName.toLowerCase());
+    const delay = isSimulated ? 5000 : 10000;
+
+    setTimeout(() => {
+      const currentState = this._stateManager.getState();
+      const stillSent = currentState.friends.sent.some(r => r.to === cleanName);
+      if (stillSent && currentState.friends.list.length < this._maxFriends) {
+        this._stateManager.dispatch((state) => ({
+          ...state,
+          friends: {
+            ...state.friends,
+            sent: state.friends.sent.filter(r => r.to !== cleanName),
+            list: [...state.friends.list, { name: cleanName, added: Date.now() }]
+          }
+        }), 'friend/simulateAccept');
+
+        this._eventBus.publish('friend:accepted', { name: cleanName });
+        this._eventBus.publish('ui:showToast', {
+          message: `🤝 ${cleanName} hat deine Freundschaftsanfrage angenommen!`,
+          type: 'success',
+          duration: 3000
+        });
+      }
+    }, delay);
 
     return { success: true, message: `Anfrage an ${cleanName} gesendet.` };
   }
@@ -109,6 +136,67 @@ export class FriendService {
   }
 
   /**
+   * Lehnt eine Freundschaftsanfrage ab.
+   */
+  declineFriendRequest(name) {
+    const state = this._stateManager.getState();
+    const playerName = state.hero.name;
+    const cleanName = sanitizeString(name, 50, '');
+
+    const request = state.friends.pending.find(r => r.from === cleanName && r.to === playerName);
+    if (!request) {
+      return { success: false, message: 'Keine Anfrage von dieser Person.' };
+    }
+
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      friends: {
+        ...state.friends,
+        pending: state.friends.pending.filter(r => r !== request)
+      }
+    }), 'friend/decline');
+
+    this._eventBus.publish('friend:requestDeclined', { name: cleanName });
+    this._eventBus.publish('ui:showToast', {
+      message: `❌ Freundschaftsanfrage von ${cleanName} abgelehnt.`,
+      type: 'info',
+      duration: 2000
+    });
+
+    return { success: true, message: `Anfrage von ${cleanName} abgelehnt.` };
+  }
+
+  /**
+   * Zieht eine gesendete Freundschaftsanfrage zurück.
+   */
+  cancelSentRequest(name) {
+    const state = this._stateManager.getState();
+    const cleanName = sanitizeString(name, 50, '');
+
+    const request = state.friends.sent.find(r => r.to === cleanName);
+    if (!request) {
+      return { success: false, message: 'Keine gesendete Anfrage an diese Person.' };
+    }
+
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      friends: {
+        ...state.friends,
+        sent: state.friends.sent.filter(r => r.to !== cleanName)
+      }
+    }), 'friend/cancelSent');
+
+    this._eventBus.publish('friend:sentCancelled', { name: cleanName });
+    this._eventBus.publish('ui:showToast', {
+      message: `🚫 Freundschaftsanfrage an ${cleanName} zurückgezogen.`,
+      type: 'info',
+      duration: 2000
+    });
+
+    return { success: true, message: `Anfrage an ${cleanName} zurückgezogen.` };
+  }
+
+  /**
    * Entfernt einen Freund.
    */
   removeFriend(name) {
@@ -135,6 +223,34 @@ export class FriendService {
     });
 
     return { success: true, message: `${cleanName} entfernt.` };
+  }
+
+  /**
+   * Simuliert eine eingehende Freundschaftsanfrage.
+   */
+  simulateIncomingRequest(name) {
+    const state = this._stateManager.getState();
+    const playerName = state.hero.name;
+    const cleanName = sanitizeString(name, 50, '');
+
+    if (cleanName === playerName) return;
+    if (state.friends.list.some(f => f.name === cleanName)) return;
+    if (state.friends.pending.some(r => r.from === cleanName)) return;
+
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      friends: {
+        ...state.friends,
+        pending: [...state.friends.pending, { from: cleanName, to: playerName, timestamp: Date.now() }]
+      }
+    }), 'friend/receiveRequest');
+
+    this._eventBus.publish('friend:requestReceived', { from: cleanName, to: playerName });
+    this._eventBus.publish('ui:showToast', {
+      message: `🔔 Neue Freundschaftsanfrage von ${cleanName}!`,
+      type: 'info',
+      duration: 3000
+    });
   }
 
   /**

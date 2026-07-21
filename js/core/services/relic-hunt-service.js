@@ -64,6 +64,11 @@ export class RelicHuntService {
     chance += hero.level * CONFIG.RELIC_HUNT.LEVEL_BONUS;
     chance += this._heroService.getAttributes().attack * CONFIG.RELIC_HUNT.POWER_BONUS;
     chance += hero.prestige.level * (CONFIG.RELIC_HUNT.PRESTIGE_BONUS || 0.01);
+    
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'ruthless_greed') {
+      chance *= 1.5;
+    }
     chance = clamp(chance, CONFIG.RELIC_HUNT.MIN_CHANCE, CONFIG.RELIC_HUNT.MAX_CHANCE);
 
     const roll = RNG.next();
@@ -72,7 +77,10 @@ export class RelicHuntService {
     let message = '';
 
     if (success) {
-      const relics = 1 + Math.floor(RNG.next() * 2) + Math.floor(hero.level / 10);
+      let relics = 1 + Math.floor(RNG.next() * 2) + Math.floor(hero.level / 10);
+      if (activePact === 'ruthless_greed') {
+        relics = Math.floor(relics * 1.5);
+      }
       const finalRelics = Math.max(1, relics);
       this._resourceService.addRelics(finalRelics);
       const exp = 5 + Math.floor(RNG.next() * 5);
@@ -121,6 +129,10 @@ export class RelicHuntService {
     chance += hero.level * CONFIG.RELIC_HUNT.LEVEL_BONUS;
     chance += this._heroService.getAttributes().attack * CONFIG.RELIC_HUNT.POWER_BONUS;
     chance += hero.prestige.level * (CONFIG.RELIC_HUNT.PRESTIGE_BONUS || 0.01);
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'ruthless_greed') {
+      chance *= 1.5;
+    }
     return clamp(chance, CONFIG.RELIC_HUNT.MIN_CHANCE, CONFIG.RELIC_HUNT.MAX_CHANCE);
   }
 
