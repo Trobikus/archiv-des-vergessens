@@ -372,3 +372,19 @@ html, body {
   opacity: 0.65; /* Dezent gedimmt */
   transform: translateY(0);
 }
+
+/* G. Progress Fill Validating State (Pulsierende Gold-Animation) */
+.progress-fill.pulse {
+  animation: pulse-gold 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-gold {
+  0% {
+    box-shadow: 0 0 5px var(--color-gold);
+    filter: brightness(1);
+  }
+  100% {
+    box-shadow: 0 0 20px var(--color-gold-hover);
+    filter: brightness(1.25);
+  }
+}

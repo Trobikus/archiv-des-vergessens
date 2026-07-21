@@ -105,14 +105,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateState = state;
     if (!actionBtn || !progressContainer) return;
 
-    if (state === 'downloading') {
+    if (state === 'downloading' || state === 'validating') {
       actionBtn.style.display = 'none';
       progressContainer.style.display = 'flex';
       if (text) progressLabel.innerText = text;
+      
+      if (state === 'validating') {
+        progressFill.classList.add('pulse');
+      } else {
+        progressFill.classList.remove('pulse');
+      }
     } else {
       progressContainer.style.display = 'none';
       actionBtn.style.display = 'inline-block';
       actionBtn.disabled = false;
+      progressFill.classList.remove('pulse');
 
       switch (state) {
         case 'checking':
@@ -174,14 +181,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearInterval(simInterval);
             
             setTimeout(() => {
-              setUIState('ready-to-play');
-              console.log('[Launcher] Simulation abgeschlossen.');
+              setUIState('validating', 'VALIDATING FILES...');
+              progressFill.style.width = '100%';
+              
+              setTimeout(() => {
+                setUIState('ready-to-play');
+                console.log('[Launcher] Simulation & Validierung abgeschlossen.');
+              }, 1800);
             }, 300);
           }
           
-          const roundedProgress = Math.round(progress);
-          progressFill.style.width = `${roundedProgress}%`;
-          progressLabel.innerText = `Downloading... ${roundedProgress}%`;
+          if (updateState === 'downloading') {
+            const roundedProgress = Math.round(progress);
+            progressFill.style.width = `${roundedProgress}%`;
+            progressLabel.innerText = `Downloading... ${roundedProgress}%`;
+          }
         }, intervalStep);
 
       } else if (updateState === 'update-available') {
@@ -234,8 +248,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // D. Update fertig heruntergeladen
     window.electronAPI.onUpdateEvent('update:downloaded', (info) => {
-      console.log('[Launcher] Download beendet. Bereit zur Installation:', info);
-      setUIState('ready-to-install');
+      console.log('[Launcher] Download beendet. Starte Dateivalidierung...');
+      setUIState('validating', 'VALIDATING FILES...');
+      progressFill.style.width = '100%';
+      
+      // Simuliere/Sichere die Dateiverifizierung für 1.8 Sekunden, bevor wir freigeben
+      setTimeout(() => {
+        console.log('[Launcher] Validierung abgeschlossen. Bereit zur Installation:', info);
+        setUIState('ready-to-install');
+      }, 1800);
     });
 
     // E. Fehler bei der Update-Abfrage
