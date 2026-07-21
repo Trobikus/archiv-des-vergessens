@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           actionBtn.innerText = 'INSTALL GAME';
           break;
         case 'update-available':
-          actionBtn.innerText = 'DOWNLOAD UPDATE';
+          actionBtn.innerText = 'UPDATE';
           break;
         case 'ready-to-install':
           actionBtn.innerText = 'INSTALL UPDATE';

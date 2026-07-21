@@ -144,6 +144,8 @@ function createWindow() {
 // ============================================================
 
 function startAutoUpdater() {
+  autoUpdater.autoDownload = false; // Verhindert den automatischen Download im Hintergrund!
+  
   // Helfer, um Events an das aktive Fenster (Launcher oder Hauptspiel) zu senden
   function sendToActiveWindow(channel, data) {
     if (launcherWindow && !launcherWindow.isDestroyed()) {
