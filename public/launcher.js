@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const progressLabel = document.getElementById('progress-label');
   const particlesContainer = document.getElementById('particles-container');
   const launcherContainer = document.querySelector('.launcher-container');
+  const updateToast = document.getElementById('update-toast');
 
   let isDevMode = false;
   let updateState = 'checking'; // Zustände: 'checking', 'dev-mode', 'update-available', 'downloading', 'ready-to-install', 'ready-to-play'
@@ -116,6 +117,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         case 'ready-to-play':
           actionBtn.innerText = 'PLAY ADVENTURE';
           break;
+      }
+    }
+
+    // Steuerung des Update-Erfolgs-Toasts
+    if (updateToast) {
+      if (state === 'ready-to-install') {
+        updateToast.classList.add('show');
+      } else {
+        updateToast.classList.remove('show');
       }
     }
   }
