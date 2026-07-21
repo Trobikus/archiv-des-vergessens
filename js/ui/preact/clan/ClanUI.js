@@ -162,11 +162,33 @@ export function ClanUI({ stateManager, eventBus, services }) {
       </div>
     `;
   };
+  const idleMembers = clanMembers.filter(m => !expeditionStatus[m.id]);
+
+  const handleMultipleExpeditions = () => {
+    const idleIds = idleMembers.map(m => m.id);
+    if (idleIds.length === 0) return;
+    
+    const count = clanService.startMultipleExpeditions(idleIds, 20);
+    if (count > 0) {
+      eventBus.publish('ui:showToast', {
+        message: `🚀 ${count} Mitglieder auf Expedition entsandt!`,
+        type: 'success',
+        duration: 2500
+      });
+    }
+  };
 
   return html`
     <div class="clan-ui-container panels-grid">
       <div class="glass-panel" style="padding: 1.5rem;">
-        <h3 class="panel-title cinzel text-gold">Mitglieder des Bundes</h3>
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(197,160,89,0.15); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+          <h3 class="panel-title cinzel text-gold" style="margin: 0; border: none; padding: 0;">Mitglieder des Bundes</h3>
+          ${idleMembers.length > 1 ? html`
+            <button class="glass-btn primary btn-small epic-pulse" style="padding: 4px 10px; font-size: 0.75rem;" onClick=${handleMultipleExpeditions}>
+              🚀 Alle Bereiten entsenden (${idleMembers.length})
+            </button>
+          ` : null}
+        </div>
         <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 1rem;">
           <table id="clan-members-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
             <thead>

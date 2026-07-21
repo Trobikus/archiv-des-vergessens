@@ -121,4 +121,39 @@ describe('ClanService', () => {
     expect(members.length).toBe(1000);
     expect(members[0].progress).toBeGreaterThan(0);
   });
+
+  test('startMultipleExpeditions starts expeditions for multiple members in a single batch', () => {
+    stateManager.dispatch((state) => ({
+      ...state,
+      clan: {
+        ...state.clan,
+        members: [
+          { id: 10, name: 'M1', role: 'collector', level: 1, experience: 0, progress: 0, expToNextLevel: 50, baseCollectRate: 1.0 },
+          { id: 11, name: 'M2', role: 'collector', level: 2, experience: 0, progress: 0, expToNextLevel: 50, baseCollectRate: 1.0 },
+          { id: 12, name: 'M3', role: 'collector', level: 3, experience: 0, progress: 0, expToNextLevel: 50, baseCollectRate: 1.0 }
+        ]
+      }
+    }), 'mockMultiple');
+
+    const startedEvents = [];
+    eventBus.subscribe('expedition:started', (data) => {
+      startedEvents.push(data);
+    });
+
+    const count = clanService.startMultipleExpeditions([10, 11, 12], 20);
+    expect(count).toBe(3);
+    expect(clanService.isOnExpedition(10)).toBe(true);
+    expect(clanService.isOnExpedition(11)).toBe(true);
+    expect(clanService.isOnExpedition(12)).toBe(true);
+
+    // Verify events were fired
+    expect(startedEvents.length).toBe(3);
+    expect(startedEvents[0].memberId).toBe(10);
+    expect(startedEvents[1].memberId).toBe(11);
+    expect(startedEvents[2].memberId).toBe(12);
+
+    // Try starting again (should start 0 because they are already on expedition)
+    const count2 = clanService.startMultipleExpeditions([10, 11], 20);
+    expect(count2).toBe(0);
+  });
 });

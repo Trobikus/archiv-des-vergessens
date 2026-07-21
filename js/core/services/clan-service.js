@@ -154,6 +154,53 @@ export class ClanService {
   }
   
   /**
+   * Startet eine Expedition für mehrere Mitglieder gleichzeitig (effizient gebatcht).
+   */
+  startMultipleExpeditions(memberIds, durationSeconds = 20) {
+    if (!Array.isArray(memberIds) || memberIds.length === 0) return 0;
+    
+    const duration = sanitizeNumber(durationSeconds, 20);
+    const successfulStarts = [];
+    const newStatuses = {};
+    
+    for (const memberId of memberIds) {
+      const member = this.getMember(memberId);
+      if (!member) continue;
+      if (this._activeExpeditions.has(memberId)) continue;
+      
+      const successChance = this._calculateSuccessChance(member);
+      
+      this._activeExpeditions.set(memberId, {
+        remainingTime: duration * 1000,
+        duration: duration,
+        successChance: clamp(successChance, 0.05, 0.95)
+      });
+      
+      successfulStarts.push(memberId);
+      newStatuses[memberId] = true;
+      
+      // Einzelne Events feuern für bestehende Listener (z.B. Achievements)
+      this._eventBus.publish('expedition:started', { memberId, duration, successChance });
+    }
+    
+    if (successfulStarts.length === 0) return 0;
+    
+    // Status gebatcht im State speichern
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      clan: {
+        ...state.clan,
+        expeditionStatus: {
+          ...state.clan.expeditionStatus,
+          ...newStatuses
+        }
+      }
+    }), 'clan/expeditionStartMultiple');
+    
+    return successfulStarts.length;
+  }
+  
+  /**
    * Verarbeitet einen Slow-Tick (Produktion + Expeditionen).
    */
   _processTick(delta) {
