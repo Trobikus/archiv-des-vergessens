@@ -1,6 +1,6 @@
 {
   "userId": "user_mrsfuc5p_wi5f",
-  "timestamp": 1784599584317,
+  "timestamp": 1784600366441,
   "saveData": {
     "hero": {
       "id": "hero_1",
@@ -459,7 +459,7 @@
     "system": {
       "currentView": "hub",
       "isSaving": false,
-      "lastSave": 1784599569326,
+      "lastSave": 1784600360345,
       "gameVersion": "1.6",
       "tutorialStep": -1,
       "tutorialFinished": true,

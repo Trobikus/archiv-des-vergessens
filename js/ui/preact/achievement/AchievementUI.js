@@ -27,7 +27,7 @@ export function AchievementUI({ stateManager, eventBus, services }) {
     <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
       <div class="modal-content glass-panel" onClick=${(e) => e.stopPropagation()}>
         <button class="modal-close" onClick=${() => setIsOpen(false)}>×</button>
-        <h2 class="achievement-modal-title">🏆 Erfolge &amp; Meilensteine</h2>
+        <h2 class="achievement-modal-title">🏆 Erfolge & Meilensteine</h2>
         <div class="achievement-modal-subtitle" style="text-align: center; color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 1rem; font-style: italic;">Erreiche Ziele, um seltene Titel und Belohnungen freizuschalten.</div>
 
         <div class="modal-scroll-area" style="max-height: 60vh; overflow-y: auto; padding-right: 0.5rem;">

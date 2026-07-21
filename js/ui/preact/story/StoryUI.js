@@ -45,7 +45,7 @@ export function StoryUI({ stateManager, eventBus, services }) {
     <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
       <div class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;" onClick=${(e) => e.stopPropagation()}>
         <button class="modal-close" id="story-close" onClick=${() => setIsOpen(false)}>×</button>
-        <h2 class="story-modal-title">📖 Story &amp; Bosse</h2>
+        <h2 class="story-modal-title">📖 Story & Bosse</h2>
 
         <!-- Chapter-Navigation -->
         <div class="story-chapter-nav">

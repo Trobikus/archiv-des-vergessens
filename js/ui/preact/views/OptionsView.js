@@ -65,7 +65,7 @@ export function OptionsView({ stateManager, eventBus, services }) {
 
         <div class="options-panel mt-2">
           <!-- Grafik -->
-          <h3 class="options-header">Grafik &amp; UI</h3>
+          <h3 class="options-header">Grafik & UI</h3>
           <div class="option-row flex-between mb-1">
             <span class="option-label text-muted">Mystisches Netzwerk (Partikel)</span>
             <span class="option-control">
@@ -82,7 +82,7 @@ export function OptionsView({ stateManager, eventBus, services }) {
           <!-- Audio -->
           <h3 class="options-header mt-2">Audio</h3>
           <div class="option-row flex-between mb-1">
-            <span class="option-label text-muted">Musik &amp; Soundeffekte</span>
+            <span class="option-label text-muted">Musik & Soundeffekte</span>
             <span class="option-control">
               <button id="opt-audio-toggle" class="glass-btn btn-small" type="button" onClick=${handleAudioToggle}>
                 ${settings?.music ? '🔊 Aktiv' : '🔇 Stumm'}
@@ -103,7 +103,7 @@ export function OptionsView({ stateManager, eventBus, services }) {
           </div>
 
           <!-- Cloud -->
-          <h3 class="options-header mt-2">Cloud &amp; Synchronisation</h3>
+          <h3 class="options-header mt-2">Cloud & Synchronisation</h3>
           <div class="option-row flex-between mb-1">
             <span class="option-label text-muted">Cloud-Sync aktivieren</span>
             <span class="option-control">

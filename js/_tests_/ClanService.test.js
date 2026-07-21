@@ -86,6 +86,48 @@ describe('ClanService', () => {
     expect(resources.particles).toBeGreaterThan(100);
   });
 
+  test('processTick processes archivist and elder roles and awards artifacts', () => {
+    stateManager.dispatch((state) => ({
+      ...state,
+      resources: {
+        ...state.resources,
+        particles: '0',
+        relics: '0',
+        artifacts: '0'
+      },
+      clan: {
+        ...state.clan,
+        members: [
+          {
+            id: 1,
+            name: 'Archivist Member',
+            role: 'archivist',
+            level: 1,
+            experience: 0,
+            progress: 90,
+            expToNextLevel: 50,
+            baseCollectRate: 1.0
+          },
+          {
+            id: 2,
+            name: 'Elder Member',
+            role: 'elder',
+            level: 1,
+            experience: 0,
+            progress: 90,
+            expToNextLevel: 50,
+            baseCollectRate: 1.0
+          }
+        ]
+      }
+    }), 'mockEpicLegendary');
+
+    eventBus.publish('game:slowTick', { delta: 10000 });
+
+    const resources = resourceService.getResources();
+    expect(Number(resources.particles) + Number(resources.relics) + Number(resources.artifacts)).toBeGreaterThan(0);
+  });
+
   test('performance and correctness with 1000 members', () => {
     // Generate 1000 members
     const newMembers = [];

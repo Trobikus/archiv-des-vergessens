@@ -29,13 +29,34 @@ export function MainApp({ stateManager, eventBus, services }) {
   const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
   const [newGameName, setNewGameName] = useState('Der Mneme-Bund');
+  
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: 'BESTÄTIGUNG',
+    message: '',
+    isAlert: false,
+    onConfirm: null,
+    onCancel: null
+  });
 
   useEffect(() => {
     const showNewGame = () => setNewGameModalOpen(true);
     const hideNewGame = () => setNewGameModalOpen(false);
 
+    const openConfirm = (data) => {
+      setConfirmModal({
+        isOpen: true,
+        title: data.title || (data.isAlert ? 'HINWEIS' : 'BESTÄTIGUNG'),
+        message: data.message || '',
+        isAlert: data.isAlert || false,
+        onConfirm: data.onConfirm,
+        onCancel: data.onCancel
+      });
+    };
+
     eventBus.subscribe('ui:showNewGameModal', showNewGame);
     eventBus.subscribe('ui:hideNewGameModal', hideNewGame);
+    eventBus.subscribe('ui:openConfirm', openConfirm);
 
     return () => {
       // unsubscribing happens automatically on unmount if we use eventBus helper,
@@ -104,6 +125,30 @@ export function MainApp({ stateManager, eventBus, services }) {
             <div class="flex-row gap-md">
               <button id="new-game-cancel-btn" class="glass-btn" style="flex: 1;" type="button" onClick=${handleNewGameCancel}>Abbrechen</button>
               <button id="new-game-start-btn" class="glass-btn primary" style="flex: 1.5;" type="button" onClick=${handleNewGameStart}>Reise beginnen</button>
+            </div>
+          </div>
+        </div>
+      ` : null}
+
+      <!-- SYSTEMEIGENER BESTÄTIGUNGS-MODAL (CUSTOM POPUP) -->
+      ${confirmModal.isOpen ? html`
+        <div class="modal-overlay" style="display: flex; z-index: 12000;" role="dialog" aria-label="Bestätigung">
+          <div class="modal-content-small glass-panel" style="width: 450px; text-align: center; max-width: 95vw;">
+            <h2 class="glow-text text-gold cinzel text-center" style="margin-bottom: 0.8rem; font-size: 1.4rem;">${confirmModal.title}</h2>
+            <div class="glass-inner-panel mb-2" style="padding: 1.2rem; line-height: 1.6; text-align: center; background: rgba(0,0,0,0.3); border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.15);">
+              <span class="text-main" style="font-size: 1rem; color: #e2d5c3; font-family: var(--font-main);">${confirmModal.message}</span>
+            </div>
+            <div class="flex-row gap-md" style="margin-top: 1rem; width: 100%; display: flex; justify-content: center; gap: 0.8rem;">
+              ${!confirmModal.isAlert ? html`
+                <button class="glass-btn btn-small" style="flex: 1; padding: 0.8rem 1rem;" onClick=${() => {
+                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                  if (confirmModal.onCancel) confirmModal.onCancel();
+                }}>ABBRECHEN</button>
+              ` : null}
+              <button class="glass-btn primary btn-small" style=${confirmModal.isAlert ? "flex: 1; max-width: 200px; padding: 0.8rem 1rem;" : "flex: 1.5; padding: 0.8rem 1rem;"} onClick=${() => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                if (confirmModal.onConfirm) confirmModal.onConfirm();
+              }}>OK</button>
             </div>
           </div>
         </div>

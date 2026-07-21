@@ -45,6 +45,31 @@ export async function bootGame() {
   const eventBus = new EventBus();
   logger.setEventBus(eventBus);
 
+  // Registriere globale Helper-Funktionen für spieleigene, wunderschöne Popups
+  window.gameConfirm = (message, title = 'BESTÄTIGUNG') => {
+    return new Promise((resolve) => {
+      eventBus.publish('ui:openConfirm', {
+        title,
+        message,
+        isAlert: false,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false)
+      });
+    });
+  };
+
+  window.gameAlert = (message, title = 'HINWEIS') => {
+    return new Promise((resolve) => {
+      eventBus.publish('ui:openConfirm', {
+        title,
+        message,
+        isAlert: true,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false)
+      });
+    });
+  };
+
   // Globale Fehlerbehandlung
   window.addEventListener('error', (e) => {
     logger.error(`[Global Error] ${e.message}`, e.error?.stack);
@@ -150,6 +175,7 @@ export async function bootGame() {
       // Erzwingen, dass das Intro beim Spielstart geladen wird, statt direkt ins Menü/Hub zu springen
       if (savedState.system) {
         savedState.system.currentView = 'intro';
+        savedState.system.originalLastSave = savedState.system.lastSave;
       }
       stateManager.dispatch(() => savedState, 'boot/hydrate');
       // Expeditionen bereinigen
@@ -395,7 +421,8 @@ export async function bootGame() {
     // Zero-Alloc Render Loop · OffscreenCanvas Stamps · Screen-Blend
     // ----------------------------------------------------------
     const _startIntroParticles = () => {
-      const canvas = document.getElementById('intro-particle-canvas');
+      /** @type {HTMLCanvasElement} */
+      const canvas = (/** @type {any} */ (document.getElementById('intro-particle-canvas')));
       if (!canvas) return null;
 
       // alpha:true für transparenten Hintergrund (screen-blending über dunklem BG)
@@ -743,13 +770,20 @@ export async function bootGame() {
     // ============================================================
     // ELECTRON AUTO-UPDATER INTEGRATION (IN-GAME UI)
     // ============================================================
-    const updateOverlay = document.getElementById('update-overlay');
-    const updateTitle = document.getElementById('update-title');
-    const updateMessage = document.getElementById('update-message');
-    const updateConfirmBtn = document.getElementById('update-confirm-btn');
-    const updateCancelBtn = document.getElementById('update-cancel-btn');
-    const loadingBar = document.querySelector('.intro-loading-bar');
-    const loadingText = document.getElementById('intro-loading-text');
+    /** @type {HTMLElement} */
+    const updateOverlay = (/** @type {any} */ (document.getElementById('update-overlay')));
+    /** @type {HTMLElement} */
+    const updateTitle = (/** @type {any} */ (document.getElementById('update-title')));
+    /** @type {HTMLElement} */
+    const updateMessage = (/** @type {any} */ (document.getElementById('update-message')));
+    /** @type {HTMLElement} */
+    const updateConfirmBtn = (/** @type {any} */ (document.getElementById('update-confirm-btn')));
+    /** @type {HTMLElement} */
+    const updateCancelBtn = (/** @type {any} */ (document.getElementById('update-cancel-btn')));
+    /** @type {HTMLElement} */
+    const loadingBar = (/** @type {any} */ (document.querySelector('.intro-loading-bar')));
+    /** @type {HTMLElement} */
+    const loadingText = (/** @type {any} */ (document.getElementById('intro-loading-text')));
 
     if (window.electronAPI) {
       // 1. Wenn ein Update verfügbar ist

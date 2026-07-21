@@ -145,7 +145,7 @@ export class NavigationController {
     // Prüfen, ob ein Save existiert – ggf. löschen
     const hasSave = await this._saveManager.hasSave();
     if (hasSave) {
-      if (!confirm('Möchtest du den alten Spielstand überschreiben?')) return;
+      if (!(await window.gameConfirm('Möchtest du den alten Spielstand überschreiben?'))) return;
       await this._saveManager.deleteSave();
     }
 
@@ -160,6 +160,7 @@ export class NavigationController {
 
     // Lokale Service-Zustände zurücksetzen
     this._clanService.reset();
+    this._eventBus.publish('game:reset');
 
     // Zum Hub navigieren
     this.showHub();
@@ -176,9 +177,8 @@ export class NavigationController {
   // ---- SPIELSTAND LADEN ----
 
   async _loadGame() {
-    const state = await this._saveManager.load();
+    const state = this._stateManager.getState();
     if (state) {
-      this._stateManager.dispatch(() => state, 'game/load');
       this._clanService.cleanupExpeditions();
       
       // Richtige View basierend auf Tutorial wiederherstellen
@@ -186,18 +186,168 @@ export class NavigationController {
 
       // Offline-Zeit berechnen
       const now = Date.now();
-      const offlineMs = now - (state.system.lastSave || now);
+      const lastSave = state.system.originalLastSave || state.system.lastSave || now;
+      const offlineMs = now - lastSave;
+
+      // originalLastSave löschen, damit es bei erneutem Weiter-Klicken nicht nochmal verwendet wird
+      if (state.system.originalLastSave) {
+        this._stateManager.dispatch((s) => {
+          const newSystem = { ...s.system };
+          delete newSystem.originalLastSave;
+          return { ...s, system: newSystem };
+        }, 'system/clearOriginalLastSave');
+      }
+
       if (offlineMs > 60000) {
         const clampedOffline = Math.min(offlineMs, 12 * 60 * 60 * 1000);
-        const offlineSeconds = clampedOffline / 1000;
-        this._resourceService.setTimeBank(offlineSeconds);
         
-        // Offline-Modal einblenden
+        // Offline-Fortschritt berechnen
+        const prestigeBonus = state.hero?.prestige?.level * 2 || 0;
+        const libraryBonus = (state.library?.upgrades?.clan_boost || 0) * 0.05;
+        const tickRateMs = 10000; // CONFIG.CLAN.TICK_RATE_MS ist 10000 (10 Sekunden)
+        const expPerCycle = 1; // CONFIG.CLAN.EXP_PER_CYCLE ist 1
+        
+        let totalParticles = 0;
+        let totalRelics = 0;
+        let totalArtifacts = 0;
+        let totalLevels = 0;
+        
+        const simulatedMembers = [];
+        const members = state.clan?.members || [];
+        const expeditionStatus = state.clan?.expeditionStatus || {};
+        
+        for (const member of members) {
+          // Wenn das Mitglied auf einer Expedition ist, produziert es keine Ressourcen offline
+          if (expeditionStatus[member.id] === true) {
+            simulatedMembers.push({ ...member });
+            continue;
+          }
+          
+          let memberProgress = member.progress || 0;
+          let memberLevel = member.level || 1;
+          let memberExp = member.experience || 0;
+          let memberExpToNext = member.expToNextLevel || 50;
+          const baseRate = member.baseCollectRate || 1.0;
+          
+          let remainingTime = clampedOffline;
+          
+          while (remainingTime > 0) {
+            let rate = baseRate * Math.pow(1.05, memberLevel - 1);
+            rate *= (1 + prestigeBonus / 100);
+            rate *= (1 + libraryBonus);
+            
+            if (rate <= 0) break;
+            
+            // msNeeded = verbleibender Fortschritt bis 100 * tickRateMs / (rate * 100)
+            const msNeeded = ((100 - memberProgress) * tickRateMs) / (rate * 100);
+            
+            if (remainingTime >= msNeeded) {
+              remainingTime -= msNeeded;
+              memberProgress = 0;
+              
+              const role = member.role;
+              if (role === 'collector') {
+                totalParticles += 1;
+              } else if (role === 'weaver') {
+                if (Math.random() < 0.1) {
+                  totalRelics += 1;
+                } else {
+                  totalParticles += 2;
+                }
+              } else if (role === 'guardian') {
+                if (Math.random() < 0.05) {
+                  totalArtifacts += 1;
+                } else {
+                  totalParticles += 3;
+                }
+              } else if (role === 'archivist') {
+                if (Math.random() < 0.15) {
+                  totalRelics += 1;
+                } else {
+                  totalParticles += 4;
+                }
+              } else if (role === 'elder') {
+                const rand = Math.random();
+                if (rand < 0.1) {
+                  totalArtifacts += 1;
+                } else if (rand < 0.3) {
+                  totalRelics += 1;
+                } else {
+                  totalParticles += 6;
+                }
+              }
+              
+              memberExp += expPerCycle;
+              while (memberExp >= memberExpToNext) {
+                memberExp -= memberExpToNext;
+                memberLevel++;
+                totalLevels++;
+                memberExpToNext = Math.floor(memberExpToNext * 1.15);
+              }
+            } else {
+              const progressGain = (rate * remainingTime) / tickRateMs * 100;
+              memberProgress = Math.min(100, memberProgress + progressGain);
+              remainingTime = 0;
+            }
+          }
+          
+          simulatedMembers.push({
+            ...member,
+            level: memberLevel,
+            experience: memberExp,
+            progress: memberProgress,
+            expToNextLevel: memberExpToNext
+          });
+        }
+        
+        // Ressourcen und Clan-Mitglieder im State aktualisieren
+        this._stateManager.dispatch((state) => {
+          const currentParticles = BigInt(state.resources.particles || '0');
+          const totalParticlesAcc = BigInt(state.resources.totalParticles || '0');
+          const currentRelics = BigInt(state.resources.relics || '0');
+          const totalRelicsAcc = BigInt(state.resources.totalRelics || '0');
+          const currentArtifacts = BigInt(state.resources.artifacts || '0');
+          
+          return {
+            ...state,
+            resources: {
+              ...state.resources,
+              particles: String(currentParticles + BigInt(totalParticles)),
+              totalParticles: String(totalParticlesAcc + BigInt(totalParticles)),
+              relics: String(currentRelics + BigInt(totalRelics)),
+              totalRelics: String(totalRelicsAcc + BigInt(totalRelics)),
+              artifacts: String(currentArtifacts + BigInt(totalArtifacts)),
+              timeBank: 0 // Da wir die Belohnungen sofort gewähren, ist kein zeitbasierter Catchup nötig
+            },
+            clan: {
+              ...state.clan,
+              members: simulatedMembers
+            }
+          };
+        }, 'game/offlineProgress');
+        
+        // Offline-Modal einblenden & Werte aktualisieren
         const offlineModal = document.getElementById('offline-modal-overlay');
         if (offlineModal) offlineModal.style.display = 'flex';
         
         const offlineTimeVal = document.getElementById('offline-time-val');
         if (offlineTimeVal) offlineTimeVal.textContent = this._formatTime(clampedOffline);
+        
+        const offlineParticlesVal = document.getElementById('offline-particles-val');
+        if (offlineParticlesVal) offlineParticlesVal.textContent = totalParticles.toLocaleString();
+        
+        const offlineRelicsVal = document.getElementById('offline-relics-val');
+        if (offlineRelicsVal) offlineRelicsVal.textContent = totalRelics.toLocaleString();
+        
+        const offlineArtifactsVal = document.getElementById('offline-artifacts-val');
+        if (offlineArtifactsVal) offlineArtifactsVal.textContent = totalArtifacts.toLocaleString();
+        
+        const offlineLevelsVal = document.getElementById('offline-levels-val');
+        if (offlineLevelsVal) offlineLevelsVal.textContent = totalLevels.toLocaleString();
+        
+        // Event-Bus benachrichtigen, um alle Views und Overlays zu aktualisieren
+        this._eventBus.publish('resources:updated', {});
+        this._eventBus.publish('clan:membersUpdated', { members: this._clanService.getMembers() });
       }
       this._eventBus.publish('ui:showToast', {
         message: '💾 Spielstand geladen!',
@@ -249,8 +399,8 @@ export class NavigationController {
 
   // ---- BEENDEN ----
 
-  _quitGame() {
-    if (confirm('Möchtest du das Spiel wirklich beenden?')) {
+  async _quitGame() {
+    if (await window.gameConfirm('Möchtest du das Spiel wirklich beenden?')) {
       this._eventBus.publish('save:started');
       this._saveManager.save(this._stateManager.getState()).then(() => {
         window.close();
@@ -368,12 +518,13 @@ export class NavigationController {
   }
 
   async _hardReset() {
-    if (!confirm('🚨 ACHTUNG: Möchtest du deinen Spielstand wirklich unwiderruflich löschen? Alle Fortschritte gehen verloren!')) return;
+    if (!(await window.gameConfirm('🚨 ACHTUNG: Möchtest du deinen Spielstand wirklich unwiderruflich löschen? Alle Fortschritte gehen verloren!', 'SPIELSTAND LÖSCHEN'))) return;
     
     await this._saveManager.deleteSave();
     this._cloudManager.clearCloudData();
     this._stateManager.reset();
     this._clanService.reset();
+    this._eventBus.publish('game:reset');
     
     await this.showMenu();
     this._eventBus.publish('hero:updated', {});
@@ -395,10 +546,30 @@ export class NavigationController {
     const base = CONFIG.GATHER.BASE_AMOUNT + clickPowerLevel * CONFIG.GATHER.POWER_MULT;
     const gatherLevel = state.library.upgrades?.gather_boost || 0;
     const libraryBonus = gatherLevel * 0.10;
-    const amount = Math.floor(base * (1 + libraryBonus));
+    
+    // Finstre Pakte Multiplikatoren
+    let amount = Math.floor(base * (1 + libraryBonus));
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'solitary_wanderer') {
+      amount = Math.floor(amount * 2.5); // +150% click power
+    }
 
     this._resourceService.addParticles(amount);
     this._eventBus.publish(EVENTS.QUEST_MANUAL_GATHER, {});
+
+    // Time Warp aufladen
+    if (!state.system?.timeWarpActive) {
+      const currentCharge = state.system?.timeWarpCharge || 0;
+      if (currentCharge < 100) {
+        this._stateManager.dispatch((s) => ({
+          ...s,
+          system: {
+            ...s.system,
+            timeWarpCharge: Math.min(100, currentCharge + 1.0)
+          }
+        }), 'system/chargeTimeWarp');
+      }
+    }
 
     const x = clientX || window.innerWidth / 2;
     const y = clientY || window.innerHeight / 2;
@@ -412,7 +583,13 @@ export class NavigationController {
   _upgradeClickPower() {
     const state = this._stateManager.getState();
     const clickPowerLevel = state.hero.clickPowerLevel || 0;
-    const cost = Math.floor(CONFIG.GATHER.UPGRADE_BASE_COST * Math.pow(CONFIG.GATHER.UPGRADE_COST_MULT, clickPowerLevel));
+    let cost = Math.floor(CONFIG.GATHER.UPGRADE_BASE_COST * Math.pow(CONFIG.GATHER.UPGRADE_COST_MULT, clickPowerLevel));
+    
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'ancient_folios') {
+      cost = Math.floor(cost * 1.5); // +50% Upgrade-Kosten
+    }
+
     const currentParticles = BigInt(state.resources.particles || '0');
 
     if (currentParticles < BigInt(cost)) {

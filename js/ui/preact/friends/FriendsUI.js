@@ -67,8 +67,8 @@ export function FriendsUI({ stateManager, eventBus, services }) {
     friendService.cancelSentRequest(name);
   };
 
-  const handleRemove = (name) => {
-    if (confirm(`Möchtest du ${name} wirklich aus deiner Freundesliste entfernen?`)) {
+  const handleRemove = async (name) => {
+    if (await window.gameConfirm(`Möchtest du ${name} wirklich aus deiner Freundesliste entfernen?`)) {
       friendService.removeFriend(name);
     }
   };

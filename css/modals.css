@@ -9,8 +9,8 @@
     width: 100vw;
     height: 100vh;
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -31,14 +31,11 @@
 .modal-content-wide,
 .hero-modal-wide,
 .modal-content-small {
-    background: 
-        url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E') repeat,
-        linear-gradient(180deg, #15151a 0%, #0a0a0c 100%);
-    border: 1px solid #000;
+    background: linear-gradient(135deg, rgba(15, 12, 20, 0.98) 0%, rgba(5, 5, 8, 0.95) 100%);
+    border: 1px solid rgba(197, 160, 89, 0.2);
     border-top: 2px solid var(--color-gold);
-    border-bottom: 2px solid #000;
-    border-radius: 2px;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.98), inset 0 0 60px rgba(0, 0, 0, 0.6);
     position: relative;
     display: flex;
     flex-direction: column;

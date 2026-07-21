@@ -284,6 +284,11 @@ export class CraftingService {
     const state = this._stateManager.getState();
     const level = state.crafting.level || 0;
     quality += level * 1.0;
+
+    // Lore-Bonus (Lehre des Erzes)
+    if (state.lore?.decrypted?.node_prologue === 'metal') {
+      quality *= 1.10;
+    }
     
     // Talent-Bonus
     const unlocked = state.hero.unlockedSkills || [];

@@ -45,8 +45,8 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
     leaderboardService.requestGlobalLeaderboard();
   };
 
-  const handleReset = () => {
-    if (confirm('Möchtest du deine persönlichen Rekorde zurücksetzen?')) {
+  const handleReset = async () => {
+    if (await window.gameConfirm('Möchtest du deine persönlichen Rekorde zurücksetzen?')) {
       leaderboardService.reset();
       eventBus.publish('ui:showToast', {
         message: '📊 Bestenliste zurückgesetzt.',

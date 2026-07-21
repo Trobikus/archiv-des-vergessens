@@ -76,30 +76,49 @@
 }
 
 #manual-gather-btn {
-    background: radial-gradient(circle at center, #1a1a20 0%, #0a0a0c 100%);
-    border: 2px solid var(--color-gold);
-    border-radius: 4px;
+    background: linear-gradient(160deg, #1e1e24 0%, #0d0d12 100%);
+    border: 1px solid rgba(197, 160, 89, 0.1);
+    border-top: 1px solid rgba(197, 160, 89, 0.35);
+    border-radius: 6px;
     padding: 1.8rem 4rem;
     font-size: 1.4rem;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.1s ease-out;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px var(--color-gold-glow), inset 0 0 20px rgba(197, 160, 89, 0.1);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(197, 160, 89, 0.1), inset 0 0 15px rgba(0,0,0,0.6);
     color: var(--color-gold);
+    position: relative;
+    overflow: hidden;
+    will-change: transform;
+}
+
+#manual-gather-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(197, 160, 89, 0.1), transparent);
+    transform: skewX(-20deg);
+    transition: all 0.6s ease;
 }
 
 #manual-gather-btn:hover {
-    transform: scale(1.02);
-    border-color: var(--color-gold-hover);
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--color-gold);
     color: #fff;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), 0 0 40px var(--color-gold-glow), inset 0 0 30px rgba(197, 160, 89, 0.3);
+    background: linear-gradient(160deg, #25252c 0%, #121218 100%);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.95), 0 0 35px var(--color-gold-glow), inset 0 1px 1px rgba(255,255,255,0.1);
+}
+
+#manual-gather-btn:hover::before {
+    left: 200%;
 }
 
 #manual-gather-btn:active {
-    transform: scale(0.98);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.9);
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.9), inset 0 2px 5px rgba(0,0,0,0.6);
 }
 
 /* ---- Panels Grid ---- */
@@ -194,4 +213,101 @@
     display: grid !important;
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important;
     gap: 0.5rem;
+}
+
+/* ---- Time Warp Floating Button & Overlay Effects ---- */
+.time-warp-float-btn {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(20, 20, 35, 0.95) 0%, rgba(5, 5, 10, 0.98) 100%);
+    border: 2px solid rgba(197, 160, 89, 0.6);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(197, 160, 89, 0.15), inset 0 2px 2px rgba(255,255,255,0.1);
+    cursor: pointer;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    user-select: none;
+    margin-left: auto;
+    overflow: hidden;
+}
+
+.time-warp-float-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(197, 160, 89, 0.2) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.time-warp-float-btn:hover:not(:disabled) {
+    transform: scale(1.15) translateY(-5px);
+    border-color: var(--color-gold);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.95), 0 0 35px var(--color-gold-glow), inset 0 0 20px rgba(197, 160, 89, 0.4);
+}
+
+.time-warp-float-btn:hover:not(:disabled)::before {
+    opacity: 1;
+    animation: rotateSlowly 4s linear infinite;
+}
+
+.time-warp-float-btn:active:not(:disabled) {
+    transform: scale(0.95) translateY(2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.9);
+}
+
+.time-warp-float-btn.charged {
+    border-color: #00d2ff;
+    box-shadow: 0 0 20px rgba(0, 210, 255, 0.5), 0 0 30px rgba(197, 160, 89, 0.3);
+    animation: charged-pulse 2s infinite;
+}
+
+.time-warp-float-btn.active-warp {
+    border-color: #ffaa00;
+    box-shadow: 0 0 25px rgba(255, 170, 0, 0.6);
+    animation: active-warp-pulse 1.5s infinite;
+}
+
+@keyframes charged-pulse {
+    0% { box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), 0 0 10px rgba(197, 160, 89, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(0, 210, 255, 0.8), 0 0 20px rgba(197, 160, 89, 0.5); transform: scale(1.05); }
+    100% { box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), 0 0 10px rgba(197, 160, 89, 0.2); }
+}
+
+@keyframes active-warp-pulse {
+    0% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.08) rotate(180deg); }
+    100% { transform: scale(1) rotate(360deg); }
+}
+
+/* Fullscreen Time-Warp gold-blauer Schleier */
+.time-warp-fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 100;
+    background: radial-gradient(circle, transparent 40%, rgba(0, 162, 255, 0.12) 80%, rgba(197, 160, 89, 0.08) 100%);
+    box-shadow: inset 0 0 100px rgba(0, 162, 255, 0.2), inset 0 0 150px rgba(197, 160, 89, 0.1);
+    animation: warp-shimmer 3s infinite ease-in-out;
+}
+
+@keyframes warp-shimmer {
+    0% { opacity: 0.7; }
+    50% { opacity: 1.0; }
+    100% { opacity: 0.7; }
+}
+
+/* CSS Filter auf das gesamte Spiel wenn aktiv */
+.time-warp-blur-filter {
+    filter: saturate(1.1) contrast(1.05) hue-rotate(5deg);
+    transition: filter 0.5s ease;
 }
