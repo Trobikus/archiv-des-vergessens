@@ -19,10 +19,12 @@ export class LeaderboardService {
   /**
    * @param {StateManager} stateManager
    * @param {EventBus} eventBus
+   * @param {import('./network-service.js').NetworkService} [networkService]
    */
-  constructor(stateManager, eventBus) {
+  constructor(stateManager, eventBus, networkService = null) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
+    this._networkService = networkService;
     this._STORAGE_KEY = 'archiv_leaderboard_data';
     this._records = this._load();
   }
@@ -111,7 +113,10 @@ export class LeaderboardService {
     }
 
     r.lastPlayed = Date.now();
-    if (changed) this._save();
+    if (changed) {
+      this._save();
+      this._submitToServer();
+    }
 
     this._eventBus.publish('leaderboard:updated', { records: this.getFormattedStats() });
   }
@@ -161,6 +166,7 @@ export class LeaderboardService {
       this._records.fastestPrestige = timeSinceLastPrestige;
     }
     this._save();
+    this._submitToServer();
   }
 
   updateBossDefeated(bossId, timeInSeconds, chapter) {
@@ -172,6 +178,7 @@ export class LeaderboardService {
       this._records.highestChapterReached = chapter;
     }
     this._save();
+    this._submitToServer();
   }
 
   updateCrafting(level, quality, isMasterwork = false) {
@@ -193,6 +200,28 @@ export class LeaderboardService {
       this._records.successfulExpeditions++;
     }
     this._save();
+  }
+
+  _submitToServer() {
+    if (this._networkService && this._networkService.isConnected()) {
+      this._networkService.send('leaderboard:submit', {
+        prestige: this._records.highestPrestige,
+        bosses: this._records.totalBossesDefeated,
+        level: this._records.highestLevel
+      });
+    }
+  }
+
+  requestGlobalLeaderboard() {
+    if (this._networkService && this._networkService.isConnected()) {
+      this._networkService.send('leaderboard:get');
+    } else {
+      this._eventBus.publish('leaderboard:globalUpdated', []);
+    }
+  }
+
+  addReceivedGlobalEntries(entries) {
+    this._eventBus.publish('leaderboard:globalUpdated', entries);
   }
 }
 

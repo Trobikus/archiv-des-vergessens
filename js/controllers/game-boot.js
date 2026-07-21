@@ -126,6 +126,10 @@ export async function bootGame() {
   const settingsManager = container.get('settingsManager');
   const cloudManager = container.get('cloudManager');
   const tutorialService = container.get('tutorialService');
+  const networkService = container.get('networkService');
+
+  // Querverweise für Netzwerk-Verarbeitung initialisieren
+  networkService.setServices(chatService, leaderboardService, cloudManager);
 
   // ============================================================
   // 5. STATE INITIALISIEREN

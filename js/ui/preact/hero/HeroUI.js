@@ -27,6 +27,34 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const [previewItem, setPreviewItem] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
+  // Hilfsfunktion für Custom-Icons
+  const getItemIcon = (item) => {
+    if (!item) return null;
+    const name = item.name;
+    if (name === "Amulett der Dämmerung") {
+      return "icons/Amulett der Dämmerung .png";
+    }
+    if (name === "Mneme-Krone" || name === "Mneme-Krone der Wiederkehr") {
+      return "icons/Die Mneme-Krone.png";
+    }
+    if (
+      name === "Klinge der Ersten" || 
+      name === "Ewige Mneme-Klinge" || 
+      name === "Staubige Klinge" || 
+      name === "Schattenklinge" || 
+      name === "Archiv-Klinge" || 
+      name === "Architekten-Klinge" || 
+      name === "Gott-Klinge" || 
+      name === "Grundlegende Klinge" || 
+      name === "Stahlklinge" || 
+      name === "Dämonenklinge" || 
+      name === "Göttliche Klinge"
+    ) {
+      return "icons/Die Klinge der Ersten.png";
+    }
+    return null;
+  };
+
   // State-Selektoren
   const hero = useStateSelector(stateManager, (state) => state?.hero || null);
   const attributes = useStateSelector(stateManager, (state) => {
@@ -325,7 +353,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
             }
           }}
         >
-          ${icon}
+          ${item && getItemIcon(item) ? html`<img src="${getItemIcon(item)}" class="equip-icon-img" alt="${item.name}" />` : icon}
         </div>
       `;
     });
@@ -405,7 +433,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
       return items.map((item, idx) => html`
         <div 
           class="inventory-item-card" 
-          style="border-left: 3px solid ${rarityColors[item.rarity] || '#aaa'};"
+          style="border-left: 3px solid ${rarityColors[item.rarity] || '#aaa'}; display: flex; align-items: center; justify-content: space-between;"
           onMouseEnter=${(e) => {
             setPreviewItem(item);
             setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 });
@@ -413,9 +441,12 @@ export function HeroUI({ stateManager, eventBus, services }) {
           onMouseMove=${(e) => setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 })}
           onMouseLeave=${() => setPreviewItem(null)}
         >
-          <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
-            ${item.name} <span class="text-muted text-sm">Lv.${item.level}</span>
-            <span class="text-muted text-sm">(${rarityLabels[item.rarity] || item.rarity})</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${getItemIcon(item) ? html`<img src="${getItemIcon(item)}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1);" alt="${item.name}" />` : ''}
+            <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
+              ${item.name} <span class="text-muted text-sm">Lv.${item.level}</span>
+              <span class="text-muted text-sm">(${rarityLabels[item.rarity] || item.rarity})</span>
+            </div>
           </div>
           <div class="item-actions">
             <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>Anlegen</button>

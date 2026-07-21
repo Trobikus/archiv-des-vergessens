@@ -391,6 +391,15 @@ export class ClanService {
         if (reward.particles) this._resourceService.addParticles(reward.particles);
         if (reward.relics) this._resourceService.addRelics(reward.relics);
         this._addMemberExperience(memberId, 5 + Math.floor(RNG.next() * 5));
+        
+        // _successfulExpeditions im Helden-Zustand erhöhen (wichtig für Quest q13 & Achievements)
+        this._stateManager.dispatch((state) => ({
+          ...state,
+          hero: {
+            ...state.hero,
+            _successfulExpeditions: (state.hero._successfulExpeditions || 0) + 1
+          }
+        }), 'hero/incrementSuccessfulExpeditions');
       }
     } else {
       this._addMemberExperience(memberId, 1);

@@ -55,6 +55,8 @@ export class QuestService {
       this._incrementDaily('craftedItems');
       this.checkCurrentQuest();
     });
+    this._eventBus.subscribe('forge:upgraded', () => this.checkCurrentQuest());
+    this._eventBus.subscribe('story:bossDefeated', () => this.checkCurrentQuest());
     this._eventBus.subscribe('quest:manualGather', () => {
       this._incrementDaily('gatherClicks');
       this.checkCurrentQuest();
@@ -162,7 +164,7 @@ export class QuestService {
     switch (questId) {
       case 'q1': return Number(res.particles) >= 10;
       case 'q2': return clan.members.length >= 1;
-      case 'q3': return clan.members.some(m => this._clanService.isOnExpedition(m.id));
+      case 'q3': return clan.members.some(m => this._clanService.isOnExpedition(m.id)) || (hero._successfulExpeditions || 0) > 0;
       case 'q4': return hero.prestige.bossProgress >= 1;
       case 'q5': return Object.values(hero.equipment).some(item => item !== null);
       case 'q6': return hero.clickPowerLevel >= 1;
@@ -171,8 +173,8 @@ export class QuestService {
       case 'q9': return Number(res.relics) >= 20;
       case 'q10': return clan.members.length >= 5;
       case 'q11': return hero.level >= 10;
-      case 'q12': return Object.values(hero.equipment).some(i => i && i.level > 1);
-      case 'q13': return hero._successfulExpeditions >= 25;
+      case 'q12': return Object.values(hero.equipment).some(i => i && i.level > 1) || (hero.inventory?.equipment && hero.inventory.equipment.some(i => i && i.level > 1));
+      case 'q13': return (hero._successfulExpeditions || 0) >= 25;
       case 'q14': return hero.prestige.bossProgress >= 20;
       case 'q15': return Number(res.totalParticles) >= 1000;
       default: return false;

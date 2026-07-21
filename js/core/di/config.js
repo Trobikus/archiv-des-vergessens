@@ -29,6 +29,7 @@ import SkillTreeService from '../services/skilltree-service.js';
 import ChallengeService from '../services/challenge-service.js';
 import LibraryService from '../services/library-service.js';
 import TutorialService from '../services/tutorial-service.js';
+import NetworkService from '../services/network-service.js';
 
 /**
  * Registriert ALLE Dienste im DI-Container.
@@ -45,7 +46,8 @@ export function registerServices(container) {
   // Zweit-Instanz erzeugen, die alle Services statt der echten bekämen
   // (führte zu "state is null" / "dispatch vor init()"-Fehlern).
   container.register('settingsManager', () => new SettingsManager(container.get('eventBus')));
-  container.register('cloudManager', () => new CloudManager(container.get('eventBus')));
+  container.register('networkService', (c) => new NetworkService(c.get('stateManager'), c.get('eventBus')));
+  container.register('cloudManager', (c) => new CloudManager(c.get('eventBus'), c.get('networkService')));
 
   // ============================================================
   // SERVICES
@@ -61,11 +63,11 @@ export function registerServices(container) {
   container.register('achievementService', (c) => new AchievementService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
   container.register('guildService', (c) => new GuildService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('friendService', (c) => new FriendService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
-  container.register('chatService', (c) => new ChatService(c.get('stateManager'), c.get('eventBus'), c.get('heroService'), c.get('guildService')));
+  container.register('chatService', (c) => new ChatService(c.get('stateManager'), c.get('eventBus'), c.get('heroService'), c.get('guildService'), c.get('networkService')));
   container.register('codexService', (c) => new CodexService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('relicHuntService', (c) => new RelicHuntService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
   container.register('dailyRewardService', (c) => new DailyRewardService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
-  container.register('leaderboardService', (c) => new LeaderboardService(c.get('stateManager'), c.get('eventBus')));
+  container.register('leaderboardService', (c) => new LeaderboardService(c.get('stateManager'), c.get('eventBus'), c.get('networkService')));
   container.register('storyBranchService', (c) => new StoryBranchService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('skillTreeService', (c) => new SkillTreeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('challengeService', (c) => new ChallengeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
