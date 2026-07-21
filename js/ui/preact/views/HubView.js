@@ -214,12 +214,6 @@ export function HubView({ stateManager, eventBus }) {
                 <span class="label">Tagebuch & Lore</span>
                 <span class="hub-btn-glow"></span>
               </button>
-              <button class="hub-btn" id="hub-story-branch" onClick=${() => handleAction(EVENTS.UI_OPEN_DIALOG, { npcId: 'archivist' })} type="button">
-                <span class="icon" aria-hidden="true">📖</span>
-                <span class="cinzel text-lg">Story</span>
-                <span class="label">Entscheidungen treffen</span>
-                <span class="hub-btn-glow"></span>
-              </button>
             </div>
           </div>
         ` : null}

@@ -120,7 +120,7 @@ export class DailyRewardService {
       ...state,
       resources: {
         ...state.resources,
-        artifacts: String(Number(state.resources.artifacts || '0') + reward.artifacts)
+        artifacts: String(BigInt(state.resources.artifacts || '0') + BigInt(reward.artifacts))
       }
     }), 'daily/claimArtifacts');
     if (reward.boost) {

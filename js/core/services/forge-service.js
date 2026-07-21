@@ -283,8 +283,8 @@ export class ForgeService {
     const resources = selectResources(state);
 
     // Prüfen, ob Katalysator vorhanden ist
-    const currentCatalyst = Number(resources.catalyst || '0');
-    if (currentCatalyst < 1) {
+    const currentCatalyst = BigInt(resources.catalyst || '0');
+    if (currentCatalyst < BigInt(1)) {
       return { success: false, message: 'Nicht genügend Katalysatoren vorhanden.' };
     }
 
@@ -349,7 +349,7 @@ export class ForgeService {
 
       const updatedResources = {
         ...state.resources,
-        catalyst: String(Math.max(0, currentCatalyst - 1))
+        catalyst: String(currentCatalyst - BigInt(1) >= BigInt(0) ? currentCatalyst - BigInt(1) : BigInt(0))
       };
 
       return {

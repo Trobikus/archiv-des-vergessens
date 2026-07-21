@@ -101,8 +101,8 @@ export class ClanService {
     } while (existingNames.includes(name) && attempts < 100);
     
     // Prüfen, ob genug Partikel vorhanden sind
-    const particles = Number(state.resources.particles || '0');
-    if (particles < cost) {
+    const particles = BigInt(state.resources.particles || '0');
+    if (particles < BigInt(cost)) {
       this._eventBus.publish('ui:showToast', {
         message: `❌ Nicht genug Partikel (${cost} benötigt)`,
         type: 'warning',
@@ -259,30 +259,35 @@ export class ClanService {
    * Verarbeitet einen Slow-Tick (Produktion + Expeditionen).
    */
   _processTick(delta) {
-    // Raid-Tick herabstufen
+    // Raid-Tick herabstufen mit korrektem Millisekunden-Akkumulator (Fixes Doppel-Geschwindigkeit-Bug)
     const state = this._stateManager.getState();
     const raid = state.clan.raid || {};
     if (raid.active && raid.durationSeconds > 0) {
-      const secondsPassed = Math.floor(delta / 1000) || 1; // Sicherstellen, dass mindestens 1 Sekunde gezählt wird
-      const nextSeconds = Math.max(0, raid.durationSeconds - secondsPassed);
-      this._stateManager.dispatch((state) => ({
-        ...state,
-        clan: {
-          ...state.clan,
-          raid: {
-            ...state.clan.raid,
-            durationSeconds: nextSeconds
+      this._raidMillisAccumulator = (this._raidMillisAccumulator || 0) + delta;
+      if (this._raidMillisAccumulator >= 1000) {
+        const secondsPassed = Math.floor(this._raidMillisAccumulator / 1000);
+        this._raidMillisAccumulator %= 1000;
+        
+        const nextSeconds = Math.max(0, raid.durationSeconds - secondsPassed);
+        this._stateManager.dispatch((state) => ({
+          ...state,
+          clan: {
+            ...state.clan,
+            raid: {
+              ...state.clan.raid,
+              durationSeconds: nextSeconds
+            }
           }
+        }), 'clan/raidTick');
+        
+        if (nextSeconds === 0) {
+          this._eventBus.publish('clan:raidComplete', {});
+          this._eventBus.publish('ui:showToast', {
+            message: '⚔️ Der Clan-Raid wurde siegreich beendet! Fordere deine Beute im Clan-Menü ein.',
+            type: 'success',
+            duration: 5000
+          });
         }
-      }), 'clan/raidTick');
-      
-      if (nextSeconds === 0) {
-        this._eventBus.publish('clan:raidComplete', {});
-        this._eventBus.publish('ui:showToast', {
-          message: '⚔️ Der Clan-Raid wurde siegreich beendet! Fordere deine Beute im Clan-Menü ein.',
-          type: 'success',
-          duration: 5000
-        });
       }
     }
 
@@ -462,45 +467,7 @@ export class ClanService {
     }
   }
   
-  /**
-   * Produziert Ressourcen durch ein Clan-Mitglied.
-   */
-  _produceResource(member) {
-    const role = member.role;
-    if (role === 'collector') {
-      this._resourceService.addParticles(1);
-    } else if (role === 'weaver') {
-      if (RNG.next() < 0.1) {
-        this._resourceService.addRelics(1);
-      } else {
-        this._resourceService.addParticles(2);
-      }
-    } else if (role === 'guardian') {
-      if (RNG.next() < 0.05) {
-        this._resourceService.addArtifacts(1);
-        this._eventBus.publish('clan:artefactFound', { memberId: member.id });
-      } else {
-        this._resourceService.addParticles(3);
-      }
-    } else if (role === 'archivist') {
-      if (RNG.next() < 0.15) {
-        this._resourceService.addRelics(1);
-      } else {
-        this._resourceService.addParticles(4);
-      }
-    } else if (role === 'elder') {
-      const rand = RNG.next();
-      if (rand < 0.1) {
-        this._resourceService.addArtifacts(1);
-        this._eventBus.publish('clan:artefactFound', { memberId: member.id });
-      } else if (rand < 0.3) {
-        this._resourceService.addRelics(1);
-      } else {
-        this._resourceService.addParticles(6);
-      }
-    }
-  }
-  
+
   /**
    * Fügt einem Mitglied Erfahrung hinzu.
    */
@@ -723,7 +690,7 @@ export class ClanService {
 
     // Katalysatoren-Belohnung (1-3)
     const catalystAmount = 1 + Math.floor(RNG.next() * 3);
-    const newCatalystCount = Number(state.resources.catalyst || '0') + catalystAmount;
+    const newCatalystCount = BigInt(state.resources.catalyst || '0') + BigInt(catalystAmount);
 
     // Optionales Bonus-Item (30% Chance)
     let lootedItem = null;

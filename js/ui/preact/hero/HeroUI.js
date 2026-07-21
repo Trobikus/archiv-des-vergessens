@@ -593,7 +593,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
           </div>
           <div class="item-actions" style="display: flex; gap: 4px; align-items: center;">
             <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>Anlegen</button>
-            ${item.sockets && item.sockets.some(s => s === null) && Number(resources.catalyst || '0') >= 1 ? html`
+            ${item.sockets && item.sockets.some(s => s === null) && BigInt(resources.catalyst || '0') >= BigInt(1) ? html`
               <button class="glass-btn btn-small" style="border-color: var(--color-gold); color: var(--color-gold); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); setSocketingItem({ item, idx, isEquipped: false }); }}>💎 Sockeln</button>
             ` : ''}
             <button class="glass-btn btn-danger btn-small" style="padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>Zerlegen</button>
@@ -836,7 +836,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
               ].map(cat => {
                 // Finde den ersten freien Sockel
                 const emptySocketIdx = socketingItem.item.sockets?.findIndex(s => s === null);
-                const hasCatalyst = Number(resources.catalyst || '0') >= 1;
+                const hasCatalyst = BigInt(resources.catalyst || '0') >= BigInt(1);
                 const canSocket = emptySocketIdx !== -1 && hasCatalyst;
 
                 const handleConfirmSocket = () => {

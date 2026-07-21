@@ -105,8 +105,8 @@ export class CraftingService {
 
     // Kosten prüfen
     for (const [key, amount] of Object.entries(cost)) {
-      const current = Number(resources[key] || '0');
-      if (current < amount) {
+      const current = BigInt(resources[key] || '0');
+      if (current < BigInt(amount)) {
         return { success: false, message: `Nicht genug ${key}. (${amount} benötigt)` };
       }
     }
@@ -120,7 +120,7 @@ export class CraftingService {
           ...state,
           resources: {
             ...state.resources,
-            artifacts: String(Number(state.resources.artifacts || '0') - amount)
+            artifacts: String(BigInt(state.resources.artifacts || '0') - BigInt(amount))
           }
         }), 'crafting/payArtifacts');
       } else if (key === 'memoryDust') {
@@ -128,7 +128,7 @@ export class CraftingService {
           ...state,
           resources: {
             ...state.resources,
-            memoryDust: String(Number(state.resources.memoryDust || '0') - amount)
+            memoryDust: String(BigInt(state.resources.memoryDust || '0') - BigInt(amount))
           }
         }), 'crafting/payDust');
       } else if (key === 'catalyst') {
@@ -136,7 +136,7 @@ export class CraftingService {
           ...state,
           resources: {
             ...state.resources,
-            catalyst: String(Number(state.resources.catalyst || '0') - amount)
+            catalyst: String(BigInt(state.resources.catalyst || '0') - BigInt(amount))
           }
         }), 'crafting/payCatalyst');
       } else if (key === 'essence') {
@@ -144,7 +144,7 @@ export class CraftingService {
           ...state,
           resources: {
             ...state.resources,
-            essence: String(Number(state.resources.essence || '0') - amount)
+            essence: String(BigInt(state.resources.essence || '0') - BigInt(amount))
           }
         }), 'crafting/payEssence');
       }
@@ -162,7 +162,7 @@ export class CraftingService {
             ...state,
             resources: {
               ...state.resources,
-              catalyst: String(Number(state.resources.catalyst || '0') + amount)
+              catalyst: String(BigInt(state.resources.catalyst || '0') + BigInt(amount))
             }
           }), 'crafting/addCatalyst');
         } else if (key === 'essence') {
@@ -170,7 +170,7 @@ export class CraftingService {
             ...state,
             resources: {
               ...state.resources,
-              essence: String(Number(state.resources.essence || '0') + amount)
+              essence: String(BigInt(state.resources.essence || '0') + BigInt(amount))
             }
           }), 'crafting/addEssence');
         }

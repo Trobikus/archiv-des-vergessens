@@ -6,8 +6,8 @@ import { defineConfig } from 'vite'
  * https://vite.dev/config/
  */
 export default defineConfig({
-  // Setzt den korrekten Pfad für das GitHub-Pages-Unterverzeichnis oder relativ für Electron
-  base: process.env.ELECTRON === 'true' ? './' : '/archiv-des-vergessens/',
+  // Setzt den korrekten Pfad für das GitHub-Pages-Unterverzeichnis oder relativ für Tauri
+  base: process.env.TAURI_ENV_PLATFORM ? '' : '/archiv-des-vergessens/',
 
   // Server-Konfiguration für die lokale Entwicklung
   server: {

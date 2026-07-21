@@ -49,7 +49,7 @@ export function DialogUI({ stateManager, eventBus, services }) {
       switch (option.action) {
         case 'trade_particles':
           const state = stateManager.getState();
-          if (Number(state.resources.particles) >= 100) {
+          if (BigInt(state.resources.particles || '0') >= BigInt(100)) {
             resourceService.removeParticles(100);
             resourceService.addRelics(10);
             eventBus.publish('ui:showToast', {

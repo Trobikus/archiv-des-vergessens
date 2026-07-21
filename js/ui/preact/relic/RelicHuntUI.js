@@ -67,8 +67,8 @@ export function RelicHuntUI({ stateManager, eventBus, services }) {
   };
 
   const chance = relicHuntService.getSuccessChance();
-  const particles = Number(resources.particles || 0);
-  const canAfford = particles >= 25;
+  const particles = BigInt(resources.particles || '0');
+  const canAfford = particles >= BigInt(25);
 
   return html`
     <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>

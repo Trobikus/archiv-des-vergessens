@@ -58,19 +58,6 @@
     scrollbar-color: #2a2a35 #0a0a0c;
 }
 
-@supports not (-moz-appearance: none) {
-    .hero-avatar-panel::-webkit-scrollbar {
-        width: 6px;
-    }
-    .hero-avatar-panel::-webkit-scrollbar-track {
-        background: #0a0a0c;
-    }
-    .hero-avatar-panel::-webkit-scrollbar-thumb {
-        background: #2a2a35;
-        border-radius: 2px;
-    }
-}
-
 /* ---- Avatar Container ---- */
 .avatar-container {
     position: relative;
@@ -354,25 +341,6 @@
     margin-top: 0.3rem;
     scrollbar-width: thin;
     scrollbar-color: #2a2a35 #0a0a0c;
-}
-
-@supports not (-moz-appearance: none) {
-    #hero-inventory-resources::-webkit-scrollbar,
-    #hero-inventory-equipment::-webkit-scrollbar,
-    #hero-inventory-loot::-webkit-scrollbar {
-        width: 6px;
-    }
-    #hero-inventory-resources::-webkit-scrollbar-track,
-    #hero-inventory-equipment::-webkit-scrollbar-track,
-    #hero-inventory-loot::-webkit-scrollbar-track {
-        background: #0a0a0c;
-    }
-    #hero-inventory-resources::-webkit-scrollbar-thumb,
-    #hero-inventory-equipment::-webkit-scrollbar-thumb,
-    #hero-inventory-loot::-webkit-scrollbar-thumb {
-        background: #2a2a35;
-        border-radius: 2px;
-    }
 }
 
 /* ---- Inventory Items ---- */

@@ -120,17 +120,4 @@
     padding-right: 0.5rem;
     flex: 1;
     min-height: 0;
-}
-
-@supports not (-moz-appearance: none) {
-    .modal-scroll-area::-webkit-scrollbar {
-        width: 6px;
-    }
-    .modal-scroll-area::-webkit-scrollbar-track {
-        background: #0a0a0c;
-    }
-    .modal-scroll-area::-webkit-scrollbar-thumb {
-        background: #2a2a35;
-        border-radius: 2px;
-    }
-}
+}

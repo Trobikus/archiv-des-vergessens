@@ -15,26 +15,22 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "electron:dev": "cross-env NODE_ENV=development electron .",
-    "electron:build": "cross-env ELECTRON=true npm run build && electron-builder --win --config electron-builder.json",
-    "electron:release": "cross-env ELECTRON=true npm run build && electron-builder --win --publish always --config electron-builder.json"
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9",
     "htm": "^3.1.1",
     "preact": "^10.19.3"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/cli": "^2.11.4",
     "cross-env": "^7.0.3",
-    "electron": "^43.1.1",
-    "electron-builder": "^26.15.3",
     "typescript": "^5.6.0",
     "vite": "^8.1.5",
     "vitest": "^3.0.0"
   },
   "allowScripts": {
-    "esbuild@0.28.1": true,
-    "electron@31.7.7": true,
-    "electron-winstaller@5.4.0": true
+    "esbuild@0.28.1": true
   }
 }

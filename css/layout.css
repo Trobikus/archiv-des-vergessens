@@ -40,6 +40,21 @@ body {
     }
 }
 
+/* Thin Scrollbar Utility (6px wide scrollbars for tight panels) */
+@supports not (-moz-appearance: none) {
+    .thin-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .thin-scrollbar::-webkit-scrollbar-track {
+        background: #0a0a0c;
+    }
+    .thin-scrollbar::-webkit-scrollbar-thumb {
+        background: #2a2a35;
+        border-radius: 2px;
+    }
+}
+
 /* Firefox Scrollbar */
 * {
     scrollbar-width: thin;
