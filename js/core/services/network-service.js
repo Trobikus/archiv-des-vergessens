@@ -25,8 +25,8 @@ export class NetworkService {
     this._reconnectInterval = 5000;
     this._userId = this._getUserId();
 
-    // Standard Server-URL (lokal). Kann bei Bedarf auf die VM-IP angepasst werden!
-    this._serverUrl = 'ws://localhost:8080';
+    // Live Server-URL auf deiner Google Cloud VM
+    this._serverUrl = 'ws://35.209.11.134:8080';
 
     // Registrierte Services, an die Nachrichten weitergeleitet werden
     this._chatService = null;
