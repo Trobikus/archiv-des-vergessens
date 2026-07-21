@@ -36,11 +36,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // In Dev: Projekt-Root / In Production: resources/ neben app.asar
   if (launcherContainer && window.electronAPI && window.electronAPI.getResourcesPath) {
     try {
-      const resourcesPath = await window.electronAPI.getResourcesPath();
-      // Slashes normalisieren für file:// URLs auf Windows
-      const bgPath = resourcesPath.replace(/\\/g, '/');
-      launcherContainer.style.backgroundImage = `url('file:///${bgPath}/background.png')`;
-      console.log('[Launcher] Hintergrundbild geladen aus:', bgPath);
+      if (window.__TAURI__) {
+        launcherContainer.style.backgroundImage = `url('/background.png')`;
+        console.log('[Launcher] Hintergrundbild für Tauri geladen.');
+      } else {
+        const resourcesPath = await window.electronAPI.getResourcesPath();
+        // Slashes normalisieren für file:// URLs auf Windows
+        const bgPath = resourcesPath.replace(/\\/g, '/');
+        launcherContainer.style.backgroundImage = `url('file:///${bgPath}/background.png')`;
+        console.log('[Launcher] Hintergrundbild geladen aus:', bgPath);
+      }
     } catch (e) {
       console.warn('[Launcher] Konnte Hintergrundbild-Pfad nicht laden:', e);
     }

@@ -32,9 +32,14 @@ Dies ist das leichtgewichtige Node.js-Backend für den Multiplayer-Modus von **A
 Wenn du den Code in dein GitHub-Repository gepusht hast, kannst du ihn ganz leicht auf deiner VM in Betrieb nehmen:
 
 ### 1. Auf der VM einloggen & Code holen
-Verbinde dich per SSH mit deiner VM und navigiere in dein Projektverzeichnis:
+Verbinde dich per SSH mit deiner VM. Da auf einer frischen VM standardmäßig kein Git installiert sein kann, installiere es zuerst:
+
 ```bash
-cd archiv-des-vergessens
+# Git installieren
+sudo apt update && sudo apt install git -y
+
+# In dein Projektverzeichnis wechseln und Code klonen/holen
+cd /pfad/zu/deinem/verzeichnis
 git pull
 cd server
 npm install

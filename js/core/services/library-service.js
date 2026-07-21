@@ -122,8 +122,8 @@ export class LibraryService {
 
     // Prüfen, ob genug Ressourcen vorhanden sind
     for (const [res, amount] of Object.entries(cost)) {
-      const current = Number(resources[res] || '0');
-      if (current < amount) {
+      const current = BigInt(resources[res] || '0');
+      if (current < BigInt(amount)) {
         this._eventBus.publish('ui:showToast', {
           message: `❌ Nicht genug ${res} (${amount} benötigt)`,
           type: 'warning',
@@ -142,7 +142,7 @@ export class LibraryService {
           ...state,
           resources: {
             ...state.resources,
-            artifacts: String(Number(state.resources.artifacts || '0') - amount)
+            artifacts: String(BigInt(state.resources.artifacts || '0') - BigInt(amount))
           }
         }), 'library/buy');
       }

@@ -8,7 +8,19 @@
  * ============================================================
  */
 
-import { deepClone } from '../../utils/object-utils.js';
+// Cache-Speicher für echte Reference-Memoization
+let cacheHero = null;
+let cachedAttributes = null;
+
+let cacheCombatStatsHero = null;
+let cacheCombatStatsPact = null;
+let cachedCombatStats = null;
+
+let cacheResources = null;
+let cachedResources = null;
+
+let cacheHubState = null;
+let cachedHubData = null;
 
 // ============================================================
 // HERO-SELECTOREN
@@ -40,6 +52,10 @@ export function selectHeroLevel(state) {
  */
 export function selectHeroAttributes(state) {
   const hero = state.hero;
+  if (hero === cacheHero && cachedAttributes !== null) {
+    return cachedAttributes;
+  }
+
   const base = hero.baseStats;
   const spent = hero.spentStats;
   
@@ -61,6 +77,8 @@ export function selectHeroAttributes(state) {
     }
   }
   
+  cacheHero = hero;
+  cachedAttributes = stats;
   return stats;
 }
 
@@ -68,14 +86,20 @@ export function selectHeroAttributes(state) {
  * Holt die Kampf-Statistiken.
  */
 export function selectHeroCombatStats(state) {
+  const hero = state.hero;
+  const activePact = hero?.prestige?.activePact;
+
+  if (hero === cacheCombatStatsHero && activePact === cacheCombatStatsPact && cachedCombatStats !== null) {
+    return cachedCombatStats;
+  }
+
   const stats = { ...selectHeroAttributes(state) };
-  const activePact = state.hero?.prestige?.activePact;
   if (activePact === 'scourged_bodies') {
     stats.attack = Math.floor(stats.attack * 1.5);
     stats.defense = Math.floor(stats.defense * 1.5);
   }
   
-  return {
+  const combatStats = {
     ...stats,
     maxHp: 100 + (stats.stamina * 10) + (stats.defense * 2),
     damageReduction: stats.defense / (stats.defense + 100),
@@ -83,6 +107,11 @@ export function selectHeroCombatStats(state) {
     critDamage: 150 + (stats.attack * 0.5),
     dodgeChance: Math.min(50, stats.agility * 0.25)
   };
+
+  cacheCombatStatsHero = hero;
+  cacheCombatStatsPact = activePact;
+  cachedCombatStats = combatStats;
+  return combatStats;
 }
 
 /**
@@ -111,7 +140,11 @@ export function selectHeroLevelProgress(state) {
  */
 export function selectResources(state) {
   const res = state.resources;
-  return {
+  if (res === cacheResources && cachedResources !== null) {
+    return cachedResources;
+  }
+
+  const resources = {
     particles: Number(res.particles || '0'),
     relics: Number(res.relics || '0'),
     artifacts: Number(res.artifacts || '0'),
@@ -122,6 +155,10 @@ export function selectResources(state) {
     totalParticles: Number(res.totalParticles || '0'),
     totalRelics: Number(res.totalRelics || '0')
   };
+
+  cacheResources = res;
+  cachedResources = resources;
+  return resources;
 }
 
 /**
@@ -228,7 +265,11 @@ export function selectIsSaving(state) {
  * Holt alle relevanten Daten für das Hub-Dashboard.
  */
 export function selectHubData(state) {
-  return {
+  if (state === cacheHubState && cachedHubData !== null) {
+    return cachedHubData;
+  }
+
+  const data = {
     heroName: selectHeroName(state),
     heroLevel: selectHeroLevel(state),
     heroPrestige: state.hero.prestige.level,
@@ -237,6 +278,10 @@ export function selectHubData(state) {
     clanMembers: selectClanMembers(state),
     currentView: selectCurrentView(state)
   };
+
+  cacheHubState = state;
+  cachedHubData = data;
+  return data;
 }
 
 // ============================================================

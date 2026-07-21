@@ -26,7 +26,7 @@ export class NetworkService {
     this._userId = this._getUserId();
 
     // Live Server-URL auf deiner Google Cloud VM
-    this._serverUrl = 'ws://35.209.11.134:8080';
+    this._serverUrl = 'wss://grimoireinteractive.duckdns.org';
 
     // Registrierte Services, an die Nachrichten weitergeleitet werden
     this._chatService = null;

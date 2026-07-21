@@ -154,15 +154,20 @@ export class GameLoop {
           });
         }
       } else {
-        // Passive Ladung: 0.1% pro Sekunde => 0.05% pro 500ms
-        if (timeWarpCharge < 100) {
-          this._stateManager.dispatch((s) => ({
-            ...s,
-            system: {
-              ...s.system,
-              timeWarpCharge: Math.min(100, (s.system?.timeWarpCharge || 0) + 0.05)
-            }
-          }), 'system/timeWarpChargePassive');
+        // Passive Ladung akkumulieren und nur alle 5 Sekunden (5000ms) in den State dispatchen,
+        // um ungenutzte State-Wechsel-Spams im Idle-Zustand um 90% zu reduzieren.
+        this._passiveWarpTimer = (this._passiveWarpTimer || 0) + slowDelta;
+        if (this._passiveWarpTimer >= 5000) {
+          this._passiveWarpTimer = 0;
+          if (timeWarpCharge < 100) {
+            this._stateManager.dispatch((s) => ({
+              ...s,
+              system: {
+                ...s.system,
+                timeWarpCharge: Math.min(100, (s.system?.timeWarpCharge || 0) + 0.5)
+              }
+            }), 'system/timeWarpChargePassive');
+          }
         }
       }
 

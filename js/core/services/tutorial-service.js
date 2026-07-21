@@ -165,8 +165,8 @@ export class TutorialService {
     if (index === 4) {
       let subId;
       subId = this._stateManager.subscribe((state) => {
-        const particles = Number(state.resources.particles || '0');
-        if (particles >= 50 && this._currentStepIndex === 4) {
+        const particles = BigInt(state.resources.particles || '0');
+        if (particles >= BigInt(50) && this._currentStepIndex === 4) {
           if (subId !== undefined) {
             this._stateManager.unsubscribe(subId);
           } else {

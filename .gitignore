@@ -32,3 +32,12 @@ release/
 
 # electron-builder Cache
 .electron-builder-cache/
+
+# Tauri build output
+src-tauri/target/
+src-tauri/bin/
+
+# SQLite local database files
+server/data/*.db
+server/data/*.db-wal
+server/data/*.db-shm

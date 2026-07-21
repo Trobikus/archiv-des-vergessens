@@ -49,9 +49,9 @@ export class RelicHuntService {
 
     const state = this._stateManager.getState();
     const resources = state.resources;
-    const particles = Number(resources.particles || '0');
+    const particles = BigInt(resources.particles || '0');
 
-    if (particles < this._cost) {
+    if (particles < BigInt(this._cost)) {
       return { success: false, message: `Nicht genug Partikel (${this._cost} benötigt).` };
     }
 

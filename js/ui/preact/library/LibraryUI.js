@@ -57,7 +57,7 @@ export function LibraryUI({ stateManager, eventBus, services }) {
         <div class="modal-scroll-area" style="max-height: 60vh; overflow-y: auto; padding-right: 0.5rem;">
           ${upgrades.map(upg => {
             const cost = libraryService.getUpgradeCost(upg.id);
-            const canAfford = Object.entries(cost).every(([key, amt]) => (Number(resources[key] || 0) >= amt));
+            const canAfford = Object.entries(cost).every(([key, amt]) => (BigInt(resources[key] || '0') >= BigInt(amt)));
             const isMaxed = upg.level >= upg.maxLevel;
 
             return html`

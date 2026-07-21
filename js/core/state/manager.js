@@ -12,7 +12,7 @@
  * ============================================================
  */
 
-import { deepClone, deepFreeze, isPlainObject } from '../../utils/object-utils.js';
+import { deepFreeze, isPlainObject, getNestedValue } from '../../utils/object-utils.js';
 
 /**
  * Friert nur den Root-State und seine direkten Kind-Objekte ein (O(n) statt O(n²)).
@@ -220,11 +220,60 @@ export class StateManager {
     if (heroData) initialState.hero = { ...initialState.hero, ...heroData };
     if (resourceData) initialState.resources = { ...initialState.resources, ...resourceData };
     if (clanData) initialState.clan = { ...initialState.clan, ...clanData };
-    this._state = deepFreeze(initialState);
+    
+    // Migriere alten Spielstand-Status vor dem Einfrieren
+    const migratedState = this._migrateState(initialState);
+    
+    this._state = deepFreeze(migratedState);
     this._initialized = true;
     this._notifySubscribersImmediate();
     this._eventBus.publish('state:initialized', { state: this._state });
     return this;
+  }
+
+  /**
+   * Migriert ältere Spielstände auf das aktuelle State-Schema (Abwärtskompatibilität).
+   * Wird einmalig bei der Initialisierung ausgeführt, um den Heißpfad beim Dispatch zu entlasten.
+   */
+  _migrateState(state) {
+    let migrated = { ...state };
+    const defaultState = this._getInitialState();
+
+    if (!migrated.leaderboard) {
+      migrated.leaderboard = defaultState.leaderboard;
+    }
+
+    if (!migrated.lore) {
+      migrated.lore = defaultState.lore;
+    }
+
+    if (migrated.clan && !migrated.clan.raid) {
+      migrated.clan = {
+        ...migrated.clan,
+        raid: defaultState.clan.raid
+      };
+    }
+
+    if (migrated.system && migrated.system.timeWarpCharge === undefined) {
+      migrated.system = {
+        ...migrated.system,
+        timeWarpCharge: 0,
+        timeWarpActive: false,
+        timeWarpRemaining: 0
+      };
+    }
+
+    if (migrated.hero && migrated.hero.prestige && migrated.hero.prestige.activePact === undefined) {
+      migrated.hero = {
+        ...migrated.hero,
+        prestige: {
+          ...migrated.hero.prestige,
+          activePact: null
+        }
+      };
+    }
+
+    return migrated;
   }
 
   /**
@@ -243,13 +292,7 @@ export class StateManager {
    */
   getSlice(path) {
     if (!this._initialized) return undefined;
-    const parts = path.split('.');
-    let current = this._state;
-    for (const part of parts) {
-      if (current === undefined || current === null) return undefined;
-      current = current[part];
-    }
-    return current;
+    return getNestedValue(this._state, path);
   }
 
   /**
@@ -281,59 +324,7 @@ export class StateManager {
         throw new Error(`Reducer "${name}" hat keinen gültigen State zurückgegeben`);
       }
 
-      // Backwards-compatibility for missing leaderboard slice in older saves
-      if (newState && !newState.leaderboard) {
-        newState = {
-          ...newState,
-          leaderboard: this._getInitialState().leaderboard
-        };
-      }
-
-      // Backwards-compatibility for missing lore slice
-      if (newState && !newState.lore) {
-        newState = {
-          ...newState,
-          lore: this._getInitialState().lore
-        };
-      }
-
-      // Backwards-compatibility for missing clan.raid
-      if (newState && newState.clan && !newState.clan.raid) {
-        newState = {
-          ...newState,
-          clan: {
-            ...newState.clan,
-            raid: this._getInitialState().clan.raid
-          }
-        };
-      }
-
-      // Backwards-compatibility for missing system.timeWarpCharge
-      if (newState && newState.system && newState.system.timeWarpCharge === undefined) {
-        newState = {
-          ...newState,
-          system: {
-            ...newState.system,
-            timeWarpCharge: 0,
-            timeWarpActive: false,
-            timeWarpRemaining: 0
-          }
-        };
-      }
-
-      // Backwards-compatibility for missing hero.prestige.activePact
-      if (newState && newState.hero && newState.hero.prestige && newState.hero.prestige.activePact === undefined) {
-        newState = {
-          ...newState,
-          hero: {
-            ...newState.hero,
-            prestige: {
-              ...newState.hero.prestige,
-              activePact: null
-            }
-          }
-        };
-      }
+      // Kompatibilitäts-Prüfungen wurden nach init() ausgelagert, um den Dispatch-Heißpfad zu entlasten
 
       // Shallow-Freeze: Root + direkte Kind-Objekte (O(n) statt O(n²) deepFreeze)
       // Unveränderte Sub-Objekte sind bereits tiefgefroren (kommen aus oldState).
@@ -541,7 +532,7 @@ export class StateManager {
     for (const [id, { callback, path }] of this._subscribers) {
       try {
         if (path) {
-          const value = this._getNestedValue(state, path);
+          const value = getNestedValue(state, path);
           callback(value);
         } else {
           callback(state);
@@ -550,16 +541,6 @@ export class StateManager {
         console.error(`[StateManager] Subscriber ${id} Fehler:`, e);
       }
     }
-  }
-
-  _getNestedValue(obj, path) {
-    const parts = path.split('.');
-    let current = obj;
-    for (const part of parts) {
-      if (current === undefined || current === null) return undefined;
-      current = current[part];
-    }
-    return current;
   }
 
   _scheduleIdleProcessing() {

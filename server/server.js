@@ -16,47 +16,242 @@ import { WebSocketServer } from 'ws';
 import { promises as fs } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import Database from 'better-sqlite3';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// ---- KONTANTEN & CONFIG ----
+// ---- KONSTANTEN & CONFIG ----
 const PORT = process.env.PORT || 8080;
 const DATA_DIR = join(__dirname, 'data');
 const SAVES_DIR = join(DATA_DIR, 'saves');
 const LEADERBOARD_FILE = join(DATA_DIR, 'leaderboard.json');
+const DB_FILE = join(DATA_DIR, 'database.db');
 
-// ---- GLOBALE STATS & CACHE ----
+// ---- GLOBALE STATS & DATABASE ----
 const clients = new Map(); // Map: WebSocket -> { userId, username, guildId }
-let leaderboardCache = [];
+let db;
 
 // ============================================================
-// DATEN-VERZEICHNISSE INITIALISIEREN
+// DATEN-VERZEICHNISSE & SQLITE INITIALISIEREN
 // ============================================================
 async function initStorage() {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.mkdir(SAVES_DIR, { recursive: true });
 
-    // Lade Bestenliste aus Datei (falls vorhanden)
-    try {
-      const data = await fs.readFile(LEADERBOARD_FILE, 'utf-8');
-      leaderboardCache = JSON.parse(data);
-      console.log(`[Storage] ${leaderboardCache.length} Leaderboard-Einträge geladen.`);
-    } catch {
-      leaderboardCache = [];
-      await saveLeaderboard();
-      console.log('[Storage] Neues Leaderboard initialisiert.');
-    }
+    // SQLite-Datenbank initialisieren
+    db = new Database(DB_FILE);
+    db.pragma('journal_mode = WAL'); // Erhöht die Schreibgeschwindigkeit massiv
+
+    // Tabellen anlegen
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS saves (
+        userId TEXT PRIMARY KEY,
+        username TEXT,
+        saveData TEXT,
+        version TEXT,
+        timestamp INTEGER
+      )
+    `).run();
+
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS leaderboard (
+        userId TEXT PRIMARY KEY,
+        username TEXT,
+        prestige INTEGER,
+        bosses INTEGER,
+        level INTEGER,
+        timestamp INTEGER
+      )
+    `).run();
+
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS chats (
+        id TEXT PRIMARY KEY,
+        player TEXT,
+        message TEXT,
+        timestamp INTEGER,
+        type TEXT,
+        guildId TEXT
+      )
+    `).run();
+
+    console.log('[Storage] SQLite-Datenbank erfolgreich initialisiert.');
+
+    // Automatische Migration von Altdaten
+    await migrateOldJsonData();
+
   } catch (err) {
     console.error('[Storage] Fehler bei der Initialisierung:', err);
   }
 }
 
-async function saveLeaderboard() {
+// ============================================================
+// AUTOMATISCHE DATENMIGRATION (JSON -> SQLITE)
+// ============================================================
+async function migrateOldJsonData() {
   try {
-    await fs.writeFile(LEADERBOARD_FILE, JSON.stringify(leaderboardCache, null, 2), 'utf-8');
+    // 1. Leaderboard migrieren
+    const leaderboardExists = await fs.access(LEADERBOARD_FILE).then(() => true).catch(() => false);
+    if (leaderboardExists) {
+      console.log('[Migration] Starte Leaderboard-Migration...');
+      const rawLeaderboard = await fs.readFile(LEADERBOARD_FILE, 'utf-8');
+      const list = JSON.parse(rawLeaderboard);
+      
+      if (Array.isArray(list) && list.length > 0) {
+        const insertStmt = db.prepare(`
+          INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(userId) DO UPDATE SET
+            username = excluded.username,
+            prestige = MAX(leaderboard.prestige, excluded.prestige),
+            bosses = MAX(leaderboard.bosses, excluded.bosses),
+            level = MAX(leaderboard.level, excluded.level),
+            timestamp = excluded.timestamp
+        `);
+
+        const runTx = db.transaction((items) => {
+          for (const item of items) {
+            insertStmt.run(
+              item.userId,
+              item.username,
+              item.prestige || 0,
+              item.bosses || 0,
+              item.level || 1,
+              item.timestamp || Date.now()
+            );
+          }
+        });
+        runTx(list);
+        console.log(`[Migration] ${list.length} Bestenlisten-Einträge erfolgreich migriert.`);
+      }
+      
+      await fs.rename(LEADERBOARD_FILE, `${LEADERBOARD_FILE}.bak`);
+      console.log(`[Migration] Alte Leaderboard-Datei umbenannt in ${basename(LEADERBOARD_FILE)}.bak`);
+    }
+
+    // 2. Spielstände migrieren
+    const savesDirExists = await fs.access(SAVES_DIR).then(() => true).catch(() => false);
+    if (savesDirExists) {
+      const files = await fs.readdir(SAVES_DIR);
+      const jsonFiles = files.filter(f => f.startsWith('save_') && f.endsWith('.json'));
+
+      if (jsonFiles.length > 0) {
+        console.log(`[Migration] Starte Migration von ${jsonFiles.length} Spielständen...`);
+        const savesData = [];
+        
+        for (const file of jsonFiles) {
+          try {
+            const rawData = await fs.readFile(join(SAVES_DIR, file), 'utf-8');
+            const parsed = JSON.parse(rawData);
+            
+            savesData.push({
+              userId: parsed.userId || file.substring(5, file.length - 5),
+              username: parsed.username || 'Spieler',
+              saveData: typeof parsed.saveData === 'string' ? parsed.saveData : JSON.stringify(parsed.saveData),
+              version: parsed.version || '1.6',
+              timestamp: parsed.timestamp || Date.now()
+            });
+          } catch (err) {
+            console.error(`[Migration] Fehler beim Lesen der Datei ${file}:`, err);
+          }
+        }
+
+        if (savesData.length > 0) {
+          const insertSaveStmt = db.prepare(`
+            INSERT INTO saves (userId, username, saveData, version, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(userId) DO UPDATE SET
+              username = excluded.username,
+              saveData = excluded.saveData,
+              version = excluded.version,
+              timestamp = excluded.timestamp
+          `);
+
+          const runSavesTx = db.transaction((items) => {
+            for (const item of items) {
+              insertSaveStmt.run(
+                item.userId,
+                item.username,
+                item.saveData,
+                item.version,
+                item.timestamp
+              );
+            }
+          });
+          runSavesTx(savesData);
+          console.log(`[Migration] ${savesData.length} Spielstände erfolgreich migriert.`);
+        }
+      }
+
+      await fs.rename(SAVES_DIR, `${SAVES_DIR}.bak`);
+      console.log(`[Migration] Alter saves-Ordner umbenannt in ${basename(SAVES_DIR)}.bak`);
+    }
   } catch (err) {
-    console.error('[Storage] Fehler beim Speichern des Leaderboards:', err);
+    console.error('[Migration] Fehler während des Migrationsprozesses:', err);
+  }
+}
+
+// Hilfsfunktion: Holt die Top 10 Bestenliste aus SQLite
+function getTop10() {
+  try {
+    return db.prepare(`
+      SELECT userId, username, prestige, bosses, level, timestamp
+      FROM leaderboard
+      ORDER BY prestige DESC, bosses DESC, level DESC
+      LIMIT 10
+    `).all();
+  } catch (err) {
+    console.error('[Database] Fehler beim Abrufen der Top 10:', err);
+    return [];
+  }
+}
+
+// Holt den globalen Chatverlauf aus SQLite
+function getGlobalChatHistory(limit = 50) {
+  try {
+    return db.prepare(`
+      SELECT id, player, message, timestamp, type
+      FROM chats
+      WHERE type = 'global'
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `).all(limit).reverse();
+  } catch (err) {
+    console.error('[Chat] Fehler beim Laden des globalen Chatverlaufs:', err);
+    return [];
+  }
+}
+
+// Holt den Gilden-Chatverlauf aus SQLite
+function getGuildChatHistory(guildId, limit = 50) {
+  if (!guildId) return [];
+  try {
+    return db.prepare(`
+      SELECT id, player, message, timestamp, guildId
+      FROM chats
+      WHERE type = 'guild' AND guildId = ?
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `).all(guildId, limit).reverse();
+  } catch (err) {
+    console.error('[Chat] Fehler beim Laden des Gilden-Chatverlaufs:', err);
+    return [];
+  }
+}
+
+// Hält die Chat-Datenbank klein und performant
+function pruneChatHistory(keepCount = 500) {
+  try {
+    db.prepare(`
+      DELETE FROM chats
+      WHERE id NOT IN (
+        SELECT id FROM chats
+        ORDER BY timestamp DESC
+        LIMIT ?
+      )
+    `).run(keepCount);
+  } catch (err) {
+    console.error('[Chat] Fehler beim Bereinigen des Chatverlaufs:', err);
   }
 }
 
@@ -115,6 +310,12 @@ const wss = new WebSocketServer({ server: httpServer });
 wss.on('connection', (ws) => {
   console.log('[Net] Neuer Verbindungsversuch...');
   
+  // Heartbeat-Erkennung initialisieren
+  ws.isAlive = true;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+  
   // temporäre Registrierung des nackten Sockets
   clients.set(ws, { userId: null, username: 'Anonymus', guildId: null });
 
@@ -141,6 +342,21 @@ wss.on('connection', (ws) => {
 
           console.log(`[Auth] Spieler '${rawUsername}' (${rawUserId}) eingeloggt. Gilde: ${rawGuildId || 'keine'}`);
           send(ws, 'auth:success', { userId: rawUserId, username: rawUsername });
+
+          // --- CHAT-VERLAUF BEIM LOGIN SENDEN ---
+          // 1. Letzte 50 globalen Nachrichten senden
+          const globalHistory = getGlobalChatHistory(50);
+          for (const msg of globalHistory) {
+            send(ws, 'chat:globalMessage', msg);
+          }
+
+          // 2. Letzte 50 Gilden-Nachrichten senden (falls in einer Gilde)
+          if (rawGuildId) {
+            const guildHistory = getGuildChatHistory(rawGuildId, 50);
+            for (const msg of guildHistory) {
+              send(ws, 'chat:guildMessage', msg);
+            }
+          }
           break;
         }
 
@@ -157,6 +373,17 @@ wss.on('connection', (ws) => {
             timestamp: Date.now(),
             type: 'global'
           };
+
+          // Im SQLite-Chatverlauf speichern
+          try {
+            db.prepare(`
+              INSERT INTO chats (id, player, message, timestamp, type, guildId)
+              VALUES (?, ?, ?, ?, 'global', NULL)
+            `).run(msg.id, msg.player, msg.message, msg.timestamp);
+            pruneChatHistory(500); // Datenbank klein & schnell halten
+          } catch (err) {
+            console.error('[Chat] Fehler beim Speichern der globalen Nachricht:', err);
+          }
 
           console.log(`[Chat:Global] ${clientInfo.username}: ${text}`);
           broadcast('chat:globalMessage', msg);
@@ -176,6 +403,17 @@ wss.on('connection', (ws) => {
             guildId: clientInfo.guildId
           };
 
+          // Im SQLite-Chatverlauf speichern
+          try {
+            db.prepare(`
+              INSERT INTO chats (id, player, message, timestamp, type, guildId)
+              VALUES (?, ?, ?, ?, 'guild', ?)
+            `).run(msg.id, msg.player, msg.message, msg.timestamp, msg.guildId);
+            pruneChatHistory(500); // Datenbank klein & schnell halten
+          } catch (err) {
+            console.error('[Chat] Fehler beim Speichern der Gilden-Nachricht:', err);
+          }
+
           console.log(`[Chat:Guild ${clientInfo.guildId}] ${clientInfo.username}: ${text}`);
           broadcastToGuild(clientInfo.guildId, 'chat:guildMessage', msg);
           break;
@@ -189,22 +427,27 @@ wss.on('connection', (ws) => {
           }
 
           try {
-            // Verhindere Directory Traversal Angriffe
-            const safeUserId = basename(clientInfo.userId);
-            const savePath = join(SAVES_DIR, `save_${safeUserId}.json`);
-            
-            const fileData = {
-              userId: clientInfo.userId,
-              timestamp: Date.now(),
-              saveData: payload.saveData,
-              version: payload.version || '1.6'
-            };
+            const timestamp = Date.now();
+            const saveDataStr = typeof payload.saveData === 'string' 
+              ? payload.saveData 
+              : JSON.stringify(payload.saveData);
+            const version = payload.version || '1.6';
 
-            await fs.writeFile(savePath, JSON.stringify(fileData, null, 2), 'utf-8');
-            console.log(`[CloudSave] Spielstand für ${clientInfo.username} gespeichert.`);
-            send(ws, 'cloud:save:success', { timestamp: fileData.timestamp });
+            const stmt = db.prepare(`
+              INSERT INTO saves (userId, username, saveData, version, timestamp)
+              VALUES (?, ?, ?, ?, ?)
+              ON CONFLICT(userId) DO UPDATE SET
+                username = excluded.username,
+                saveData = excluded.saveData,
+                version = excluded.version,
+                timestamp = excluded.timestamp
+            `);
+
+            stmt.run(clientInfo.userId, clientInfo.username, saveDataStr, version, timestamp);
+            console.log(`[CloudSave] Spielstand für ${clientInfo.username} in SQLite gespeichert.`);
+            send(ws, 'cloud:save:success', { timestamp });
           } catch (err) {
-            console.error('[CloudSave] Fehler beim Speichern:', err);
+            console.error('[CloudSave] Fehler beim Speichern in SQLite:', err);
             send(ws, 'cloud:save:error', { error: 'Fehler beim Schreiben des Spielstands.' });
           }
           break;
@@ -217,15 +460,22 @@ wss.on('connection', (ws) => {
           }
 
           try {
-            const safeUserId = basename(clientInfo.userId);
-            const savePath = join(SAVES_DIR, `save_${safeUserId}.json`);
-
-            const rawData = await fs.readFile(savePath, 'utf-8');
-            const fileData = JSON.parse(rawData);
-            send(ws, 'cloud:load:success', fileData);
-            console.log(`[CloudSave] Spielstand für ${clientInfo.username} geladen.`);
+            const row = db.prepare('SELECT saveData, version, timestamp FROM saves WHERE userId = ?').get(clientInfo.userId);
+            
+            if (row) {
+              const fileData = {
+                userId: clientInfo.userId,
+                timestamp: row.timestamp,
+                saveData: JSON.parse(row.saveData),
+                version: row.version
+              };
+              send(ws, 'cloud:load:success', fileData);
+              console.log(`[CloudSave] Spielstand für ${clientInfo.username} aus SQLite geladen.`);
+            } else {
+              send(ws, 'cloud:load:success', { saveData: null });
+            }
           } catch (err) {
-            // Datei existiert nicht ist ein normaler Fall (neuer User)
+            console.error('[CloudSave] Fehler beim Laden aus SQLite:', err);
             send(ws, 'cloud:load:success', { saveData: null });
           }
           break;
@@ -235,59 +485,43 @@ wss.on('connection', (ws) => {
         case 'leaderboard:submit': {
           if (!clientInfo.userId) return;
 
-          const prestige = Math.max(0, parseInt(payload.prestige) || 0);
-          const bosses = Math.max(0, parseInt(payload.bosses) || 0);
-          const level = Math.max(1, parseInt(payload.level) || 1);
+          try {
+            const prestige = Math.max(0, parseInt(payload.prestige) || 0);
+            const bosses = Math.max(0, parseInt(payload.bosses) || 0);
+            const level = Math.max(1, parseInt(payload.level) || 1);
+            const timestamp = Date.now();
 
-          // Suche nach bestehendem Eintrag für diesen User
-          let entry = leaderboardCache.find(e => e.userId === clientInfo.userId);
-          
-          if (!entry) {
-            entry = {
-              userId: clientInfo.userId,
-              username: clientInfo.username,
-              prestige,
-              bosses,
-              level,
-              timestamp: Date.now()
-            };
-            leaderboardCache.push(entry);
-          } else {
-            // Nur aktualisieren, wenn besser
-            let updated = false;
-            if (prestige > entry.prestige) { entry.prestige = prestige; updated = true; }
-            if (bosses > entry.bosses) { entry.bosses = bosses; updated = true; }
-            if (level > entry.level) { entry.level = level; updated = true; }
+            const stmt = db.prepare(`
+              INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
+              VALUES (?, ?, ?, ?, ?, ?)
+              ON CONFLICT(userId) DO UPDATE SET
+                username = excluded.username,
+                prestige = MAX(leaderboard.prestige, excluded.prestige),
+                bosses = MAX(leaderboard.bosses, excluded.bosses),
+                level = MAX(leaderboard.level, excluded.level),
+                timestamp = CASE 
+                  WHEN excluded.prestige > leaderboard.prestige 
+                       OR excluded.bosses > leaderboard.bosses 
+                       OR excluded.level > leaderboard.level 
+                  THEN excluded.timestamp 
+                  ELSE leaderboard.timestamp 
+                END
+            `);
+
+            stmt.run(clientInfo.userId, clientInfo.username, prestige, bosses, level, timestamp);
+            console.log(`[Leaderboard] Highscore in SQLite aktualisiert für ${clientInfo.username}`);
             
-            if (updated) {
-              entry.username = clientInfo.username; // Falls Name geändert wurde
-              entry.timestamp = Date.now();
-            }
+            // Sende aktualisierte Top 10 an alle zurück
+            broadcast('leaderboard:update', getTop10());
+          } catch (err) {
+            console.error('[Leaderboard] Fehler beim Aktualisieren des Highscores:', err);
           }
-
-          // Sortieren nach: 1. Prestige, 2. Boss-Kills, 3. Level
-          leaderboardCache.sort((a, b) => {
-            if (b.prestige !== a.prestige) return b.prestige - a.prestige;
-            if (b.bosses !== a.bosses) return b.bosses - a.bosses;
-            return b.level - a.level;
-          });
-
-          // Begrenze Bestenliste auf Top 100
-          if (leaderboardCache.length > 100) {
-            leaderboardCache = leaderboardCache.slice(0, 100);
-          }
-
-          await saveLeaderboard();
-          console.log(`[Leaderboard] Highscore aktualisiert für ${clientInfo.username}`);
-          
-          // Sende aktualisierte Top 10 an alle zurück
-          broadcast('leaderboard:update', leaderboardCache.slice(0, 10));
           break;
         }
 
         case 'leaderboard:get': {
           // Sende die Top 10 zurück an den Anfragesteller
-          send(ws, 'leaderboard:update', leaderboardCache.slice(0, 10));
+          send(ws, 'leaderboard:update', getTop10());
           break;
         }
 
@@ -310,6 +544,23 @@ wss.on('connection', (ws) => {
   ws.on('error', (err) => {
     console.error('[Net] Socket-Fehler:', err.message);
   });
+});
+
+// Heartbeat-Intervall: Prüft alle 30 Sekunden alle Verbindungen
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log('[Heartbeat] Verbindung inaktiv. Trenne Geister-Client...');
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+// Intervall aufräumen, falls der Server geschlossen wird
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
 });
 
 // Starten!

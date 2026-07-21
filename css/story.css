@@ -64,18 +64,6 @@
     scrollbar-color: #2a2a35 #0a0a0c;
 }
 
-@supports not (-moz-appearance: none) {
-    .story-boss-list::-webkit-scrollbar {
-        width: 6px;
-    }
-    .story-boss-list::-webkit-scrollbar-track {
-        background: #0a0a0c;
-    }
-    .story-boss-list::-webkit-scrollbar-thumb {
-        background: #2a2a35;
-        border-radius: 2px;
-    }
-}
 
 /* ---- Boss Entries ---- */
 .story-boss-entry {
