@@ -16,6 +16,7 @@ import { h, html, useState, useEffect, useCallback, useMemo, useStateSelector, u
 import { EVENTS } from '../../../core/events/definitions.js';
 import { selectHero, selectHeroAttributes, selectHeroCombatStats, selectHeroLevelProgress, selectResources } from '../../../core/state/selectors.js';
 import { Item } from '../../../models/item.js';
+import { PACTS } from '../../../data/pacts.js';
 
 /**
  * Helden-UI – Hauptkomponente.
@@ -26,6 +27,38 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const [activeTab, setActiveTab] = useState('resources');
   const [previewItem, setPreviewItem] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [bulkRarity, setBulkRarity] = useState('common');
+  const [socketingItem, setSocketingItem] = useState(null);
+  const [pactSelectionActive, setPactSelectionActive] = useState(false);
+  const [pactChoices, setPactChoices] = useState([]);
+
+  // Hilfsfunktion für Custom-Icons
+  const getItemIcon = (item) => {
+    if (!item) return null;
+    const name = item.name;
+    if (name === "Amulett der Dämmerung") {
+      return "icons/Amulett der Dämmerung .png";
+    }
+    if (name === "Mneme-Krone" || name === "Mneme-Krone der Wiederkehr") {
+      return "icons/Die Mneme-Krone.png";
+    }
+    if (
+      name === "Klinge der Ersten" || 
+      name === "Ewige Mneme-Klinge" || 
+      name === "Staubige Klinge" || 
+      name === "Schattenklinge" || 
+      name === "Archiv-Klinge" || 
+      name === "Architekten-Klinge" || 
+      name === "Gott-Klinge" || 
+      name === "Grundlegende Klinge" || 
+      name === "Stahlklinge" || 
+      name === "Dämonenklinge" || 
+      name === "Göttliche Klinge"
+    ) {
+      return "icons/Die Klinge der Ersten.png";
+    }
+    return null;
+  };
 
   // State-Selektoren
   const hero = useStateSelector(stateManager, (state) => state?.hero || null);
@@ -72,6 +105,30 @@ export function HeroUI({ stateManager, eventBus, services }) {
       memoryDust: Number(r.memoryDust || '0')
     };
   });
+
+  const matchingLootCount = useMemo(() => {
+    const items = hero?.inventory?.loot || [];
+    const targetRank = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      all: 4
+    }[bulkRarity] ?? 0;
+
+    const rarityRanks = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      legendary: 4
+    };
+
+    return items.filter(item => {
+      const rank = rarityRanks[item.rarity] ?? 0;
+      return bulkRarity === 'all' ? true : rank <= targetRank;
+    }).length;
+  }, [hero?.inventory?.loot, bulkRarity]);
 
   // Events abonnieren
   useEventBus(eventBus, EVENTS.UI_OPEN_HERO, () => setIsOpen(true));
@@ -149,7 +206,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
   };
 
   // Prestige durchführen
-  const handlePrestige = () => {
+  const handlePrestige = async () => {
     if (!hero) return;
     if (hero.prestige?.bossProgress < 20) {
       eventBus.publish('ui:showToast', {
@@ -159,11 +216,21 @@ export function HeroUI({ stateManager, eventBus, services }) {
       });
       return;
     }
-    if (confirm('Möchtest du deinen Helden verewigen? Alle Fortschritte außer Prestige-Level werden zurückgesetzt.')) {
-      if (heroService && heroService.performPrestige) {
-        heroService.performPrestige(resourceService, services?.clanService);
-      }
+    if (await window.gameConfirm('Möchtest du deinen Helden verewigen? Alle Fortschritte außer Prestige-Level werden zurückgesetzt. Du kannst danach einen Finstren Pakt wählen.', 'VEREWIGUNG')) {
+      // 3 zufällige Pakte auswählen
+      const allPacts = Object.values(PACTS);
+      const shuffled = [...allPacts].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 3);
+      setPactChoices(selected);
+      setPactSelectionActive(true);
     }
+  };
+
+  const handleSelectPact = (pactId) => {
+    if (heroService && heroService.performPrestige) {
+      heroService.performPrestige(resourceService, services?.clanService, pactId);
+    }
+    setPactSelectionActive(false);
   };
 
   // Item anlegen
@@ -212,8 +279,8 @@ export function HeroUI({ stateManager, eventBus, services }) {
   };
 
   // Item zerlegen
-  const handleSalvageItem = (itemData, idx, isLoot = false) => {
-    if (!confirm('Gegenstand wirklich zerlegen?')) return;
+  const handleSalvageItem = async (itemData, idx, isLoot = false) => {
+    if (!(await window.gameConfirm('Gegenstand wirklich zerlegen?'))) return;
     if (!forgeService || !forgeService.salvageItem) return;
     
     const inventory = isLoot ? hero?.inventory?.loot : hero?.inventory?.equipment;
@@ -267,6 +334,78 @@ export function HeroUI({ stateManager, eventBus, services }) {
       };
     }, 'hero/sellLoot');
     eventBus.publish('ui:showToast', { message: `Loot für ${value} Partikel verkauft.`, type: 'success', duration: 2000 });
+  };
+
+  // Massenverkauf (Loot)
+  const handleBulkSell = async () => {
+    if (!hero || !resourceService || matchingLootCount === 0) return;
+
+    const targetRank = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      all: 4
+    }[bulkRarity] ?? 0;
+
+    const rarityRanks = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      legendary: 4
+    };
+
+    const itemsToKeep = [];
+    const itemsToSell = [];
+
+    const items = hero.inventory?.loot || [];
+    items.forEach(item => {
+      const rank = rarityRanks[item.rarity] ?? 0;
+      const shouldSell = bulkRarity === 'all' ? true : rank <= targetRank;
+      if (shouldSell) {
+        itemsToSell.push(item);
+      } else {
+        itemsToKeep.push(item);
+      }
+    });
+
+    if (itemsToSell.length === 0) return;
+
+    // Sicherheitsabfrage für höhere Seltenheiten
+    const containsHighRarity = itemsToSell.some(item => ['rare', 'epic', 'legendary'].includes(item.rarity));
+    if (containsHighRarity) {
+      const confirmMsg = 'Möchtest du wirklich alle ausgewählten Loot-Gegenstände (einschließlich seltener, epischer oder legendärer) verkaufen?';
+      if (!(await window.gameConfirm(confirmMsg, 'MASSENVERKAUF'))) return;
+    }
+
+    const totalValue = itemsToSell.reduce((acc, item) => {
+      const bonus = { common: 0, uncommon: 5, rare: 10, epic: 20, legendary: 50 }[item.rarity] || 0;
+      return acc + 5 + bonus;
+    }, 0);
+
+    resourceService.addParticles(totalValue);
+
+    stateManager.dispatch((state) => {
+      if (!state?.hero) return state;
+      return {
+        ...state,
+        hero: {
+          ...state.hero,
+          inventory: {
+            ...state.hero.inventory,
+            loot: itemsToKeep
+          }
+        }
+      };
+    }, 'hero/bulkSellLoot');
+
+    eventBus.publish(EVENTS.HERO_UPDATED);
+    eventBus.publish('ui:showToast', { 
+      message: `${itemsToSell.length} Gegenstände für ${totalValue} Partikel verkauft.`, 
+      type: 'success', 
+      duration: 3000 
+    });
   };
 
   // Tab wechseln
@@ -325,7 +464,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
             }
           }}
         >
-          ${icon}
+          ${item && getItemIcon(item) ? html`<img src="${getItemIcon(item)}" class="equip-icon-img" alt="${item.name}" />` : icon}
         </div>
       `;
     });
@@ -387,7 +526,25 @@ export function HeroUI({ stateManager, eventBus, services }) {
         <div class="glass-inner-panel mb-2">
           <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Heldentum & Prestige</h3>
           <div class="flex-between mb-1"><span class="text-muted">Prestige-Stufe:</span> <span class="text-gold text-bold">Stufe ${hero?.prestige?.level || 0}</span></div>
-          <div class="flex-between"><span class="text-muted">Prestige-Punkte:</span> <span class="text-gold text-bold">${hero?.prestige?.points || 0}</span></div>
+          <div class="flex-between mb-1"><span class="text-muted">Prestige-Punkte:</span> <span class="text-gold text-bold">${hero?.prestige?.points || 0}</span></div>
+          ${(() => {
+            const activePactId = hero?.prestige?.activePact;
+            const activePactData = activePactId ? PACTS[activePactId] : null;
+            if (activePactData) {
+              return html`
+                <div style="margin-top: 0.6rem; padding: 0.5rem; background: rgba(212,175,55,0.03); border: 1px solid rgba(212,175,55,0.15); border-radius: 4px; box-shadow: inset 0 0 10px rgba(212,175,55,0.05);">
+                  <div style="font-size: 0.58rem; text-transform: uppercase; color: var(--color-gold); font-family: var(--font-header); font-weight: bold; letter-spacing: 0.5px;">Aktiver finsterer Pakt</div>
+                  <div class="text-gold text-bold" style="font-size: 0.78rem; font-family: var(--font-header); margin-top: 1px;">${activePactData.name}</div>
+                  <div style="font-size: 0.68rem; color: #2ecc71; margin-top: 4px; font-weight: 500;">${activePactData.passiveText}</div>
+                  <div style="font-size: 0.68rem; color: #e74c3c; margin-top: 2px; font-weight: 500;">${activePactData.curseText}</div>
+                </div>
+              `;
+            } else {
+              return html`
+                <div class="text-muted text-center" style="font-size: 0.68rem; margin-top: 0.6rem; font-style: italic; opacity: 0.6;">Kein aktiver Sündenpakt vorhanden.</div>
+              `;
+            }
+          })()}
         </div>
         <div class="glass-inner-panel">
           <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Statistiken</h3>
@@ -405,7 +562,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
       return items.map((item, idx) => html`
         <div 
           class="inventory-item-card" 
-          style="border-left: 3px solid ${rarityColors[item.rarity] || '#aaa'};"
+          style="border-left: 3px solid ${rarityColors[item.rarity] || '#aaa'}; display: flex; align-items: center; justify-content: space-between;"
           onMouseEnter=${(e) => {
             setPreviewItem(item);
             setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 });
@@ -413,13 +570,33 @@ export function HeroUI({ stateManager, eventBus, services }) {
           onMouseMove=${(e) => setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 })}
           onMouseLeave=${() => setPreviewItem(null)}
         >
-          <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
-            ${item.name} <span class="text-muted text-sm">Lv.${item.level}</span>
-            <span class="text-muted text-sm">(${rarityLabels[item.rarity] || item.rarity})</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ${getItemIcon(item) ? html`<img src="${getItemIcon(item)}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1);" alt="${item.name}" />` : ''}
+            <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span>${item.name}</span>
+                <span class="text-muted text-sm">Lv.${item.level}</span>
+              </div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-bottom: 2px;">
+                ${rarityLabels[item.rarity] || item.rarity}
+              </div>
+              ${item.sockets && item.sockets.length > 0 ? html`
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  ${item.sockets.map(sock => html`
+                    <span style="font-size: 0.62rem; padding: 1px 4px; border-radius: 3px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; display: inline-flex; align-items: center; gap: 2px;">
+                      ${sock ? '💎 ' + sock.title : '⚪ Sockel leer'}
+                    </span>
+                  `)}
+                </div>
+              ` : ''}
+            </div>
           </div>
-          <div class="item-actions">
-            <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>Anlegen</button>
-            <button class="glass-btn btn-danger btn-small" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>Zerlegen</button>
+          <div class="item-actions" style="display: flex; gap: 4px; align-items: center;">
+            <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>Anlegen</button>
+            ${item.sockets && item.sockets.some(s => s === null) && Number(resources.catalyst || '0') >= 1 ? html`
+              <button class="glass-btn btn-small" style="border-color: var(--color-gold); color: var(--color-gold); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); setSocketingItem({ item, idx, isEquipped: false }); }}>💎 Sockeln</button>
+            ` : ''}
+            <button class="glass-btn btn-danger btn-small" style="padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>Zerlegen</button>
           </div>
         </div>
       `);
@@ -554,6 +731,31 @@ export function HeroUI({ stateManager, eventBus, services }) {
               <button class="inv-tab-btn ${activeTab === 'loot' ? 'active' : ''}" onClick=${() => switchTab('loot')}>Loot</button>
             </div>
 
+            ${activeTab === 'loot' && hero?.inventory?.loot?.length > 0 ? html`
+              <div class="bulk-actions-container">
+                <span class="text-muted text-xs cinzel" style="margin-right: auto; letter-spacing: 0.5px;">Massenverkauf:</span>
+                <select 
+                  class="ui-select" 
+                  value=${bulkRarity} 
+                  onChange=${(e) => setBulkRarity(e.target.value)}
+                  style="background: rgba(0, 0, 0, 0.4); border-color: rgba(197, 160, 89, 0.15); color: var(--color-gold-hover);"
+                >
+                  <option value="common">Nur Gewöhnlich</option>
+                  <option value="uncommon">Ungewöhnlich & schlechter</option>
+                  <option value="rare">Selten & schlechter</option>
+                  <option value="epic">Episch & schlechter</option>
+                  <option value="all">Alle Gegenstände</option>
+                </select>
+                <button 
+                  class="glass-btn btn-danger btn-small" 
+                  disabled=${matchingLootCount === 0}
+                  onClick=${handleBulkSell}
+                >
+                  Verkaufen (${matchingLootCount})
+                </button>
+              </div>
+            ` : ''}
+
             <div class="modal-scroll-area" style="flex: 1; overflow-y: auto; padding-right: 0.3rem; margin-top: 0.3rem;">
               ${renderTabContent()}
             </div>
@@ -568,18 +770,175 @@ export function HeroUI({ stateManager, eventBus, services }) {
       </div>
 
       ${previewItem ? html`
-        <div class="custom-tooltip glass-panel" style="display: block; top: ${tooltipPos.y}px; left: ${tooltipPos.x}px;">
-          <div class="tooltip-title" style="color: ${rarityColors[previewItem.rarity] || '#aaa'};">
-            ${previewItem.name} <span class="text-muted text-sm">Lv.${previewItem.level}</span>
+        <div class="custom-tooltip glass-panel" style="display: block; top: ${tooltipPos.y}px; left: ${tooltipPos.x}px; min-width: 220px; pointer-events: none; z-index: 10000;">
+          <div class="tooltip-title" style="color: ${rarityColors[previewItem.rarity] || '#aaa'}; font-weight: bold; font-size: 0.95rem; font-family: var(--font-header);">
+            ${previewItem.name} <span class="text-muted text-sm" style="font-size: 0.75rem;">Lv.${previewItem.level}</span>
           </div>
-          <div class="tooltip-desc">${previewItem.description || 'Ein Ausrüstungsgegenstand.'}</div>
-          <div class="tooltip-stats">
+          <div class="tooltip-desc" style="font-size: 0.75rem; color: #aaa; margin: 0.3rem 0;">${previewItem.description || 'Ein Ausrüstungsgegenstand.'}</div>
+          <div class="tooltip-stats" style="margin-top: 0.4rem; font-size: 0.8rem;">
             ${Object.entries(previewItem.stats || {}).map(([stat, val]) => html`
-              <div class="tooltip-stat">
+              <div class="tooltip-stat" style="display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 2px;">
                 <span class="text-muted">${stat === 'attack' ? '⚔️ Stärke' : stat === 'defense' ? '🛡️ Zähigkeit' : stat === 'agility' ? '⚡ Geschick' : '❤️ Vitalität'}:</span>
-                <span class="text-highlight text-bold">+${val}</span>
+                <span class="text-highlight text-bold" style="color: var(--color-gold);">+${val}</span>
               </div>
             `)}
+          </div>
+          ${previewItem.sockets && previewItem.sockets.length > 0 ? html`
+            <div class="tooltip-sockets" style="margin-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem; text-align: left;">
+              <div class="text-xs text-muted mb-1" style="font-size: 0.68rem; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4);">Katalysatorsockel:</div>
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                ${previewItem.sockets.map((sock, sIdx) => html`
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: ${sock ? sock.color : '#888'};">
+                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${sock ? sock.color : 'transparent'}; border: 1px solid ${sock ? sock.color : '#666'}; box-shadow: ${sock ? '0 0 4px ' + sock.color : 'none'};"></span>
+                    <span>Sockel ${sIdx + 1}: ${sock ? `${sock.title} (+5 ${sock.id === 'attack' ? 'Angriff' : sock.id === 'defense' ? 'Zähigkeit' : sock.id === 'agility' ? 'Geschick' : 'Vitalität'})` : 'Leerer Sockel'}</span>
+                  </div>
+                `)}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
+
+      ${socketingItem ? html`
+        <div class="modal-overlay" style="display: flex; z-index: 11000;" onClick=${() => setSocketingItem(null)}>
+          <div class="modal-content glass-panel" style="max-width: 440px; text-align: center; padding: 1.5rem; border: 1px solid rgba(197,160,89,0.25);" onClick=${(e) => e.stopPropagation()}>
+            <button class="modal-close" onClick=${() => setSocketingItem(null)}>×</button>
+            <h3 class="modal-title glow-text cinzel" style="font-size: 1.3rem; margin-bottom: 0.3rem;">💎 Katalysatorsockel</h3>
+            <p class="text-muted text-sm mb-1" style="font-size: 0.8rem; line-height: 1.3; color: #bbb;">Wähle einen Katalysator-Rune, um sie in den nächsten freien Sockel dieses Gegenstandes einzusetzen.</p>
+
+            <div class="glass-inner-panel mb-1" style="padding: 0.8rem; border-color: ${rarityColors[socketingItem.item.rarity] || 'var(--color-gold)'}; background: rgba(0,0,0,0.3); margin: 0.8rem 0;">
+              <div class="text-bold cinzel" style="color: ${rarityColors[socketingItem.item.rarity] || 'var(--color-gold)'}; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.05);">
+                ${socketingItem.item.name}
+              </div>
+              <div class="text-muted text-xs" style="font-size: 0.72rem; margin-top: 2px;">Lv.${socketingItem.item.level} (${rarityLabels[socketingItem.item.rarity]})</div>
+              
+              <!-- Sockets state -->
+              <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+                ${socketingItem.item.sockets?.map((sock, sIdx) => html`
+                  <div style="padding: 0.3rem 0.6rem; border-radius: 4px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;">
+                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${sock ? sock.color : 'transparent'}; border: 1px solid ${sock ? sock.color : '#666'};"></span>
+                    Sockel ${sIdx + 1}: ${sock ? sock.title : 'Leerer Sockel'}
+                  </div>
+                `)}
+              </div>
+            </div>
+
+            <div class="text-gold text-sm mb-1 text-bold" style="font-family: var(--font-header); font-size: 0.85rem;">
+              Verfügbare Katalysatoren: <span class="text-highlight" style="font-size: 1rem; color: var(--color-gold);">${resources.catalyst || 0}</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+              ${[
+                { id: 'attack', title: 'Rubin der Glut', bonus: '+5 Angriff', desc: 'Fügt dem Gegenstand Angriffskraft hinzu', color: '#ff4d4d', icon: '⚔️' },
+                { id: 'defense', title: 'Saphir des Schutzes', bonus: '+5 Zähigkeit', desc: 'Fügt dem Gegenstand Zähigkeit hinzu', color: '#4d79ff', icon: '🛡️' },
+                { id: 'agility', title: 'Smaragd der Schnelligkeit', bonus: '+5 Geschick', desc: 'Fügt dem Gegenstand Geschicklichkeit hinzu', color: '#33cc33', icon: '⚡' },
+                { id: 'stamina', title: 'Bernstein des Lebens', bonus: '+5 Vitalität', desc: 'Fügt dem Gegenstand Vitalität hinzu', color: '#ffaa00', icon: '❤️' }
+              ].map(cat => {
+                // Finde den ersten freien Sockel
+                const emptySocketIdx = socketingItem.item.sockets?.findIndex(s => s === null);
+                const hasCatalyst = Number(resources.catalyst || '0') >= 1;
+                const canSocket = emptySocketIdx !== -1 && hasCatalyst;
+
+                const handleConfirmSocket = () => {
+                  if (!canSocket) return;
+                  const res = services.forgeService.socketCatalyst(
+                    socketingItem.isEquipped,
+                    socketingItem.isEquipped ? socketingItem.slot : socketingItem.idx,
+                    emptySocketIdx,
+                    cat.id
+                  );
+                  if (res.success) {
+                    setSocketingItem(null);
+                  }
+                };
+
+                return html`
+                  <button class="glass-btn" 
+                          style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.8rem; border-color: rgba(255,255,255,0.08); cursor: ${canSocket ? 'pointer' : 'not-allowed'}; opacity: ${canSocket ? 1 : 0.55}; text-align: left; background: rgba(255,255,255,0.01);"
+                          disabled=${!canSocket}
+                          onClick=${handleConfirmSocket}>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 1.1rem; color: ${cat.color};">${cat.icon}</span>
+                      <div>
+                        <div style="color: ${cat.color}; font-weight: bold; font-size: 0.8rem; font-family: var(--font-header);">${cat.title}</div>
+                        <div class="text-muted" style="font-size: 0.68rem; line-height: 1.1; color: #999;">${cat.desc}</div>
+                      </div>
+                    </div>
+                    <div class="text-success text-bold" style="font-size: 0.8rem; font-family: var(--font-header); color: #2ecc71;">${cat.bonus}</div>
+                  </button>
+                `;
+              })}
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Finstre Pakte Modal Overlay -->
+      ${pactSelectionActive ? html`
+        <div class="modal-overlay fade-in active" style="z-index: 12000; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+          <div class="glass-panel" style="max-width: 850px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 2rem; border-color: var(--color-gold); background: rgba(10, 8, 5, 0.9); box-shadow: 0 0 40px rgba(212, 175, 55, 0.15); border-radius: 8px; position: relative;">
+            
+            <h2 class="glow-text text-center text-gold cinzel" style="font-size: 1.8rem; letter-spacing: 2px; margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); text-transform: uppercase;">🌀 Finstre Pakte der Verewigung 🌀</h2>
+            <p class="subtitle text-center" style="color: #ccc; font-size: 0.88rem; line-height: 1.4; max-width: 650px; margin: 0 auto 2rem auto; font-family: var(--font-header);">
+              Du stehst an den Grenzen des Archivs des Vergessens. Um den Kreislauf neu zu beginnen und deine Stufe zu erhöhen, musst du einen der drei angebotenen finsteren Pakte schließen. Wähle mit Bedacht – die Entscheidung ist bis zur nächsten Verewigung unumkehrbar.
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 1.5rem;">
+              ${pactChoices.map(pact => html`
+                <div class="glass-panel text-center" 
+                     style="display: flex; flex-direction: column; justify-content: space-between; padding: 1.2rem; border-color: rgba(212, 175, 55, 0.15); background: rgba(255, 255, 255, 0.01); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;"
+                     onMouseEnter=${(e) => {
+                       e.currentTarget.style.borderColor = 'var(--color-gold)';
+                       e.currentTarget.style.boxShadow = '0 0 25px rgba(212, 175, 55, 0.25)';
+                       e.currentTarget.style.transform = 'translateY(-4px)';
+                       e.currentTarget.style.background = 'rgba(212, 175, 55, 0.03)';
+                     }}
+                     onMouseLeave=${(e) => {
+                       e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.15)';
+                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                       e.currentTarget.style.transform = 'translateY(0)';
+                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)';
+                     }}
+                     onClick=${() => handleSelectPact(pact.id)}>
+                  
+                  <div>
+                    <h3 class="text-gold cinzel" style="font-size: 1.1rem; margin-top: 0.2rem; margin-bottom: 0.8rem; font-weight: bold; letter-spacing: 1px;">${pact.name}</h3>
+                    <div style="width: 40px; height: 1px; background: linear-gradient(90deg, transparent, var(--color-gold), transparent); margin: 0 auto 1rem auto;"></div>
+                    <p style="font-size: 0.75rem; color: #aaa; line-height: 1.4; margin-bottom: 1.2rem; min-height: 3.2rem; display: flex; align-items: center; justify-content: center;">
+                      „${pact.desc}“
+                    </p>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 0.8rem; background: rgba(0,0,0,0.4); padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03);">
+                    <!-- Segen -->
+                    <div>
+                      <div class="text-success text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #2ecc71;">🌌 Segen (Positiv)</div>
+                      <div style="font-size: 0.78rem; font-weight: bold; color: #e5ffe5; line-height: 1.2;">
+                        ${pact.passiveText}
+                      </div>
+                    </div>
+
+                    <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 0 auto; width: 60%;"></div>
+
+                    <!-- Fluch -->
+                    <div>
+                      <div class="text-danger text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #e74c3c;">💀 Fluch (Negativ)</div>
+                      <div style="font-size: 0.78rem; font-weight: bold; color: #ffe5e5; line-height: 1.2;">
+                        ${pact.curseText}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button class="glass-btn primary cinzel" style="width: 100%; margin-top: 1.2rem; padding: 0.45rem; font-size: 0.75rem; border-color: rgba(212, 175, 55, 0.3); pointer-events: none;">
+                    Pakt besiegeln
+                  </button>
+                </div>
+              `)}
+            </div>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+              <button class="glass-btn secondary cinzel" style="font-size: 0.75rem; padding: 0.4rem 1.2rem; border-color: rgba(255,255,255,0.15);" onClick=${() => setPactSelectionActive(false)}>Abbrechen</button>
+            </div>
           </div>
         </div>
       ` : ''}

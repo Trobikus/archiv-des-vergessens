@@ -273,6 +273,101 @@ export class ForgeService {
     this._eventBus.publish('forge:salvaged', { item, amount });
     return { success: true, message: `${item.name} zerlegt. +${amount} Staub.` };
   }
+
+  /**
+   * Setzt einen Katalysator in einen Gegenstandssockel ein.
+   */
+  socketCatalyst(isEquipped, slotOrIndex, socketIndex, choiceId) {
+    const state = this._stateManager.getState();
+    const hero = state.hero;
+    const resources = selectResources(state);
+
+    // Prüfen, ob Katalysator vorhanden ist
+    const currentCatalyst = Number(resources.catalyst || '0');
+    if (currentCatalyst < 1) {
+      return { success: false, message: 'Nicht genügend Katalysatoren vorhanden.' };
+    }
+
+    // Item abrufen
+    let itemData = null;
+    if (isEquipped) {
+      itemData = hero.equipment[slotOrIndex];
+    } else {
+      const index = Number(slotOrIndex);
+      itemData = hero.inventory.equipment[index];
+    }
+
+    if (!itemData) {
+      return { success: false, message: 'Gegenstand nicht gefunden.' };
+    }
+
+    const item = Item.fromJSON(itemData);
+    if (!item.sockets || socketIndex < 0 || socketIndex >= item.sockets.length) {
+      return { success: false, message: 'Dieser Gegenstand besitzt keinen entsprechenden Sockel.' };
+    }
+
+    if (item.sockets[socketIndex] !== null) {
+      return { success: false, message: 'Dieser Sockel ist bereits belegt.' };
+    }
+
+    // Katalysator-Effekte definieren
+    const effectsMap = {
+      attack: { title: 'Rubin der Glut', color: '#ff4d4d', effects: { attack: 5 } },
+      defense: { title: 'Saphir des Schutzes', color: '#4d79ff', effects: { defense: 5 } },
+      agility: { title: 'Smaragd der Schnelligkeit', color: '#33cc33', effects: { agility: 5 } },
+      stamina: { title: 'Bernstein des Lebens', color: '#ffaa00', effects: { stamina: 5 } }
+    };
+
+    const catalyst = effectsMap[choiceId];
+    if (!catalyst) {
+      return { success: false, message: 'Ungültiger Katalysator-Typ.' };
+    }
+
+    // Sockel belegen
+    item.sockets[socketIndex] = {
+      id: choiceId,
+      ...catalyst
+    };
+
+    // Im State abspeichern und Katalysator abziehen
+    this._stateManager.dispatch((state) => {
+      const updatedHero = { ...state.hero };
+      if (isEquipped) {
+        updatedHero.equipment = {
+          ...updatedHero.equipment,
+          [slotOrIndex]: item.toJSON()
+        };
+      } else {
+        const index = Number(slotOrIndex);
+        const newEquip = [...updatedHero.inventory.equipment];
+        newEquip[index] = item.toJSON();
+        updatedHero.inventory = {
+          ...updatedHero.inventory,
+          equipment: newEquip
+        };
+      }
+
+      const updatedResources = {
+        ...state.resources,
+        catalyst: String(Math.max(0, currentCatalyst - 1))
+      };
+
+      return {
+        ...state,
+        hero: updatedHero,
+        resources: updatedResources
+      };
+    }, 'forge/socketCatalyst');
+
+    this._eventBus.publish('forge:socketed', { item, socketIndex, catalyst });
+    this._eventBus.publish('ui:showToast', {
+      message: `✨ ${catalyst.title} erfolgreich gesockelt!`,
+      type: 'success',
+      duration: 3000
+    });
+
+    return { success: true, item, message: 'Katalysator erfolgreich gesockelt!' };
+  }
 }
 
 export default ForgeService;

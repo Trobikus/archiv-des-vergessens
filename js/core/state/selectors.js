@@ -68,8 +68,12 @@ export function selectHeroAttributes(state) {
  * Holt die Kampf-Statistiken.
  */
 export function selectHeroCombatStats(state) {
-  const stats = selectHeroAttributes(state);
-  const hero = state.hero;
+  const stats = { ...selectHeroAttributes(state) };
+  const activePact = state.hero?.prestige?.activePact;
+  if (activePact === 'scourged_bodies') {
+    stats.attack = Math.floor(stats.attack * 1.5);
+    stats.defense = Math.floor(stats.defense * 1.5);
+  }
   
   return {
     ...stats,

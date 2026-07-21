@@ -87,10 +87,11 @@ export class GameLoop {
         logicDelta = this._maxDelta * 2;
       }
 
-      // Catchup-Modus (4× Geschwindigkeit)
+      // Catchup-Modus (4× Geschwindigkeit) oder Time Warp (3x Geschwindigkeit)
       let multiplier = 1;
       const state = this._stateManager.getState();
       const timeBank = state.resources.timeBank || 0;
+      const timeWarpActive = state.system?.timeWarpActive || false;
 
       if (timeBank > 0) {
         multiplier = 4;
@@ -104,6 +105,9 @@ export class GameLoop {
         if (!this._catchupActive) {
           this._eventBus.publish('catchup:ended', {});
         }
+      } else if (timeWarpActive) {
+        multiplier = 3;
+        this._catchupActive = false;
       } else {
         this._catchupActive = false;
       }
@@ -121,6 +125,45 @@ export class GameLoop {
 
       if (slowDelta > this._maxDelta * 5) {
         slowDelta = this._maxDelta * 5;
+      }
+
+      // Time Warp decrement / charge ticks
+      const state = this._stateManager.getState();
+      const timeWarpActive = state.system?.timeWarpActive || false;
+      const timeWarpCharge = state.system?.timeWarpCharge || 0;
+      const timeWarpRemaining = state.system?.timeWarpRemaining || 0;
+
+      if (timeWarpActive) {
+        const nextRemaining = Math.max(0, timeWarpRemaining - 0.5);
+        this._stateManager.dispatch((s) => ({
+          ...s,
+          system: {
+            ...s.system,
+            timeWarpRemaining: nextRemaining,
+            timeWarpActive: nextRemaining > 0,
+            timeWarpCharge: nextRemaining > 0 ? timeWarpCharge : 0
+          }
+        }), 'system/timeWarpTick');
+        
+        if (nextRemaining === 0) {
+          this._eventBus.publish('timeWarp:ended', {});
+          this._eventBus.publish('ui:showToast', {
+            message: '⌛ Die Zeitkrümmung ist verflogen.',
+            type: 'info',
+            duration: 3000
+          });
+        }
+      } else {
+        // Passive Ladung: 0.1% pro Sekunde => 0.05% pro 500ms
+        if (timeWarpCharge < 100) {
+          this._stateManager.dispatch((s) => ({
+            ...s,
+            system: {
+              ...s.system,
+              timeWarpCharge: Math.min(100, (s.system?.timeWarpCharge || 0) + 0.05)
+            }
+          }), 'system/timeWarpChargePassive');
+        }
       }
 
       this._eventBus.publish(EVENTS.GAME_SLOW_TICK, {

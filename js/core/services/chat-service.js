@@ -24,23 +24,32 @@ export class ChatService {
    * @param {EventBus} eventBus
    * @param {HeroService} heroService
    * @param {GuildService} guildService
+   * @param {import('./network-service.js').NetworkService} [networkService]
    */
-  constructor(stateManager, eventBus, heroService, guildService) {
+  constructor(stateManager, eventBus, heroService, guildService, networkService = null) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
     this._heroService = heroService;
     this._guildService = guildService;
+    this._networkService = networkService;
     this._maxMessages = 100;
   }
 
-  /**
-   * Sendet eine globale Nachricht.
-   */
   sendGlobalMessage(text) {
     const cleanText = sanitizeString(text, 200, '');
     if (!cleanText) {
       return { success: false, message: 'Nachricht darf nicht leer sein.' };
     }
+
+    // Falls Netzwerk verbunden, senden wir über das WebSocket-Netzwerk
+    if (this._networkService && this._networkService.isConnected()) {
+      const sent = this._networkService.send('chat:global', { message: cleanText });
+      if (sent) {
+        return { success: true };
+      }
+    }
+
+    // FALLBACK: Lokale Simulation (Offline-Modus)
     const playerName = this._stateManager.getState().hero.name;
 
     const msg = {
@@ -51,24 +60,10 @@ export class ChatService {
       type: 'global'
     };
 
-    this._stateManager.dispatch((state) => {
-      const global = [...state.chat.global, msg];
-      if (global.length > this._maxMessages) {
-        global.splice(0, global.length - this._maxMessages);
-      }
-      return {
-        ...state,
-        chat: { ...state.chat, global }
-      };
-    }, 'chat/globalMessage');
-
-    this._eventBus.publish('chat:globalMessage', msg);
+    this.addReceivedGlobalMessage(msg);
     return { success: true, msg };
   }
 
-  /**
-   * Sendet eine Gilden-Nachricht.
-   */
   sendGuildMessage(text) {
     const cleanText = sanitizeString(text, 200, '');
     if (!cleanText) {
@@ -78,6 +73,16 @@ export class ChatService {
     if (!guild) {
       return { success: false, message: 'Du bist in keiner Gilde.' };
     }
+
+    // Falls Netzwerk verbunden, senden wir über das WebSocket-Netzwerk
+    if (this._networkService && this._networkService.isConnected()) {
+      const sent = this._networkService.send('chat:guild', { message: cleanText });
+      if (sent) {
+        return { success: true };
+      }
+    }
+
+    // FALLBACK: Lokale Simulation (Offline-Modus)
     const playerName = this._stateManager.getState().hero.name;
 
     const msg = {
@@ -88,18 +93,7 @@ export class ChatService {
       guildId: guild.id
     };
 
-    this._stateManager.dispatch((state) => {
-      const guildChat = [...state.chat.guild, msg];
-      if (guildChat.length > this._maxMessages) {
-        guildChat.splice(0, guildChat.length - this._maxMessages);
-      }
-      return {
-        ...state,
-        chat: { ...state.chat, guild: guildChat }
-      };
-    }, 'chat/guildMessage');
-
-    this._eventBus.publish('chat:guildMessage', msg);
+    this.addReceivedGuildMessage(msg);
     return { success: true, msg };
   }
 
@@ -139,6 +133,41 @@ export class ChatService {
     }), 'chat/clearGuild');
     this._eventBus.publish('chat:cleared', { type: 'guild' });
     return { success: true };
+  }
+  /**
+   * Wird aufgerufen, wenn ein globales Chat-Paket vom Server empfangen wird.
+   */
+  addReceivedGlobalMessage(msg) {
+    this._stateManager.dispatch((state) => {
+      const global = [...state.chat.global, msg];
+      if (global.length > this._maxMessages) {
+        global.splice(0, global.length - this._maxMessages);
+      }
+      return {
+        ...state,
+        chat: { ...state.chat, global }
+      };
+    }, 'chat/globalMessage');
+
+    this._eventBus.publish('chat:globalMessage', msg);
+  }
+
+  /**
+   * Wird aufgerufen, wenn ein Gilden-Chat-Paket vom Server empfangen wird.
+   */
+  addReceivedGuildMessage(msg) {
+    this._stateManager.dispatch((state) => {
+      const guildChat = [...state.chat.guild, msg];
+      if (guildChat.length > this._maxMessages) {
+        guildChat.splice(0, guildChat.length - this._maxMessages);
+      }
+      return {
+        ...state,
+        chat: { ...state.chat, guild: guildChat }
+      };
+    }, 'chat/guildMessage');
+
+    this._eventBus.publish('chat:guildMessage', msg);
   }
 }
 

@@ -4,40 +4,39 @@
 
 /* ---- Glass Panels ---- */
 .glass-panel {
-    background: linear-gradient(180deg, #141419 0%, #0a0a0c 100%);
-    border: var(--border-glass);
-    border-top: var(--border-highlight);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(10, 10, 15, 0.4) 100%);
+    border: 1px solid rgba(197, 160, 89, 0.15);
+    border-top: 2px solid rgba(197, 160, 89, 0.3);
     border-radius: var(--border-radius-lg);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), inset 0 1px 10px rgba(197, 160, 89, 0.05);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), inset 0 0 30px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255,255,255,0.05);
     position: relative;
+    backdrop-filter: blur(8px);
 }
 
 .glass-panel::before {
     content: '';
     position: absolute;
-    top: 3px;
-    left: 3px;
-    right: 3px;
-    bottom: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.02);
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: var(--border-radius-lg);
+    box-shadow: inset 0 0 100px rgba(0,0,0,0.4);
     pointer-events: none;
-    border-radius: var(--border-radius-md);
+    z-index: 0;
 }
 
 .glass-inner-panel {
-    background: var(--color-panel-inner);
+    background: linear-gradient(to bottom, rgba(5,5,8,0.7), rgba(0,0,0,0.9));
     border: 1px solid rgba(0, 0, 0, 0.8);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius-md);
     padding: 1rem;
-    box-shadow: inset 0 5px 15px rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 5px 25px rgba(0, 0, 0, 0.8);
 }
 
-/* ---- Buttons (Dark Forged Metal) ---- */
+/* ---- Buttons (Dark Forged Metal & Kinetic AAA Style) ---- */
 .glass-btn {
-    background: linear-gradient(180deg, #1e1e24 0%, #111115 100%);
-    border: 1px solid #000;
-    border-top: 1px solid #333;
+    background: linear-gradient(160deg, #1e1e24 0%, #0d0d12 100%);
+    border: 1px solid rgba(197, 160, 89, 0.1);
+    border-top: 1px solid rgba(197, 160, 89, 0.25);
     color: var(--color-text-main);
     border-radius: var(--border-radius-md);
     padding: 0.6rem 1.2rem;
@@ -51,30 +50,48 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
-    text-shadow: 0 1px 2px #000;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0,0,0,0.4);
+    text-shadow: 0 1px 3px #000;
     white-space: nowrap;
-    transition: all var(--transition-default);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
     will-change: transform;
 }
 
+.glass-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(197, 160, 89, 0.08), transparent);
+    transform: skewX(-20deg);
+    transition: all 0.6s ease;
+}
+
 .glass-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, #25252c 0%, #15151a 100%);
+    background: linear-gradient(160deg, #25252c 0%, #121218 100%);
     border-color: var(--color-gold);
     color: var(--color-gold-hover);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.8), 0 0 15px var(--color-gold-glow);
-    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(197, 160, 89, 0.25), inset 0 1px 1px rgba(255,255,255,0.1);
+    transform: translateY(-3px) scale(1.02);
+}
+
+.glass-btn:hover:not(:disabled)::before {
+    left: 200%;
 }
 
 .glass-btn:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 2px 5px rgba(0,0,0,0.6);
 }
 
 .glass-btn:disabled {
     opacity: 0.4;
     filter: grayscale(100%);
     cursor: not-allowed;
+    background: #111;
+    border-color: #222;
 }
 
 .glass-btn.primary {

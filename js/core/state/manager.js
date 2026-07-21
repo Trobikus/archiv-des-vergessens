@@ -53,6 +53,8 @@ function shallowFreezeState(obj) {
  * @property {Object} chat - Chat-Nachrichten
  * @property {Object} codex - Codex-Einträge
  * @property {Object} storyBranch - Story-Verzweigungen
+ * @property {Object} leaderboard - Bestenliste
+ * @property {Object} lore - Chroniken
  * @property {Object} settings - Benutzereinstellungen
  * @property {Object} system - System-Status
  */
@@ -108,7 +110,7 @@ export class StateManager {
         unspentStatPoints: 0,
         equipment: { weapon: null, shield: null, helmet: null, shoulders: null, armor: null, gloves: null, belt: null, boots: null, amulet: null, ring: null, ring2: null },
         inventory: { equipment: [], loot: [] },
-        prestige: { level: 0, points: 0, bossProgress: 0, defeatedBosses: [] },
+        prestige: { level: 0, points: 0, bossProgress: 0, defeatedBosses: [], activePact: null },
         unlockedSkills: [],
         clickPowerLevel: 0,
         titles: [],
@@ -131,7 +133,15 @@ export class StateManager {
       clan: {
         members: [],
         nextId: 1,
-        expeditionStatus: {}
+        expeditionStatus: {},
+        raid: {
+          active: false,
+          members: [],
+          durationSeconds: 0,
+          maxDuration: 3600,
+          lastRaidTime: 0,
+          rewardClaimed: false
+        }
       },
       achievements: {
         list: [],
@@ -157,8 +167,44 @@ export class StateManager {
       chat: { global: [], guild: [], messageId: 0 },
       codex: { entries: {} },
       storyBranch: { currentNode: 'prologue', flags: {}, visited: ['prologue'], history: [], endingReached: false },
+      leaderboard: {
+        highestPrestige: 0,
+        totalPrestiges: 0,
+        fastestBossKill: Infinity,
+        totalBossesDefeated: 0,
+        highestChapterReached: 0,
+        highestLevel: 1,
+        fastestLevelUp: Infinity,
+        highestCraftingLevel: 0,
+        totalMasterworksCrafted: 0,
+        highestItemQuality: 0,
+        peakParticlesPerSecond: 0,
+        totalParticlesCollected: 0,
+        peakRelicsPerSecond: 0,
+        totalRelicsCollected: 0,
+        totalExpeditions: 0,
+        successfulExpeditions: 0,
+        achievementsUnlocked: 0,
+        fastestPrestige: Infinity,
+        totalPlayTime: 0,
+        sessionCount: 0,
+        lastPlayed: Date.now()
+      },
+      lore: {
+        decrypted: {}
+      },
       settings: { particles: true, floatingText: true, autosave: 15000, music: true, sfx: true, volume: 0.7, cloudEnabled: true },
-      system: { currentView: 'menu', isSaving: false, lastSave: null, gameVersion: '1.6', tutorialStep: 0, tutorialFinished: false }
+      system: {
+        currentView: 'intro',
+        isSaving: false,
+        lastSave: null,
+        gameVersion: '1.7',
+        tutorialStep: 0,
+        tutorialFinished: false,
+        timeWarpCharge: 0,
+        timeWarpActive: false,
+        timeWarpRemaining: 0
+      }
     };
   }
 
@@ -229,10 +275,64 @@ export class StateManager {
         if (mw.onBefore) mw.onBefore(oldState, { name });
       }
 
-      const newState = reducer(oldState);
+      let newState = reducer(oldState);
 
       if (!newState || typeof newState !== 'object') {
         throw new Error(`Reducer "${name}" hat keinen gültigen State zurückgegeben`);
+      }
+
+      // Backwards-compatibility for missing leaderboard slice in older saves
+      if (newState && !newState.leaderboard) {
+        newState = {
+          ...newState,
+          leaderboard: this._getInitialState().leaderboard
+        };
+      }
+
+      // Backwards-compatibility for missing lore slice
+      if (newState && !newState.lore) {
+        newState = {
+          ...newState,
+          lore: this._getInitialState().lore
+        };
+      }
+
+      // Backwards-compatibility for missing clan.raid
+      if (newState && newState.clan && !newState.clan.raid) {
+        newState = {
+          ...newState,
+          clan: {
+            ...newState.clan,
+            raid: this._getInitialState().clan.raid
+          }
+        };
+      }
+
+      // Backwards-compatibility for missing system.timeWarpCharge
+      if (newState && newState.system && newState.system.timeWarpCharge === undefined) {
+        newState = {
+          ...newState,
+          system: {
+            ...newState.system,
+            timeWarpCharge: 0,
+            timeWarpActive: false,
+            timeWarpRemaining: 0
+          }
+        };
+      }
+
+      // Backwards-compatibility for missing hero.prestige.activePact
+      if (newState && newState.hero && newState.hero.prestige && newState.hero.prestige.activePact === undefined) {
+        newState = {
+          ...newState,
+          hero: {
+            ...newState.hero,
+            prestige: {
+              ...newState.hero.prestige,
+              activePact: null
+            }
+          }
+        };
       }
 
       // Shallow-Freeze: Root + direkte Kind-Objekte (O(n) statt O(n²) deepFreeze)

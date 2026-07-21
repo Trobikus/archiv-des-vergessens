@@ -55,6 +55,8 @@ export class QuestService {
       this._incrementDaily('craftedItems');
       this.checkCurrentQuest();
     });
+    this._eventBus.subscribe('forge:upgraded', () => this.checkCurrentQuest());
+    this._eventBus.subscribe('story:bossDefeated', () => this.checkCurrentQuest());
     this._eventBus.subscribe('quest:manualGather', () => {
       this._incrementDaily('gatherClicks');
       this.checkCurrentQuest();
@@ -162,7 +164,7 @@ export class QuestService {
     switch (questId) {
       case 'q1': return Number(res.particles) >= 10;
       case 'q2': return clan.members.length >= 1;
-      case 'q3': return clan.members.some(m => this._clanService.isOnExpedition(m.id));
+      case 'q3': return clan.members.some(m => this._clanService.isOnExpedition(m.id)) || (hero._successfulExpeditions || 0) > 0;
       case 'q4': return hero.prestige.bossProgress >= 1;
       case 'q5': return Object.values(hero.equipment).some(item => item !== null);
       case 'q6': return hero.clickPowerLevel >= 1;
@@ -171,10 +173,52 @@ export class QuestService {
       case 'q9': return Number(res.relics) >= 20;
       case 'q10': return clan.members.length >= 5;
       case 'q11': return hero.level >= 10;
-      case 'q12': return Object.values(hero.equipment).some(i => i && i.level > 1);
-      case 'q13': return hero._successfulExpeditions >= 25;
+      case 'q12': return Object.values(hero.equipment).some(i => i && i.level > 1) || (hero.inventory?.equipment && hero.inventory.equipment.some(i => i && i.level > 1));
+      case 'q13': return (hero._successfulExpeditions || 0) >= 25;
       case 'q14': return hero.prestige.bossProgress >= 20;
       case 'q15': return Number(res.totalParticles) >= 1000;
+      case 'q16': return state.hero.unlockedSkills?.length >= 1;
+      case 'q17': return Number(res.memoryDust) >= 100;
+      case 'q18': return hero.level >= 15;
+      case 'q19': return hero.prestige.bossProgress >= 25;
+      case 'q20': return clan.members.length >= 10;
+      case 'q21': return state.crafting?.level >= 3;
+      case 'q22': {
+        const hasHighRarity = Object.values(hero.equipment).some(item => item && ['rare', 'epic', 'legendary'].includes(item.rarity)) ||
+                              (hero.inventory?.equipment && hero.inventory.equipment.some(item => item && ['rare', 'epic', 'legendary'].includes(item.rarity)));
+        return !!hasHighRarity;
+      }
+      case 'q23': return (hero._successfulExpeditions || 0) >= 50;
+      case 'q24': return Number(res.relics) >= 50;
+      case 'q25': return hero.prestige.bossProgress >= 30;
+      case 'q26': return hero.level >= 25;
+      case 'q27': return state.hero.unlockedSkills?.length >= 3;
+      case 'q28': return Number(res.totalRelics) >= 1000;
+      case 'q29': return hero.prestige.level >= 1;
+      case 'q30': return hero.prestige.bossProgress >= 40;
+      case 'q31': return hero.level >= 40;
+      case 'q32': return Number(res.memoryDust) >= 500;
+      case 'q33': return state.crafting?.level >= 5;
+      case 'q34': {
+        const hasLevel5Item = Object.values(hero.equipment).some(item => item && item.level >= 5) ||
+                              (hero.inventory?.equipment && hero.inventory.equipment.some(item => item && item.level >= 5));
+        return !!hasLevel5Item;
+      }
+      case 'q35': return (hero._successfulExpeditions || 0) >= 100;
+      case 'q36': return state.hero.unlockedSkills?.length >= 5;
+      case 'q37': {
+        const hasLegendary = Object.values(hero.equipment).some(item => item && item.rarity === 'legendary') ||
+                             (hero.inventory?.equipment && hero.inventory.equipment.some(item => item && item.rarity === 'legendary'));
+        return !!hasLegendary;
+      }
+      case 'q38': return Number(res.particles) >= 10000;
+      case 'q39': return hero.prestige.level >= 2;
+      case 'q40': return hero.prestige.bossProgress >= 50;
+      case 'q41': return hero.level >= 60;
+      case 'q42': return Number(res.catalyst) >= 5;
+      case 'q43': return state.crafting?.level >= 10;
+      case 'q44': return state.hero.unlockedSkills?.length >= 8;
+      case 'q45': return hero.prestige.level >= 3 || hero.prestige.bossProgress >= 60;
       default: return false;
     }
   }
@@ -184,6 +228,20 @@ export class QuestService {
     if (reward.relics) this._resourceService.addRelics(reward.relics);
     if (reward.artifacts) this._resourceService._stateManager.dispatch(Actions.addArtifacts(reward.artifacts));
     if (reward.memoryDust) this._resourceService._stateManager.dispatch(Actions.addMemoryDust(reward.memoryDust));
+    if (reward.catalyst) {
+      this._stateManager.dispatch((state) => {
+        const resources = state.resources;
+        const current = BigInt(resources.catalyst || '0');
+        const add = BigInt(reward.catalyst);
+        return {
+          ...state,
+          resources: {
+            ...resources,
+            catalyst: String(current + add)
+          }
+        };
+      }, 'quest/addCatalyst');
+    }
   }
 
   // ---- TÄGLICHE MISSIONEN ----

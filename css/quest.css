@@ -63,33 +63,36 @@
     align-items: center;
     padding: 0.8rem 1.2rem;
     margin-bottom: 0.6rem;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(197, 160, 89, 0.06);
+    background: linear-gradient(135deg, rgba(20, 20, 25, 0.8) 0%, rgba(10, 10, 15, 0.9) 100%);
+    border: 1px solid rgba(197, 160, 89, 0.15);
     border-left: 3px solid var(--color-text-muted);
-    border-radius: 2px;
-    transition: all var(--transition-default);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.02);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .quest-card:hover {
-    background: rgba(197, 160, 89, 0.04);
-    border-color: rgba(197, 160, 89, 0.15);
+    background: linear-gradient(135deg, rgba(25, 25, 30, 0.9) 0%, rgba(15, 15, 20, 0.95) 100%);
+    border-color: rgba(197, 160, 89, 0.35);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(197, 160, 89, 0.1);
+    transform: translateY(-2px);
 }
 
 /* ---- Status: Ready ---- */
 .quest-card.ready {
     border-left-color: var(--color-gold);
-    background: rgba(197, 160, 89, 0.05);
-    box-shadow: 0 0 20px rgba(197, 160, 89, 0.05);
+    background: linear-gradient(135deg, rgba(30, 25, 15, 0.9) 0%, rgba(15, 10, 5, 0.95) 100%);
+    box-shadow: 0 5px 20px rgba(197, 160, 89, 0.15), inset 0 1px 1px rgba(197, 160, 89, 0.1);
 }
 
 .quest-card.ready .quest-title {
     color: var(--color-gold) !important;
-    text-shadow: 0 0 10px rgba(197, 160, 89, 0.15);
+    text-shadow: 0 0 15px rgba(197, 160, 89, 0.4);
 }
 
 .quest-card.ready:hover {
-    background: rgba(197, 160, 89, 0.08);
-    box-shadow: 0 0 30px rgba(197, 160, 89, 0.1);
+    background: linear-gradient(135deg, rgba(40, 30, 15, 0.95) 0%, rgba(20, 15, 5, 0.98) 100%);
+    box-shadow: 0 10px 30px rgba(197, 160, 89, 0.25), inset 0 1px 1px rgba(197, 160, 89, 0.2);
 }
 
 /* ---- Status: Active ---- */

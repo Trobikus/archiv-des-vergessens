@@ -45,6 +45,31 @@ export async function bootGame() {
   const eventBus = new EventBus();
   logger.setEventBus(eventBus);
 
+  // Registriere globale Helper-Funktionen für spieleigene, wunderschöne Popups
+  window.gameConfirm = (message, title = 'BESTÄTIGUNG') => {
+    return new Promise((resolve) => {
+      eventBus.publish('ui:openConfirm', {
+        title,
+        message,
+        isAlert: false,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false)
+      });
+    });
+  };
+
+  window.gameAlert = (message, title = 'HINWEIS') => {
+    return new Promise((resolve) => {
+      eventBus.publish('ui:openConfirm', {
+        title,
+        message,
+        isAlert: true,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false)
+      });
+    });
+  };
+
   // Globale Fehlerbehandlung
   window.addEventListener('error', (e) => {
     logger.error(`[Global Error] ${e.message}`, e.error?.stack);
@@ -126,6 +151,10 @@ export async function bootGame() {
   const settingsManager = container.get('settingsManager');
   const cloudManager = container.get('cloudManager');
   const tutorialService = container.get('tutorialService');
+  const networkService = container.get('networkService');
+
+  // Querverweise für Netzwerk-Verarbeitung initialisieren
+  networkService.setServices(chatService, leaderboardService, cloudManager);
 
   // ============================================================
   // 5. STATE INITIALISIEREN
@@ -138,10 +167,15 @@ export async function bootGame() {
   const savedState = await SaveManager.load();
   if (savedState) {
     try {
-      // Migration: Falls es ein alter Spielstand ist, Tutorial als beendet markieren
+       // Migration: Falls es ein alter Spielstand ist, Tutorial als beendet markieren
       if (savedState.system && savedState.system.tutorialFinished === undefined) {
         savedState.system.tutorialFinished = true;
         savedState.system.tutorialStep = -1;
+      }
+      // Erzwingen, dass das Intro beim Spielstart geladen wird, statt direkt ins Menü/Hub zu springen
+      if (savedState.system) {
+        savedState.system.currentView = 'intro';
+        savedState.system.originalLastSave = savedState.system.lastSave;
       }
       stateManager.dispatch(() => savedState, 'boot/hydrate');
       // Expeditionen bereinigen
@@ -226,7 +260,8 @@ export async function bootGame() {
         skillTreeService,
         challengeService,
         libraryService,
-        tutorialService
+        tutorialService,
+        saveManager: SaveManager
       }
     });
     container.register('preactUI', () => preactUI);
@@ -300,39 +335,76 @@ export async function bootGame() {
   });
 
   // ============================================================
-  // 11. CLEANUP (bei Page-Unload)
+  // 11. CLEANUP & SICHERES BEENDEN (Schnittstelle zu Electron & Browser)
   // ============================================================
 
   let cleanupDone = false;
 
-  window.addEventListener('beforeunload', async (e) => {
+  // --- A. Electron Safe-Quit (Desktop) ---
+  if (window.electronAPI && typeof window.electronAPI.onQuitRequested === 'function') {
+    window.electronAPI.onQuitRequested(async () => {
+      if (cleanupDone) return;
+      cleanupDone = true;
+
+      console.log('[GameBoot] Beenden angefordert. Speichere Spielstand lokal und online...');
+      try {
+        // Spielstand sichern
+        await SaveManager.save(stateManager.getState());
+        // Cloud-Sync durchführen
+        if (settingsManager.get('cloudEnabled')) {
+          await cloudManager.sync(stateManager.getState());
+        }
+      } catch (error) {
+        console.error('[GameBoot] Fehler beim Speichern vor Beenden:', error);
+      } finally {
+        console.log('[GameBoot] Speichern abgeschlossen. Beende Electron...');
+        
+        // Timer und Loop sauber stoppen
+        gameLoop.stop();
+        if (autosaveTimer) {
+          clearInterval(autosaveTimer);
+          autosaveTimer = null;
+        }
+        eventBus.clear();
+
+        window.electronAPI.sendQuitReady();
+      }
+    });
+  }
+
+  // --- B. Browser Safe-Quit (Web-Modus) ---
+  window.addEventListener('beforeunload', (e) => {
+    // Falls wir in Electron sind, wird das Beenden exklusiv oben über 'onQuitRequested' abgewickelt
+    if (window.electronAPI) return;
+
     if (cleanupDone) return;
     cleanupDone = true;
 
     try {
-      // Speichern
-      await SaveManager.save(stateManager.getState());
-      // Cloud-Sync
+      // Trigger asynchrones Speichern im Hintergrund
+      SaveManager.save(stateManager.getState());
       if (settingsManager.get('cloudEnabled')) {
-        await cloudManager.sync(stateManager.getState());
+        cloudManager.sync(stateManager.getState());
       }
     } catch (error) {
-      console.warn('[GameBoot] Cleanup-Save fehlgeschlagen:', error);
+      console.warn('[GameBoot] Browser-Cleanup-Save fehlgeschlagen:', error);
     }
 
-    // Stop GameLoop
+    // Timer und Loop sauber stoppen
     gameLoop.stop();
-
-    // Autosave stoppen
     if (autosaveTimer) {
       clearInterval(autosaveTimer);
       autosaveTimer = null;
     }
-
-    // EventBus leeren
     eventBus.clear();
 
-    logger.info('[GameBoot] Cleanup abgeschlossen');
+    logger.info('[GameBoot] Browser-Cleanup gestartet.');
+
+    // Verhindere das sofortige Schließen des Fensters im Browser.
+    // Während der Benutzer die Bestätigung liest, läuft das Speichern im Hintergrund fertig!
+    e.preventDefault();
+    e.returnValue = 'Möchtest du das Archiv wirklich verlassen? Dein Fortschritt wird gespeichert.';
+    return e.returnValue;
   });
 
   // ============================================================
@@ -342,13 +414,15 @@ export async function bootGame() {
   const introContainer = document.getElementById('intro-container');
   if (introContainer) {
     let introFinished = false;
+    let handleIntroClick = null;
 
     // ----------------------------------------------------------
     // MYSTISCHES CANVAS-PARTIKELSYSTEM
     // Zero-Alloc Render Loop · OffscreenCanvas Stamps · Screen-Blend
     // ----------------------------------------------------------
     const _startIntroParticles = () => {
-      const canvas = document.getElementById('intro-particle-canvas');
+      /** @type {HTMLCanvasElement} */
+      const canvas = (/** @type {any} */ (document.getElementById('intro-particle-canvas')));
       if (!canvas) return null;
 
       // alpha:true für transparenten Hintergrund (screen-blending über dunklem BG)
@@ -632,6 +706,12 @@ export async function bootGame() {
       if (introFinished) return;
       introFinished = true;
 
+      // Klick-Event-Listener sauber entfernen
+      if (handleIntroClick) {
+        introContainer.removeEventListener('click', handleIntroClick);
+        introContainer.style.cursor = 'default';
+      }
+
       // Partikel stoppen
       if (stopParticles) stopParticles();
 
@@ -662,16 +742,48 @@ export async function bootGame() {
     // Timer für das automatische Beenden des Intros
     let introTimeoutId = setTimeout(finishIntro, 7000);
 
+    // Wenn ein Spielstand existiert, kann das Intro per Klick übersprungen werden
+    if (savedState) {
+      // Optischen Hinweis geben (Zeiger wird zur Hand)
+      introContainer.style.cursor = 'pointer';
+
+      handleIntroClick = (e) => {
+        // Nicht überspringen, wenn das Update-Overlay gerade aktiv ist
+        const updateOverlay = document.getElementById('update-overlay');
+        if (updateOverlay && updateOverlay.style.display === 'flex') {
+          return;
+        }
+
+        logger.info('[GameBoot] Intro vom Benutzer per Klick übersprungen.');
+        
+        if (introTimeoutId) {
+          clearTimeout(introTimeoutId);
+          introTimeoutId = null;
+        }
+        
+        finishIntro();
+      };
+
+      introContainer.addEventListener('click', handleIntroClick);
+    }
+
     // ============================================================
     // ELECTRON AUTO-UPDATER INTEGRATION (IN-GAME UI)
     // ============================================================
-    const updateOverlay = document.getElementById('update-overlay');
-    const updateTitle = document.getElementById('update-title');
-    const updateMessage = document.getElementById('update-message');
-    const updateConfirmBtn = document.getElementById('update-confirm-btn');
-    const updateCancelBtn = document.getElementById('update-cancel-btn');
-    const loadingBar = document.querySelector('.intro-loading-bar');
-    const loadingText = document.getElementById('intro-loading-text');
+    /** @type {HTMLElement} */
+    const updateOverlay = (/** @type {any} */ (document.getElementById('update-overlay')));
+    /** @type {HTMLElement} */
+    const updateTitle = (/** @type {any} */ (document.getElementById('update-title')));
+    /** @type {HTMLElement} */
+    const updateMessage = (/** @type {any} */ (document.getElementById('update-message')));
+    /** @type {HTMLElement} */
+    const updateConfirmBtn = (/** @type {any} */ (document.getElementById('update-confirm-btn')));
+    /** @type {HTMLElement} */
+    const updateCancelBtn = (/** @type {any} */ (document.getElementById('update-cancel-btn')));
+    /** @type {HTMLElement} */
+    const loadingBar = (/** @type {any} */ (document.querySelector('.intro-loading-bar')));
+    /** @type {HTMLElement} */
+    const loadingText = (/** @type {any} */ (document.getElementById('intro-loading-text')));
 
     if (window.electronAPI) {
       // 1. Wenn ein Update verfügbar ist

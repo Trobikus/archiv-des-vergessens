@@ -330,3 +330,61 @@ html, body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* E. Subtle Update Toast (dezent unter dem Button) */
+.update-toast {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: #a3e635; /* Soft Lime-Green für Erfolg */
+  margin-top: 15px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  text-shadow: 0 0 10px rgba(163, 230, 53, 0.2);
+  text-align: center;
+  max-width: 80%;
+  line-height: 1.4;
+}
+
+.update-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* F. Subtle Version Indicator */
+.version-indicator {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca3af; /* Gedimmtes Silbergrau */
+  margin-top: 15px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  text-align: center;
+}
+
+.version-indicator.show {
+  opacity: 0.65; /* Dezent gedimmt */
+  transform: translateY(0);
+}
+
+/* G. Progress Fill Validating State (Pulsierende Gold-Animation) */
+.progress-fill.pulse {
+  animation: pulse-gold 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-gold {
+  0% {
+    box-shadow: 0 0 5px var(--color-gold);
+    filter: brightness(1);
+  }
+  100% {
+    box-shadow: 0 0 20px var(--color-gold-hover);
+    filter: brightness(1.25);
+  }
+}

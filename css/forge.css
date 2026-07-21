@@ -36,13 +36,20 @@
     padding: 0.8rem 1.2rem;
     margin-bottom: 0.6rem;
     border-left: 3px solid var(--color-gold);
-    background: rgba(0, 0, 0, 0.2);
-    transition: all var(--transition-default);
+    background: linear-gradient(135deg, rgba(20, 20, 25, 0.8) 0%, rgba(10, 10, 15, 0.9) 100%);
+    border-radius: var(--border-radius-sm);
+    border-top: 1px solid rgba(197, 160, 89, 0.15);
+    border-right: 1px solid rgba(197, 160, 89, 0.15);
+    border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.02);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .forge-recipe-card:hover {
-    background: rgba(197, 160, 89, 0.05);
-    border-left-color: var(--color-gold-hover);
+    background: linear-gradient(135deg, rgba(25, 25, 30, 0.9) 0%, rgba(15, 15, 20, 0.95) 100%);
+    border-color: rgba(197, 160, 89, 0.35);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(197, 160, 89, 0.1);
+    transform: translateY(-2px);
 }
 
 .forge-recipe-info {
@@ -54,6 +61,7 @@
     font-family: var(--font-header);
     font-size: 1.05rem;
     color: var(--color-gold);
+    text-shadow: 0 0 10px rgba(197, 160, 89, 0.2);
 }
 
 .forge-recipe-desc {
@@ -81,7 +89,20 @@
     padding: 0.6rem 1.2rem;
     margin-bottom: 0.5rem;
     border-left: 3px solid var(--color-gold);
-    background: rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, rgba(20, 20, 25, 0.8) 0%, rgba(10, 10, 15, 0.9) 100%);
+    border-radius: var(--border-radius-sm);
+    border-top: 1px solid rgba(197, 160, 89, 0.15);
+    border-right: 1px solid rgba(197, 160, 89, 0.15);
+    border-bottom: 1px solid rgba(197, 160, 89, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.02);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.forge-upgrade-card:hover {
+    background: linear-gradient(135deg, rgba(25, 25, 30, 0.9) 0%, rgba(15, 15, 20, 0.95) 100%);
+    border-color: rgba(197, 160, 89, 0.35);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(197, 160, 89, 0.1);
+    transform: translateY(-2px);
 }
 
 .forge-upgrade-info {

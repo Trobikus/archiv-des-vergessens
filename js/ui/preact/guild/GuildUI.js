@@ -55,8 +55,8 @@ export function GuildUI({ stateManager, eventBus, services }) {
     }
   };
 
-  const handleLeaveGuild = () => {
-    if (!confirm('Möchtest du deine Gilde wirklich verlassen?')) return;
+  const handleLeaveGuild = async () => {
+    if (!(await window.gameConfirm('Möchtest du deine Gilde wirklich verlassen?'))) return;
     const result = guildService.leaveGuild();
     if (result.success) {
       eventBus.publish('ui:showToast', { message: result.message, type: 'info', duration: 2000 });

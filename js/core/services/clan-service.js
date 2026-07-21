@@ -17,6 +17,7 @@ import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 import RNG from '../../utils/rng.js';
 import { CONFIG } from '../../data/config.js';
 import { EVENTS } from '../events/definitions.js';
+import { Item } from '../../models/item.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -76,13 +77,18 @@ export class ClanService {
    * Rekrutiert ein neues Mitglied.
    */
   recruitMember(role) {
-    const cost = role === 'collector' ? 10 : role === 'weaver' ? 25 : 40;
+    let cost = 10; // collector
+    if (role === 'weaver') cost = 25;
+    else if (role === 'guardian') cost = 40;
+    else if (role === 'archivist') cost = 200;
+    else if (role === 'elder') cost = 500;
+    
     const state = this._stateManager.getState();
     const members = state.clan.members;
     const id = state.clan.nextId;
 
-    const firstNames = ['Lyra', 'Theron', 'Kael', 'Elara', 'Vane', 'Sira', 'Jace', 'Rin', 'Valerius', 'Selene', 'Gideon', 'Aurelia', 'Cassian', 'Vespera', 'Helena', 'Lysander'];
-    const lastNames = ['Nebelläufer', 'Schattenweber', 'Geistwächter', 'Traumwandler', 'Staubgeborener', 'Ewigkeitssucher', 'Seelenwächter', 'Gedankenleser', 'Wortweber', 'Schleierbrecher'];
+    const firstNames = ['Lyra', 'Theron', 'Kael', 'Elara', 'Vane', 'Sira', 'Jace', 'Rin', 'Valerius', 'Selene', 'Gideon', 'Aurelia', 'Cassian', 'Vespera', 'Helena', 'Lysander', 'Aegon', 'Nyx'];
+    const lastNames = ['Nebelläufer', 'Schattenweber', 'Geistwächter', 'Traumwandler', 'Staubgeborener', 'Ewigkeitssucher', 'Seelenwächter', 'Gedankenleser', 'Wortweber', 'Schleierbrecher', 'Runenmeister'];
 
     let name = '';
     const existingNames = (members || []).map(m => m.name);
@@ -112,11 +118,50 @@ export class ClanService {
     
     this._eventBus.publish('clan:memberRecruited', { memberId: id, name, role });
     this._eventBus.publish('ui:showToast', {
-      message: `👤 ${name} ist dem Bund beigetreten!`,
+      message: `👤 ${name} wurde rekrutiert!`,
       type: 'success',
       duration: 3000
     });
     
+    return true;
+  }
+
+  /**
+   * Entlässt ein Mitglied und erstattet 50% der Partikel-Kosten zurück.
+   */
+  dismissMember(id) {
+    if (this.isOnExpedition(id)) {
+      this._eventBus.publish('ui:showToast', {
+        message: `⚠️ Dieses Mitglied ist aktuell auf einer Expedition und kann nicht entlassen werden.`,
+        type: 'warning',
+        duration: 4000
+      });
+      return false;
+    }
+
+    const member = this.getMember(id);
+    if (!member) return false;
+
+    // Erstattung berechnen
+    let cost = 10;
+    if (member.role === 'weaver') cost = 25;
+    else if (member.role === 'guardian') cost = 40;
+    else if (member.role === 'archivist') cost = 200;
+    else if (member.role === 'elder') cost = 500;
+    
+    const refund = Math.floor(cost * 0.5);
+
+    this._stateManager.dispatch(
+      Actions.dismissClanMember(id, refund),
+      'clan/dismiss'
+    );
+
+    this._eventBus.publish('ui:showToast', {
+      message: `👋 ${member.name} wurde entlassen. (+${refund} Partikel)`,
+      type: 'info',
+      duration: 4000
+    });
+
     return true;
   }
   
@@ -129,7 +174,12 @@ export class ClanService {
     if (this._activeExpeditions.has(memberId)) return false;
     
     const successChance = this._calculateSuccessChance(member);
-    const duration = sanitizeNumber(durationSeconds, 20);
+    const state = this._stateManager.getState();
+    const activePact = state.hero?.prestige?.activePact;
+    let duration = sanitizeNumber(durationSeconds, 20);
+    if (activePact === 'solitary_wanderer') {
+      duration = Math.floor(duration * 1.5);
+    }
     
     this._activeExpeditions.set(memberId, {
       remainingTime: duration * 1000,
@@ -154,9 +204,88 @@ export class ClanService {
   }
   
   /**
+   * Startet eine Expedition für mehrere Mitglieder gleichzeitig (effizient gebatcht).
+   */
+  startMultipleExpeditions(memberIds, durationSeconds = 20) {
+    if (!Array.isArray(memberIds) || memberIds.length === 0) return 0;
+    
+    const state = this._stateManager.getState();
+    const activePact = state.hero?.prestige?.activePact;
+    let duration = sanitizeNumber(durationSeconds, 20);
+    if (activePact === 'solitary_wanderer') {
+      duration = Math.floor(duration * 1.5);
+    }
+    const successfulStarts = [];
+    const newStatuses = {};
+    
+    for (const memberId of memberIds) {
+      const member = this.getMember(memberId);
+      if (!member) continue;
+      if (this._activeExpeditions.has(memberId)) continue;
+      
+      const successChance = this._calculateSuccessChance(member);
+      
+      this._activeExpeditions.set(memberId, {
+        remainingTime: duration * 1000,
+        duration: duration,
+        successChance: clamp(successChance, 0.05, 0.95)
+      });
+      
+      successfulStarts.push(memberId);
+      newStatuses[memberId] = true;
+      
+      // Einzelne Events feuern für bestehende Listener (z.B. Achievements)
+      this._eventBus.publish('expedition:started', { memberId, duration, successChance });
+    }
+    
+    if (successfulStarts.length === 0) return 0;
+    
+    // Status gebatcht im State speichern
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      clan: {
+        ...state.clan,
+        expeditionStatus: {
+          ...state.clan.expeditionStatus,
+          ...newStatuses
+        }
+      }
+    }), 'clan/expeditionStartMultiple');
+    
+    return successfulStarts.length;
+  }
+  
+  /**
    * Verarbeitet einen Slow-Tick (Produktion + Expeditionen).
    */
   _processTick(delta) {
+    // Raid-Tick herabstufen
+    const state = this._stateManager.getState();
+    const raid = state.clan.raid || {};
+    if (raid.active && raid.durationSeconds > 0) {
+      const secondsPassed = Math.floor(delta / 1000) || 1; // Sicherstellen, dass mindestens 1 Sekunde gezählt wird
+      const nextSeconds = Math.max(0, raid.durationSeconds - secondsPassed);
+      this._stateManager.dispatch((state) => ({
+        ...state,
+        clan: {
+          ...state.clan,
+          raid: {
+            ...state.clan.raid,
+            durationSeconds: nextSeconds
+          }
+        }
+      }), 'clan/raidTick');
+      
+      if (nextSeconds === 0) {
+        this._eventBus.publish('clan:raidComplete', {});
+        this._eventBus.publish('ui:showToast', {
+          message: '⚔️ Der Clan-Raid wurde siegreich beendet! Fordere deine Beute im Clan-Menü ein.',
+          type: 'success',
+          duration: 5000
+        });
+      }
+    }
+
     const prestigeBonus = this._stateManager.getState().hero.prestige.level * 2;
     const libraryBonus = this._stateManager.getState().library.upgrades.clan_boost * 0.05;
     
@@ -208,6 +337,21 @@ export class ClanService {
               } else {
                 particlesToCreate += BigInt(3);
               }
+            } else if (role === 'archivist') {
+              if (RNG.next() < 0.15) {
+                relicsToCreate += BigInt(1);
+              } else {
+                particlesToCreate += BigInt(4);
+              }
+            } else if (role === 'elder') {
+              const rand = RNG.next();
+              if (rand < 0.1) {
+                artifactsFound.push(member.id);
+              } else if (rand < 0.3) {
+                relicsToCreate += BigInt(1);
+              } else {
+                particlesToCreate += BigInt(6);
+              }
             }
             
             // add experience locally
@@ -227,18 +371,20 @@ export class ClanService {
       
       // Update resources in state
       let resources = state.resources;
-      if (particlesToCreate > BigInt(0) || relicsToCreate > BigInt(0)) {
+      if (particlesToCreate > BigInt(0) || relicsToCreate > BigInt(0) || artifactsFound.length > 0) {
         const currentParticles = BigInt(resources.particles || '0');
         const totalParticles = BigInt(resources.totalParticles || '0');
         const currentRelics = BigInt(resources.relics || '0');
         const totalRelics = BigInt(resources.totalRelics || '0');
+        const currentArtifacts = BigInt(resources.artifacts || '0');
         
         resources = {
           ...resources,
           particles: String(currentParticles + particlesToCreate),
           totalParticles: String(totalParticles + particlesToCreate),
           relics: String(currentRelics + relicsToCreate),
-          totalRelics: String(totalRelics + relicsToCreate)
+          totalRelics: String(totalRelics + relicsToCreate),
+          artifacts: String(currentArtifacts + BigInt(artifactsFound.length))
         };
       }
       
@@ -286,6 +432,13 @@ export class ClanService {
       for (const memberId of artifactsFound) {
         this._eventBus.publish('clan:artefactFound', { memberId });
       }
+      if (artifactsFound.length > 0) {
+        this._eventBus.publish('resources:updated', { 
+          type: 'artifacts', 
+          amount: artifactsFound.length,
+          total: this._stateManager.getState().resources.artifacts
+        });
+      }
       if (particlesToCreate > BigInt(0)) {
         this._eventBus.publish('resources:updated', { 
           type: 'particles', 
@@ -324,10 +477,26 @@ export class ClanService {
       }
     } else if (role === 'guardian') {
       if (RNG.next() < 0.05) {
-        // Artefakt hinzufügen (wird später über Forge-Service gemacht)
+        this._resourceService.addArtifacts(1);
         this._eventBus.publish('clan:artefactFound', { memberId: member.id });
       } else {
         this._resourceService.addParticles(3);
+      }
+    } else if (role === 'archivist') {
+      if (RNG.next() < 0.15) {
+        this._resourceService.addRelics(1);
+      } else {
+        this._resourceService.addParticles(4);
+      }
+    } else if (role === 'elder') {
+      const rand = RNG.next();
+      if (rand < 0.1) {
+        this._resourceService.addArtifacts(1);
+        this._eventBus.publish('clan:artefactFound', { memberId: member.id });
+      } else if (rand < 0.3) {
+        this._resourceService.addRelics(1);
+      } else {
+        this._resourceService.addParticles(6);
       }
     }
   }
@@ -391,6 +560,15 @@ export class ClanService {
         if (reward.particles) this._resourceService.addParticles(reward.particles);
         if (reward.relics) this._resourceService.addRelics(reward.relics);
         this._addMemberExperience(memberId, 5 + Math.floor(RNG.next() * 5));
+        
+        // _successfulExpeditions im Helden-Zustand erhöhen (wichtig für Quest q13 & Achievements)
+        this._stateManager.dispatch((state) => ({
+          ...state,
+          hero: {
+            ...state.hero,
+            _successfulExpeditions: (state.hero._successfulExpeditions || 0) + 1
+          }
+        }), 'hero/incrementSuccessfulExpeditions');
       }
     } else {
       this._addMemberExperience(memberId, 1);
@@ -457,6 +635,179 @@ export class ClanService {
     this._eventBus.publish('clan:reset', {});
   }
   
+  /**
+   * Startet eine Clan-Raid-Expedition.
+   */
+  startClanRaid(memberIds) {
+    if (!Array.isArray(memberIds) || memberIds.length === 0 || memberIds.length > 5) {
+      return { success: false, message: 'Wähle 1 bis maximal 5 Clan-Mitglieder aus.' };
+    }
+
+    const state = this._stateManager.getState();
+    const raid = state.clan.raid || {};
+    if (raid.active) {
+      return { success: false, message: 'Es läuft bereits ein aktiver Clan-Raid.' };
+    }
+
+    // Prüfen, ob Mitglieder existieren und nicht bereits auf einer Einzelexpedition sind
+    for (const memberId of memberIds) {
+      const member = this.getMember(memberId);
+      if (!member) {
+        return { success: false, message: 'Ein ausgewähltes Mitglied existiert nicht.' };
+      }
+      if (this.isOnExpedition(memberId)) {
+        return { success: false, message: `${member.name} ist bereits auf einer normalen Expedition.` };
+      }
+    }
+
+    // Dauer: 300 Sekunden (5 Minuten)
+    let duration = 300; 
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'shadowy_legions') {
+      duration = 150; // Clan Raid 50% schneller
+    }
+
+    // Im State aktivieren und alle zugewiesenen Mitglieder für Einzelexpeditionen sperren
+    const newStatuses = {};
+    for (const memberId of memberIds) {
+      this._activeExpeditions.set(memberId, {
+        remainingTime: duration * 1000,
+        duration: duration,
+        successChance: 1.0,
+        isRaid: true
+      });
+      newStatuses[memberId] = true;
+    }
+
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      clan: {
+        ...state.clan,
+        expeditionStatus: {
+          ...state.clan.expeditionStatus,
+          ...newStatuses
+        },
+        raid: {
+          active: true,
+          members: memberIds,
+          durationSeconds: duration,
+          maxDuration: duration,
+          lastRaidTime: Date.now(),
+          rewardClaimed: false
+        }
+      }
+    }), 'clan/startRaid');
+
+    this._eventBus.publish('clan:raidStarted', { memberIds, duration });
+    this._eventBus.publish('ui:showToast', {
+      message: `⚔️ Clan-Raid gestartet! Dauer: 5 Minuten.`,
+      type: 'success',
+      duration: 3000
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Fordert die Beute eines abgeschlossenen Clan-Raids ein.
+   */
+  claimRaidReward() {
+    const state = this._stateManager.getState();
+    const raid = state.clan.raid || {};
+    if (!raid.active || raid.durationSeconds > 0) {
+      return { success: false, message: 'Raid ist noch nicht abgeschlossen.' };
+    }
+    if (raid.rewardClaimed) {
+      return { success: false, message: 'Belohnung wurde bereits abgeholt.' };
+    }
+
+    // Katalysatoren-Belohnung (1-3)
+    const catalystAmount = 1 + Math.floor(RNG.next() * 3);
+    const newCatalystCount = Number(state.resources.catalyst || '0') + catalystAmount;
+
+    // Optionales Bonus-Item (30% Chance)
+    let lootedItem = null;
+    if (RNG.next() < 0.3) {
+      const slots = ['weapon', 'armor', 'amulet', 'ring'];
+      const slot = slots[Math.floor(RNG.next() * slots.length)];
+      const rarities = ['rare', 'epic', 'legendary'];
+      const rarityRoll = RNG.next();
+      const rarity = rarityRoll > 0.9 ? 'legendary' : rarityRoll > 0.5 ? 'epic' : 'rare';
+
+      const stats = { attack: 0, defense: 0, agility: 0, stamina: 0 };
+      const level = 1;
+      const power = 10 + Math.floor(RNG.next() * 10);
+      if (slot === 'weapon') stats.attack = power;
+      else if (slot === 'armor') stats.defense = power;
+      else if (slot === 'amulet') { stats.attack = Math.floor(power/2); stats.stamina = Math.floor(power/2); }
+      else { stats.defense = Math.floor(power/2); stats.agility = Math.floor(power/2); }
+
+      lootedItem = new Item(`Schicksalsklinge der Raids`, slot, rarity, stats, 'Gewonnen aus einem heroischen Clan-Raid.', false, level);
+    }
+
+    // EP an Teilnehmer verteilen
+    const members = raid.members;
+    for (const memberId of members) {
+      this._addMemberExperience(memberId, 50); // Massive EP
+    }
+
+    // State aktualisieren (Raid zurücksetzen, Items & Katalysatoren hinzufügen)
+    this._stateManager.dispatch((state) => {
+      const updatedHero = { ...state.hero };
+      if (lootedItem) {
+        updatedHero.inventory = {
+          ...updatedHero.inventory,
+          equipment: [...updatedHero.inventory.equipment, lootedItem.toJSON()]
+        };
+      }
+
+      // Expeditions-Sperre für Teilnehmer aufheben
+      const newStatuses = { ...state.clan.expeditionStatus };
+      for (const memberId of members) {
+        newStatuses[memberId] = false;
+      }
+
+      return {
+        ...state,
+        resources: {
+          ...state.resources,
+          catalyst: String(newCatalystCount)
+        },
+        hero: updatedHero,
+        clan: {
+          ...state.clan,
+          expeditionStatus: newStatuses,
+          raid: {
+            active: false,
+            members: [],
+            durationSeconds: 0,
+            maxDuration: 3600,
+            lastRaidTime: Date.now(),
+            rewardClaimed: true
+          }
+        }
+      };
+    }, 'clan/claimRaidReward');
+
+    // Raid-Objekte aus _activeExpeditions entfernen
+    for (const memberId of members) {
+      this._activeExpeditions.delete(memberId);
+    }
+
+    this._eventBus.publish('clan:raidClaimed', { catalystAmount, lootedItem });
+    
+    let msg = `🎁 Beute abgeholt! +${catalystAmount} Katalysatoren.`;
+    if (lootedItem) msg += ` + ${lootedItem.name} (${lootedItem.getRarityLabel()})!`;
+    
+    this._eventBus.publish('ui:showToast', {
+      message: msg,
+      type: 'success',
+      duration: 5000
+    });
+
+    return { success: true, catalystAmount, lootedItem };
+  }
+
   /**
    * Bereinigt abgelaufene Expeditionen (wird beim Laden aufgerufen).
    */

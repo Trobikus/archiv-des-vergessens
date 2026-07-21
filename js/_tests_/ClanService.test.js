@@ -86,6 +86,48 @@ describe('ClanService', () => {
     expect(resources.particles).toBeGreaterThan(100);
   });
 
+  test('processTick processes archivist and elder roles and awards artifacts', () => {
+    stateManager.dispatch((state) => ({
+      ...state,
+      resources: {
+        ...state.resources,
+        particles: '0',
+        relics: '0',
+        artifacts: '0'
+      },
+      clan: {
+        ...state.clan,
+        members: [
+          {
+            id: 1,
+            name: 'Archivist Member',
+            role: 'archivist',
+            level: 1,
+            experience: 0,
+            progress: 90,
+            expToNextLevel: 50,
+            baseCollectRate: 1.0
+          },
+          {
+            id: 2,
+            name: 'Elder Member',
+            role: 'elder',
+            level: 1,
+            experience: 0,
+            progress: 90,
+            expToNextLevel: 50,
+            baseCollectRate: 1.0
+          }
+        ]
+      }
+    }), 'mockEpicLegendary');
+
+    eventBus.publish('game:slowTick', { delta: 10000 });
+
+    const resources = resourceService.getResources();
+    expect(Number(resources.particles) + Number(resources.relics) + Number(resources.artifacts)).toBeGreaterThan(0);
+  });
+
   test('performance and correctness with 1000 members', () => {
     // Generate 1000 members
     const newMembers = [];
@@ -120,5 +162,40 @@ describe('ClanService', () => {
     const members = clanService.getMembers();
     expect(members.length).toBe(1000);
     expect(members[0].progress).toBeGreaterThan(0);
+  });
+
+  test('startMultipleExpeditions starts expeditions for multiple members in a single batch', () => {
+    stateManager.dispatch((state) => ({
+      ...state,
+      clan: {
+        ...state.clan,
+        members: [
+          { id: 10, name: 'M1', role: 'collector', level: 1, experience: 0, progress: 0, expToNextLevel: 50, baseCollectRate: 1.0 },
+          { id: 11, name: 'M2', role: 'collector', level: 2, experience: 0, progress: 0, expToNextLevel: 50, baseCollectRate: 1.0 },
+          { id: 12, name: 'M3', role: 'collector', level: 3, experience: 0, progress: 0, expToNextLevel: 50, baseCollectRate: 1.0 }
+        ]
+      }
+    }), 'mockMultiple');
+
+    const startedEvents = [];
+    eventBus.subscribe('expedition:started', (data) => {
+      startedEvents.push(data);
+    });
+
+    const count = clanService.startMultipleExpeditions([10, 11, 12], 20);
+    expect(count).toBe(3);
+    expect(clanService.isOnExpedition(10)).toBe(true);
+    expect(clanService.isOnExpedition(11)).toBe(true);
+    expect(clanService.isOnExpedition(12)).toBe(true);
+
+    // Verify events were fired
+    expect(startedEvents.length).toBe(3);
+    expect(startedEvents[0].memberId).toBe(10);
+    expect(startedEvents[1].memberId).toBe(11);
+    expect(startedEvents[2].memberId).toBe(12);
+
+    // Try starting again (should start 0 because they are already on expedition)
+    const count2 = clanService.startMultipleExpeditions([10, 11], 20);
+    expect(count2).toBe(0);
   });
 });

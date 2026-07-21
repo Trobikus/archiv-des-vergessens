@@ -18,7 +18,8 @@
   // Sobald weitere, bisher unabhängige Bereiche (z.B. reine UI-Komponenten
   // ohne Bezug zu js/core) ebenfalls geprüft werden sollen, hier ergänzen:
   "include": [
-    "js/core/**/*.js"
+    "js/**/*.js",
+    "js/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

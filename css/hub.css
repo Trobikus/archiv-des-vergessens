@@ -93,79 +93,180 @@
     gap: 1.5rem;
     position: relative;
     z-index: 1;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 0.5rem 1.5rem 0.5rem 1rem;
-    border-radius: 3px;
-    border: 1px solid rgba(197, 160, 89, 0.08);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(10, 10, 15, 0.4) 100%);
+    padding: 0.8rem 1.8rem 0.8rem 1.2rem;
+    border-radius: 6px;
+    border: 1px solid rgba(197, 160, 89, 0.15);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .hub-avatar {
-    width: 54px;
-    height: 54px;
-    border-radius: 4px;
-    background: radial-gradient(circle at 30% 30%, #22222d, #07070a);
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    background: radial-gradient(circle at 30% 30%, #2a2a36, #0b0b10);
     border: 1px solid var(--color-gold);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    box-shadow: 0 0 20px var(--color-gold-glow), inset 0 0 15px rgba(0, 0, 0, 0.9);
-    transition: all var(--transition-default);
+    font-size: 1.8rem;
+    box-shadow: 0 0 25px var(--color-gold-glow), inset 0 0 15px rgba(0, 0, 0, 0.9);
+    position: relative;
+    overflow: hidden;
 }
 
-.hub-avatar:hover {
-    border-color: var(--color-gold-hover);
-    box-shadow: 0 0 30px var(--color-gold-glow);
+.avatar-icon {
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+}
+
+.avatar-ring-rotating {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border: 1px dashed rgba(197, 160, 89, 0.4);
+    border-radius: 50%;
+    animation: rotateSlowly 10s linear infinite;
+    z-index: 1;
+}
+
+@keyframes rotateSlowly {
+    100% { transform: rotate(360deg); }
 }
 
 .hub-player-info {
-    text-align: right;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 200px;
 }
 
 .hub-player-name {
     font-family: var(--font-header);
     font-weight: 700;
     color: var(--color-gold);
-    font-size: 1.25rem;
-    letter-spacing: 1.5px;
-    text-shadow: 0 0 20px rgba(197, 160, 89, 0.15);
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px rgba(197, 160, 89, 0.4);
 }
 
 .hub-player-stats {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--color-text-muted);
     display: flex;
     align-items: center;
     gap: 8px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .hub-stat-divider {
-    color: var(--color-danger);
+    color: rgba(197, 160, 89, 0.4);
+}
+
+/* Premium XP Bar */
+.hub-xp-container {
+    position: relative;
+    margin-top: 6px;
+    width: 100%;
+    cursor: help;
+}
+
+.hub-xp-bar-track {
+    width: 100%;
+    height: 8px;
+    background: #000;
+    border: 1px solid rgba(197, 160, 89, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.hub-xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1a2a6c, #b21f1f, #fdbb2d);
+    background-size: 200% 200%;
+    animation: gradientFlow 3s ease infinite;
+    position: relative;
+}
+
+.hub-xp-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0));
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.hub-xp-bar-label {
+    position: absolute;
+    top: -16px;
+    right: 0;
+    font-size: 0.6rem;
+    color: var(--color-gold);
+    font-family: var(--font-header);
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px #000;
+}
+
+.hub-level-ring-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 1rem;
+}
+
+.hub-level-ring-aura {
+    position: absolute;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139, 28, 28, 0.3) 0%, transparent 70%);
+    animation: pulseAura 2s ease-in-out infinite;
+}
+
+@keyframes pulseAura {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 0.8; }
 }
 
 .hub-level-ring {
-    width: 50px;
-    height: 50px;
+    width: 55px;
+    height: 55px;
     border-radius: 50%;
     border: 2px solid var(--color-danger);
-    background: radial-gradient(circle at 40% 40%, #1a0e0e, #050507);
+    background: radial-gradient(circle at 40% 40%, #2a0a0a, #050507);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-header);
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     color: #fff;
-    box-shadow: 0 0 20px var(--color-danger-glow), inset 0 0 15px rgba(0, 0, 0, 0.9);
+    box-shadow: 0 0 25px var(--color-danger-glow), inset 0 0 15px rgba(0, 0, 0, 0.9);
     transition: all var(--transition-default);
+    position: relative;
+    z-index: 2;
 }
 
 .hub-level-ring:hover {
     border-color: var(--color-gold);
-    box-shadow: 0 0 30px var(--color-gold-glow);
-    transform: scale(1.05);
+    box-shadow: 0 0 35px var(--color-gold-glow);
+    transform: scale(1.1);
 }
 
 /* ---- Hub Tab Bar ---- */
@@ -260,11 +361,11 @@
 }
 
 .hub-btn {
-    background: linear-gradient(145deg, #16161d 0%, #0a0a0d 100%) !important;
-    border: 1px solid rgba(197, 160, 89, 0.12);
-    border-top: 2px solid rgba(197, 160, 89, 0.25);
-    border-radius: 3px;
-    padding: 3rem 1.5rem;
+    background: linear-gradient(160deg, #181822 0%, #0d0d12 100%) !important;
+    border: 1px solid rgba(197, 160, 89, 0.15);
+    border-top: 2px solid rgba(197, 160, 89, 0.35);
+    border-radius: 6px;
+    padding: 3.5rem 1.5rem;
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -272,39 +373,54 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 14px;
-    transition: all var(--transition-default);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.85);
+    gap: 16px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), inset 0 0 40px rgba(0,0,0,0.6);
     will-change: transform;
 }
 
+.hub-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(197, 160, 89, 0.05), transparent);
+    transform: skewX(-20deg);
+    transition: all 0.7s ease;
+}
+
 .hub-btn .icon {
-    font-size: 3.2rem;
-    transition: transform var(--transition-default), filter var(--transition-default);
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9));
+    font-size: 3.5rem;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.95));
     position: relative;
-    z-index: 1;
+    z-index: 2;
 }
 
 .hub-btn .cinzel {
-    letter-spacing: 2.5px;
+    letter-spacing: 3px;
     color: var(--color-text-main);
-    transition: color var(--transition-default), text-shadow var(--transition-default);
+    transition: all 0.3s ease;
     position: relative;
-    z-index: 1;
-    font-size: 1.1rem;
+    z-index: 2;
+    font-size: 1.15rem;
+    font-weight: 700;
 }
 
 .hub-btn .label {
     font-size: 0.75rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
     text-align: center;
     position: relative;
-    z-index: 1;
-    opacity: 0.7;
-    transition: opacity var(--transition-default);
+    z-index: 2;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    background: rgba(0,0,0,0.4);
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(197, 160, 89, 0.1);
 }
 
 .hub-btn-glow {
@@ -312,33 +428,46 @@
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), #fff, var(--color-gold), transparent);
+    background-size: 200% auto;
     opacity: 0;
-    transition: opacity var(--transition-default);
+    transition: opacity 0.3s ease;
     z-index: 2;
+    animation: shineGlow 2s linear infinite;
+}
+
+@keyframes shineGlow {
+    to { background-position: 200% center; }
 }
 
 .hub-btn:hover {
-    transform: translateY(-6px);
+    transform: translateY(-10px) scale(1.02);
     border-color: var(--color-gold);
-    border-top-color: var(--color-gold-hover);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 25px var(--color-gold-glow);
+    border-top-color: #fff;
+    background: linear-gradient(160deg, #1f1f2c 0%, #121218 100%) !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.95), 0 0 35px var(--color-gold-glow), inset 0 0 20px rgba(197, 160, 89, 0.1);
+}
+
+.hub-btn:hover::before {
+    left: 200%;
 }
 
 .hub-btn:hover .icon {
-    transform: scale(1.15) translateY(-3px);
-    filter: drop-shadow(0 0 15px var(--color-gold));
+    transform: scale(1.2) translateY(-8px);
+    filter: drop-shadow(0 0 25px var(--color-gold));
 }
 
 .hub-btn:hover .cinzel {
     color: var(--color-gold-hover);
-    text-shadow: 0 0 12px rgba(235, 213, 118, 0.3);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
 
 .hub-btn:hover .label {
     opacity: 1;
-    color: var(--color-text-main);
+    color: var(--color-gold);
+    border-color: rgba(197, 160, 89, 0.4);
+    background: rgba(197, 160, 89, 0.1);
 }
 
 .hub-btn:hover .hub-btn-glow {
@@ -557,4 +686,40 @@
     text-transform: uppercase;
     margin: 0;
     opacity: 0.75;
+}
+
+/* ============================================================
+   MAJESTIC IMAGE ICONS (HUB & TABS)
+   ============================================================ */
+
+.tab-icon-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    filter: grayscale(0.6) brightness(0.8) drop-shadow(0 0 5px rgba(197, 160, 89, 0.2));
+    transition: all var(--transition-default);
+    mix-blend-mode: screen; /* Macht schwarze Hintergründe unsichtbar */
+}
+
+.hub-tab-btn:hover .tab-icon-img,
+.hub-tab-btn.active .tab-icon-img {
+    filter: grayscale(0) brightness(1.1) drop-shadow(0 0 10px rgba(197, 160, 89, 0.7));
+    transform: scale(1.1);
+}
+
+.hub-btn-img {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.6));
+    mix-blend-mode: screen; /* Macht schwarze Hintergründe unsichtbar */
+}
+
+.hub-btn:hover .hub-btn-img {
+    transform: scale(1.15) translateY(-5px);
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.8)) brightness(1.1);
 }

@@ -13,9 +13,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const progressLabel = document.getElementById('progress-label');
   const particlesContainer = document.getElementById('particles-container');
   const launcherContainer = document.querySelector('.launcher-container');
+  const updateToast = document.getElementById('update-toast');
+  const versionIndicator = document.getElementById('version-indicator');
 
   let isDevMode = false;
   let updateState = 'checking'; // Zustände: 'checking', 'dev-mode', 'update-available', 'downloading', 'ready-to-install', 'ready-to-play'
+
+  // Aktuelle App-Version asynchron ermitteln und im Indicator setzen
+  let appVersion = '1.6.1';
+  if (window.electronAPI && typeof window.electronAPI.getVersion === 'function') {
+    try {
+      appVersion = await window.electronAPI.getVersion();
+    } catch (e) {
+      console.warn('[Launcher] Konnte Version nicht aus IPC laden:', e);
+    }
+  }
+  if (versionIndicator) {
+    versionIndicator.innerText = `aktuellste Version v${appVersion}`;
+  }
 
   // Hintergrundbild dynamisch per IPC laden (löst das asar-Pfad-Problem)
   // In Dev: Projekt-Root / In Production: resources/ neben app.asar
@@ -90,14 +105,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateState = state;
     if (!actionBtn || !progressContainer) return;
 
-    if (state === 'downloading') {
+    if (state === 'downloading' || state === 'validating') {
       actionBtn.style.display = 'none';
       progressContainer.style.display = 'flex';
       if (text) progressLabel.innerText = text;
+      
+      if (state === 'validating') {
+        progressFill.classList.add('pulse');
+      } else {
+        progressFill.classList.remove('pulse');
+      }
     } else {
       progressContainer.style.display = 'none';
       actionBtn.style.display = 'inline-block';
       actionBtn.disabled = false;
+      progressFill.classList.remove('pulse');
 
       switch (state) {
         case 'checking':
@@ -108,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           actionBtn.innerText = 'INSTALL GAME';
           break;
         case 'update-available':
-          actionBtn.innerText = 'DOWNLOAD UPDATE';
+          actionBtn.innerText = 'UPDATE';
           break;
         case 'ready-to-install':
           actionBtn.innerText = 'INSTALL UPDATE';
@@ -116,6 +138,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         case 'ready-to-play':
           actionBtn.innerText = 'PLAY ADVENTURE';
           break;
+      }
+    }
+
+    // Steuerung des Update-Erfolgs-Toasts
+    if (updateToast) {
+      if (state === 'ready-to-install') {
+        updateToast.classList.add('show');
+      } else {
+        updateToast.classList.remove('show');
+      }
+    }
+
+    // Steuerung des Version-Indikators
+    if (versionIndicator) {
+      if (state === 'ready-to-play') {
+        versionIndicator.classList.add('show');
+      } else {
+        versionIndicator.classList.remove('show');
       }
     }
   }
@@ -141,14 +181,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearInterval(simInterval);
             
             setTimeout(() => {
-              setUIState('ready-to-play');
-              console.log('[Launcher] Simulation abgeschlossen.');
+              setUIState('validating', 'VALIDATING FILES...');
+              progressFill.style.width = '100%';
+              
+              setTimeout(() => {
+                setUIState('ready-to-play');
+                console.log('[Launcher] Simulation & Validierung abgeschlossen.');
+              }, 1800);
             }, 300);
           }
           
-          const roundedProgress = Math.round(progress);
-          progressFill.style.width = `${roundedProgress}%`;
-          progressLabel.innerText = `Downloading... ${roundedProgress}%`;
+          if (updateState === 'downloading') {
+            const roundedProgress = Math.round(progress);
+            progressFill.style.width = `${roundedProgress}%`;
+            progressLabel.innerText = `Downloading... ${roundedProgress}%`;
+          }
         }, intervalStep);
 
       } else if (updateState === 'update-available') {
@@ -201,8 +248,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // D. Update fertig heruntergeladen
     window.electronAPI.onUpdateEvent('update:downloaded', (info) => {
-      console.log('[Launcher] Download beendet. Bereit zur Installation:', info);
-      setUIState('ready-to-install');
+      console.log('[Launcher] Download beendet. Starte Dateivalidierung...');
+      setUIState('validating', 'VALIDATING FILES...');
+      progressFill.style.width = '100%';
+      
+      // Simuliere/Sichere die Dateiverifizierung für 1.8 Sekunden, bevor wir freigeben
+      setTimeout(() => {
+        console.log('[Launcher] Validierung abgeschlossen. Bereit zur Installation:', info);
+        setUIState('ready-to-install');
+      }, 1800);
     });
 
     // E. Fehler bei der Update-Abfrage

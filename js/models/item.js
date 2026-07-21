@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * FILE: models/item.js – Item (Ausrüstung & Loot)
+ * FILE: models/item.js – Item (Ausrüstung & Loot mit Sockeln)
  * ============================================================
  */
 
@@ -16,16 +16,37 @@ export class Item {
     this.setName = this._determineSetName(name);
     this.quality = 100;
     this.isMasterwork = false;
+    this.sockets = []; // Liste von Sockel-Objekten (null = leerer Sockel, oder Catalyst-Objekt)
+    if (this.rarity === 'rare' || this.rarity === 'epic') {
+      this.sockets = [null];
+    } else if (this.rarity === 'legendary') {
+      this.sockets = [null, null];
+    }
   }
 
   get stats() {
     const multiplier = 1 + (this.level - 1) * 0.2;
-    return {
+    const base = {
       attack: Math.floor(this.baseStats.attack * multiplier),
       defense: Math.floor(this.baseStats.defense * multiplier),
       agility: Math.floor(this.baseStats.agility * multiplier),
       stamina: Math.floor(this.baseStats.stamina * multiplier)
     };
+
+    // Sockel-Katalysator-Boni hinzurechnen
+    if (this.sockets && Array.isArray(this.sockets)) {
+      for (const socket of this.sockets) {
+        if (socket && typeof socket === 'object' && socket.effects) {
+          for (const key in socket.effects) {
+            if (base[key] !== undefined) {
+              base[key] += socket.effects[key];
+            }
+          }
+        }
+      }
+    }
+
+    return base;
   }
 
   _determineSetName(name) {
@@ -82,7 +103,8 @@ export class Item {
       isLoot: this.isLoot,
       level: this.level,
       quality: this.quality,
-      isMasterwork: this.isMasterwork
+      isMasterwork: this.isMasterwork,
+      sockets: this.sockets
     };
   }
 
@@ -99,6 +121,7 @@ export class Item {
     );
     item.quality = data.quality || 100;
     item.isMasterwork = data.isMasterwork || false;
+    item.sockets = data.sockets || [];
     return item;
   }
 }

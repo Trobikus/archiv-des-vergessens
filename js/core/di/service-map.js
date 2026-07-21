@@ -47,6 +47,7 @@
  * @property {import('../services/challenge-service.js').default} challengeService
  * @property {import('../services/library-service.js').default} libraryService
  * @property {import('../services/tutorial-service.js').default} tutorialService
+ * @property {import('../services/network-service.js').default} networkService
  */
 
 export {};

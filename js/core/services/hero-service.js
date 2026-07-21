@@ -78,8 +78,25 @@ export class HeroService {
     const safeAmount = sanitizeNumber(amount, 0);
     if (safeAmount <= 0) return;
     
+    // Lore-Bonus (Lehre des Fleißes)
+    const state = this._stateManager.getState();
+    let expMultiplier = 1.0;
+    if (state.lore?.decrypted?.node_prologue === 'diligence') {
+      expMultiplier = 1.15;
+    }
+
+    // Finstre Pakte Multiplikatoren
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact === 'ancient_folios') {
+      expMultiplier *= 2.0;
+    } else if (activePact === 'shadowy_legions') {
+      expMultiplier *= 0.77; // entspricht +30% benötigter XP (1 / 1.3)
+    }
+
+    const finalAmount = Math.floor(safeAmount * expMultiplier);
+
     const oldLevel = this.getHero().level;
-    this._stateManager.dispatch(Actions.addHeroExperience(safeAmount), 'hero/addExperience');
+    this._stateManager.dispatch(Actions.addHeroExperience(finalAmount), 'hero/addExperience');
     const newLevel = this.getHero().level;
     
     if (newLevel > oldLevel) {
@@ -90,7 +107,7 @@ export class HeroService {
       });
     }
     
-    this._eventBus.publish('hero:updated', { experience: safeAmount });
+    this._eventBus.publish('hero:updated', { experience: finalAmount });
   }
   
   /**
@@ -111,7 +128,7 @@ export class HeroService {
   /**
    * Führt ein Prestige (Verewigung) durch.
    */
-  performPrestige(resourceService, clanService) {
+  performPrestige(resourceService, clanService, activePact = null) {
     const hero = this.getHero();
     const totalBosses = 20; // Aus Boss-Daten
     
@@ -142,7 +159,8 @@ export class HeroService {
         level: newPrestigeLevel,
         points: hero.prestige.points + 1,
         bossProgress: 0,
-        defeatedBosses: []
+        defeatedBosses: [],
+        activePact: activePact
       };
       hero.clickPowerLevel = 0;
       return { ...state, hero };

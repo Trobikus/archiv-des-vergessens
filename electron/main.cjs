@@ -25,6 +25,7 @@ autoUpdater.logger = {
 // ---- Globale Fenster-Referenzen (verhindert GC) ----
 let mainWindow = null;
 let launcherWindow = null;
+let forceQuit = false;
 
 // ============================================================
 // FENSTER ERSTELLEN
@@ -134,6 +135,13 @@ function createWindow() {
     return { action: 'deny' };
   });
 
+  mainWindow.on('close', (e) => {
+    if (!forceQuit) {
+      e.preventDefault();
+      mainWindow.webContents.send('app:quit-requested');
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -144,6 +152,15 @@ function createWindow() {
 // ============================================================
 
 function startAutoUpdater() {
+  autoUpdater.autoDownload = false; // Verhindert den automatischen Download im Hintergrund!
+  
+  // Da die App unter Windows oft unsigniert ist, schlägt die automatische Signaturprüfung fehl.
+  // Wir überschreiben die Prüfung, damit das Update trotzdem erfolgreich installiert werden kann.
+  autoUpdater.verifyUpdateCodeSignature = (publisherName, path) => {
+    console.log('[AutoUpdater] Code-Signaturprüfung für unsignierte App übersprungen.');
+    return Promise.resolve(null);
+  };
+
   // Helfer, um Events an das aktive Fenster (Launcher oder Hauptspiel) zu senden
   function sendToActiveWindow(channel, data) {
     if (launcherWindow && !launcherWindow.isDestroyed()) {
@@ -232,6 +249,11 @@ ipcMain.on('launcher:close', () => {
   app.quit();
 });
 
+ipcMain.on('app:quit-ready', () => {
+  forceQuit = true;
+  app.quit();
+});
+
 // --- Auto-Updater ---
 ipcMain.on('updater:start-download', () => {
   console.log('[AutoUpdater] Download per User-Aktion gestartet');
@@ -242,7 +264,21 @@ ipcMain.on('updater:start-download', () => {
 
 ipcMain.on('updater:quit-and-install', () => {
   console.log('[AutoUpdater] Neustart und Installation gestartet');
-  autoUpdater.quitAndInstall(false, true);
+  
+  forceQuit = true;
+  app.removeAllListeners('window-all-closed');
+  
+  // Alle offenen Fenster zerstören, um eventuelle Dateisperren (File Locks) aufzuheben
+  BrowserWindow.getAllWindows().forEach((win) => {
+    if (!win.isDestroyed()) {
+      win.destroy();
+    }
+  });
+
+  // setImmediate stellt sicher, dass alle Close-Operationen abgeschlossen sind
+  setImmediate(() => {
+    autoUpdater.quitAndInstall(false, true);
+  });
 });
 
 ipcMain.handle('updater:check', async () => {

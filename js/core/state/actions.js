@@ -325,6 +325,14 @@ export function recruitClanMember(name, role, cost) {
     const clan = state.clan;
     const id = clan.nextId;
     
+    // Basis-Raten festlegen (höhere Rollen sind effizienter)
+    let rate = 1.0;
+    if (role === 'collector') rate = 2.0;
+    else if (role === 'weaver') rate = 1.2;
+    else if (role === 'guardian') rate = 0.8;
+    else if (role === 'archivist') rate = 2.5;
+    else if (role === 'elder') rate = 3.5;
+    
     const newMember = {
       id,
       name: sanitizeString(name, 50, `Mitglied ${id}`),
@@ -333,7 +341,7 @@ export function recruitClanMember(name, role, cost) {
       experience: 0,
       progress: 0,
       expToNextLevel: 50,
-      baseCollectRate: role === 'collector' ? 2.0 : role === 'weaver' ? 1.2 : 0.8
+      baseCollectRate: rate
     };
     
     return {
@@ -346,6 +354,36 @@ export function recruitClanMember(name, role, cost) {
         ...clan,
         members: [...clan.members, newMember],
         nextId: id + 1
+      }
+    };
+  };
+}
+
+/**
+ * Entlässt ein Clan-Mitglied und erstattet Partikel.
+ */
+export function dismissClanMember(id, refundParticles) {
+  return (state) => {
+    const clan = state.clan;
+    const index = clan.members.findIndex(m => m.id === id);
+    if (index === -1) return state;
+
+    const resources = state.resources;
+    const currentParticles = BigInt(resources.particles || '0');
+    const refundBig = BigInt(refundParticles || '0');
+
+    const newMembers = [...clan.members];
+    newMembers.splice(index, 1);
+
+    return {
+      ...state,
+      resources: {
+        ...resources,
+        particles: String(currentParticles + refundBig)
+      },
+      clan: {
+        ...clan,
+        members: newMembers
       }
     };
   };
@@ -464,6 +502,7 @@ export default {
   removeParticles,
   addRelics,
   recruitClanMember,
+  dismissClanMember,
   updateClanMemberProgress,
   setCurrentView,
   setSavingStatus,

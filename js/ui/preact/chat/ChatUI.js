@@ -30,8 +30,8 @@ export function ChatUI({ stateManager, eventBus, services }) {
     }
   };
 
-  const handleClear = () => {
-    if (confirm('Möchtest du den globalen Chat leeren?')) {
+  const handleClear = async () => {
+    if (await window.gameConfirm('Möchtest du den globalen Chat leeren?')) {
       chatService.clearGlobalChat();
     }
   };
