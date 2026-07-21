@@ -27,6 +27,11 @@ export class LeaderboardService {
     this._networkService = networkService;
     this._STORAGE_KEY = 'archiv_leaderboard_data';
     this._records = this._load();
+
+    // Automatisch aktuelle Rekorde einreichen, sobald die Netzwerkverbindung authentifiziert ist
+    this._eventBus.subscribe('network:auth:success', () => {
+      this._submitToServer();
+    });
   }
 
   _load() {
@@ -216,7 +221,7 @@ export class LeaderboardService {
     if (this._networkService && this._networkService.isConnected()) {
       this._networkService.send('leaderboard:get');
     } else {
-      this._eventBus.publish('leaderboard:globalUpdated', []);
+      this._eventBus.publish('leaderboard:globalUpdated', null);
     }
   }
 

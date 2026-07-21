@@ -178,16 +178,36 @@ export function ClanUI({ stateManager, eventBus, services }) {
     }
   };
 
+  const multipleExpeditionsBtn = idleMembers.length > 1 ? html`
+    <button class="glass-btn primary btn-small epic-pulse" style="padding: 4px 10px; font-size: 0.75rem;" onClick=${handleMultipleExpeditions}>
+      🚀 Alle Bereiten entsenden (${idleMembers.length})
+    </button>
+  ` : null;
+
+  const memberRows = paginatedMembers.map(member => {
+    const isOnExp = expeditionStatus[member.id] || false;
+    const progress = Math.min(100, member.progress || 0);
+    return html`
+      <tr style="cursor: pointer; opacity: ${isOnExp ? '0.6' : '1'};" onClick=${() => handleMemberClick(member.id)}>
+        <td class="member-name">${member.name}</td>
+        <td class="member-role">${roleLabels[member.role] || member.role}</td>
+        <td class="member-level">${member.level}</td>
+        <td>
+          <div class="progress-bar-container" style="height: 14px;">
+            <div class="progress-bar-fill" style="transform: scaleX(${progress / 100}); transform-origin: left;"></div>
+            <div class="progress-text">${Math.floor(progress)}%</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
   return html`
     <div class="clan-ui-container panels-grid">
       <div class="glass-panel" style="padding: 1.5rem;">
         <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(197,160,89,0.15); padding-bottom: 0.5rem; margin-bottom: 1rem;">
           <h3 class="panel-title cinzel text-gold" style="margin: 0; border: none; padding: 0;">Mitglieder des Bundes</h3>
-          ${idleMembers.length > 1 ? html`
-            <button class="glass-btn primary btn-small epic-pulse" style="padding: 4px 10px; font-size: 0.75rem;" onClick=${handleMultipleExpeditions}>
-              🚀 Alle Bereiten entsenden (${idleMembers.length})
-            </button>
-          ` : null}
+          ${multipleExpeditionsBtn}
         </div>
         <div class="table-container" style="max-height: 280px; overflow-y: auto; margin-top: 1rem;">
           <table id="clan-members-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
@@ -200,23 +220,7 @@ export function ClanUI({ stateManager, eventBus, services }) {
               </tr>
             </thead>
             <tbody>
-              ${paginatedMembers.map(member => {
-                const isOnExp = expeditionStatus[member.id] || false;
-                const progress = Math.min(100, member.progress || 0);
-                return html`
-                  <tr style="cursor: pointer; opacity: ${isOnExp ? '0.6' : '1'};" onClick=${() => handleMemberClick(member.id)}>
-                    <td class="member-name">${member.name}</td>
-                    <td class="member-role">${roleLabels[member.role] || member.role}</td>
-                    <td class="member-level">${member.level}</td>
-                    <td>
-                      <div class="progress-bar-container" style="height: 14px;">
-                        <div class="progress-bar-fill" style="transform: scaleX(${progress / 100}); transform-origin: left;"></div>
-                        <div class="progress-text">${Math.floor(progress)}%</div>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              })}
+              ${memberRows}
             </tbody>
           </table>
         </div>

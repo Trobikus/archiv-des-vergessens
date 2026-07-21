@@ -13,25 +13,35 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
   const [activeTab, setActiveTab] = useState('personal'); // 'personal' | 'global'
   const [globalEntries, setGlobalEntries] = useState([]);
   const [isLoadingGlobal, setIsLoadingGlobal] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
 
   const stats = useStateSelector(stateManager, () => leaderboardService.getFormattedStats());
   const records = useStateSelector(stateManager, () => leaderboardService.getRecords());
 
   // Registriere Events
-  useEventBus(eventBus, EVENTS.UI_OPEN_LEADERBOARD, () => {
+  useEventBus(eventBus, EVENTS.UI_OPEN_LEADERBOARD, (data) => {
     setIsOpen(true);
-    if (activeTab === 'global') {
+    const targetTab = data && data.tab ? data.tab : 'personal';
+    setActiveTab(targetTab);
+    if (targetTab === 'global') {
       fetchGlobal();
     }
   });
 
   useEventBus(eventBus, 'leaderboard:globalUpdated', (entries) => {
-    setGlobalEntries(entries || []);
+    if (entries === null) {
+      setConnectionError(true);
+      setGlobalEntries([]);
+    } else {
+      setConnectionError(false);
+      setGlobalEntries(entries);
+    }
     setIsLoadingGlobal(false);
   });
 
   const fetchGlobal = () => {
     setIsLoadingGlobal(true);
+    setConnectionError(false);
     leaderboardService.requestGlobalLeaderboard();
   };
 
@@ -107,11 +117,19 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
                 </div>
               `}
 
-              ${!isLoadingGlobal && globalEntries.length === 0 && html`
+              ${!isLoadingGlobal && connectionError && html`
                 <div class="text-center text-muted" style="padding: 2rem 0;">
                   <p style="font-size: 1.2rem; margin-bottom: 0.3rem;">📡 Äther-Verbindung schwach</p>
-                  <p style="font-size: 0.85rem;">Der Multiplayer-Server ist offline oder es wurden noch keine Rekorde eingetragen.</p>
+                  <p style="font-size: 0.85rem;">Der Multiplayer-Server ist offline oder die Verbindung konnte nicht hergestellt werden.</p>
                   <button class="glass-btn btn-small" style="margin-top: 1rem; padding: 0.3rem 1rem; font-size: 0.75rem;" onClick=${fetchGlobal}>🔄 Erneut versuchen</button>
+                </div>
+              `}
+
+              ${!isLoadingGlobal && !connectionError && globalEntries.length === 0 && html`
+                <div class="text-center text-muted" style="padding: 2rem 0;">
+                  <p style="font-size: 1.2rem; margin-bottom: 0.3rem;">🏛️ Die Hallen sind leer</p>
+                  <p style="font-size: 0.85rem;">Bisher wurden noch keine Ruhmestaten in den Chroniken verzeichnet. Trage dich als Erster ein!</p>
+                  <button class="glass-btn btn-small" style="margin-top: 1rem; padding: 0.3rem 1rem; font-size: 0.75rem;" onClick=${fetchGlobal}>🔄 Aktualisieren</button>
                 </div>
               `}
 

@@ -67,7 +67,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimizeLauncher: () => ipcRenderer.send('launcher:minimize'),
 
   /** Schließt den Launcher (und damit die App) */
-  closeLauncher: () => ipcRenderer.send('launcher:close')
+  closeLauncher: () => ipcRenderer.send('launcher:close'),
+
+  // --- Sicheres Beenden (Savegame-Schutz) ---
+  /** Signalisiert dem Renderer, dass das Fenster geschlossen werden soll */
+  onQuitRequested: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('app:quit-requested', handler);
+    return () => ipcRenderer.removeListener('app:quit-requested', handler);
+  },
+
+  /** Meldet dem Hauptprozess, dass das Speichern abgeschlossen ist und beendet werden kann */
+  sendQuitReady: () => ipcRenderer.send('app:quit-ready')
 });
 
 // ---- Konsolenausgabe bei erfolgreichem Laden ----

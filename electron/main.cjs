@@ -25,6 +25,7 @@ autoUpdater.logger = {
 // ---- Globale Fenster-Referenzen (verhindert GC) ----
 let mainWindow = null;
 let launcherWindow = null;
+let forceQuit = false;
 
 // ============================================================
 // FENSTER ERSTELLEN
@@ -134,6 +135,13 @@ function createWindow() {
     return { action: 'deny' };
   });
 
+  mainWindow.on('close', (e) => {
+    if (!forceQuit) {
+      e.preventDefault();
+      mainWindow.webContents.send('app:quit-requested');
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -231,6 +239,11 @@ ipcMain.on('launcher:minimize', () => {
 });
 
 ipcMain.on('launcher:close', () => {
+  app.quit();
+});
+
+ipcMain.on('app:quit-ready', () => {
+  forceQuit = true;
   app.quit();
 });
 

@@ -158,7 +158,7 @@ export class StateManager {
       codex: { entries: {} },
       storyBranch: { currentNode: 'prologue', flags: {}, visited: ['prologue'], history: [], endingReached: false },
       settings: { particles: true, floatingText: true, autosave: 15000, music: true, sfx: true, volume: 0.7, cloudEnabled: true },
-      system: { currentView: 'menu', isSaving: false, lastSave: null, gameVersion: '1.6', tutorialStep: 0, tutorialFinished: false }
+      system: { currentView: 'intro', isSaving: false, lastSave: null, gameVersion: '1.6', tutorialStep: 0, tutorialFinished: false }
     };
   }
 

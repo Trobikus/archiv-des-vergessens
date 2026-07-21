@@ -142,10 +142,14 @@ export async function bootGame() {
   const savedState = await SaveManager.load();
   if (savedState) {
     try {
-      // Migration: Falls es ein alter Spielstand ist, Tutorial als beendet markieren
+       // Migration: Falls es ein alter Spielstand ist, Tutorial als beendet markieren
       if (savedState.system && savedState.system.tutorialFinished === undefined) {
         savedState.system.tutorialFinished = true;
         savedState.system.tutorialStep = -1;
+      }
+      // Erzwingen, dass das Intro beim Spielstart geladen wird, statt direkt ins Menü/Hub zu springen
+      if (savedState.system) {
+        savedState.system.currentView = 'intro';
       }
       stateManager.dispatch(() => savedState, 'boot/hydrate');
       // Expeditionen bereinigen
@@ -230,7 +234,8 @@ export async function bootGame() {
         skillTreeService,
         challengeService,
         libraryService,
-        tutorialService
+        tutorialService,
+        saveManager: SaveManager
       }
     });
     container.register('preactUI', () => preactUI);
@@ -304,39 +309,76 @@ export async function bootGame() {
   });
 
   // ============================================================
-  // 11. CLEANUP (bei Page-Unload)
+  // 11. CLEANUP & SICHERES BEENDEN (Schnittstelle zu Electron & Browser)
   // ============================================================
 
   let cleanupDone = false;
 
-  window.addEventListener('beforeunload', async (e) => {
+  // --- A. Electron Safe-Quit (Desktop) ---
+  if (window.electronAPI && typeof window.electronAPI.onQuitRequested === 'function') {
+    window.electronAPI.onQuitRequested(async () => {
+      if (cleanupDone) return;
+      cleanupDone = true;
+
+      console.log('[GameBoot] Beenden angefordert. Speichere Spielstand lokal und online...');
+      try {
+        // Spielstand sichern
+        await SaveManager.save(stateManager.getState());
+        // Cloud-Sync durchführen
+        if (settingsManager.get('cloudEnabled')) {
+          await cloudManager.sync(stateManager.getState());
+        }
+      } catch (error) {
+        console.error('[GameBoot] Fehler beim Speichern vor Beenden:', error);
+      } finally {
+        console.log('[GameBoot] Speichern abgeschlossen. Beende Electron...');
+        
+        // Timer und Loop sauber stoppen
+        gameLoop.stop();
+        if (autosaveTimer) {
+          clearInterval(autosaveTimer);
+          autosaveTimer = null;
+        }
+        eventBus.clear();
+
+        window.electronAPI.sendQuitReady();
+      }
+    });
+  }
+
+  // --- B. Browser Safe-Quit (Web-Modus) ---
+  window.addEventListener('beforeunload', (e) => {
+    // Falls wir in Electron sind, wird das Beenden exklusiv oben über 'onQuitRequested' abgewickelt
+    if (window.electronAPI) return;
+
     if (cleanupDone) return;
     cleanupDone = true;
 
     try {
-      // Speichern
-      await SaveManager.save(stateManager.getState());
-      // Cloud-Sync
+      // Trigger asynchrones Speichern im Hintergrund
+      SaveManager.save(stateManager.getState());
       if (settingsManager.get('cloudEnabled')) {
-        await cloudManager.sync(stateManager.getState());
+        cloudManager.sync(stateManager.getState());
       }
     } catch (error) {
-      console.warn('[GameBoot] Cleanup-Save fehlgeschlagen:', error);
+      console.warn('[GameBoot] Browser-Cleanup-Save fehlgeschlagen:', error);
     }
 
-    // Stop GameLoop
+    // Timer und Loop sauber stoppen
     gameLoop.stop();
-
-    // Autosave stoppen
     if (autosaveTimer) {
       clearInterval(autosaveTimer);
       autosaveTimer = null;
     }
-
-    // EventBus leeren
     eventBus.clear();
 
-    logger.info('[GameBoot] Cleanup abgeschlossen');
+    logger.info('[GameBoot] Browser-Cleanup gestartet.');
+
+    // Verhindere das sofortige Schließen des Fensters im Browser.
+    // Während der Benutzer die Bestätigung liest, läuft das Speichern im Hintergrund fertig!
+    e.preventDefault();
+    e.returnValue = 'Möchtest du das Archiv wirklich verlassen? Dein Fortschritt wird gespeichert.';
+    return e.returnValue;
   });
 
   // ============================================================
@@ -346,6 +388,7 @@ export async function bootGame() {
   const introContainer = document.getElementById('intro-container');
   if (introContainer) {
     let introFinished = false;
+    let handleIntroClick = null;
 
     // ----------------------------------------------------------
     // MYSTISCHES CANVAS-PARTIKELSYSTEM
@@ -636,6 +679,12 @@ export async function bootGame() {
       if (introFinished) return;
       introFinished = true;
 
+      // Klick-Event-Listener sauber entfernen
+      if (handleIntroClick) {
+        introContainer.removeEventListener('click', handleIntroClick);
+        introContainer.style.cursor = 'default';
+      }
+
       // Partikel stoppen
       if (stopParticles) stopParticles();
 
@@ -665,6 +714,31 @@ export async function bootGame() {
 
     // Timer für das automatische Beenden des Intros
     let introTimeoutId = setTimeout(finishIntro, 7000);
+
+    // Wenn ein Spielstand existiert, kann das Intro per Klick übersprungen werden
+    if (savedState) {
+      // Optischen Hinweis geben (Zeiger wird zur Hand)
+      introContainer.style.cursor = 'pointer';
+
+      handleIntroClick = (e) => {
+        // Nicht überspringen, wenn das Update-Overlay gerade aktiv ist
+        const updateOverlay = document.getElementById('update-overlay');
+        if (updateOverlay && updateOverlay.style.display === 'flex') {
+          return;
+        }
+
+        logger.info('[GameBoot] Intro vom Benutzer per Klick übersprungen.');
+        
+        if (introTimeoutId) {
+          clearTimeout(introTimeoutId);
+          introTimeoutId = null;
+        }
+        
+        finishIntro();
+      };
+
+      introContainer.addEventListener('click', handleIntroClick);
+    }
 
     // ============================================================
     // ELECTRON AUTO-UPDATER INTEGRATION (IN-GAME UI)

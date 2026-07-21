@@ -26,6 +26,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const [activeTab, setActiveTab] = useState('resources');
   const [previewItem, setPreviewItem] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [bulkRarity, setBulkRarity] = useState('common');
 
   // Hilfsfunktion für Custom-Icons
   const getItemIcon = (item) => {
@@ -100,6 +101,30 @@ export function HeroUI({ stateManager, eventBus, services }) {
       memoryDust: Number(r.memoryDust || '0')
     };
   });
+
+  const matchingLootCount = useMemo(() => {
+    const items = hero?.inventory?.loot || [];
+    const targetRank = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      all: 4
+    }[bulkRarity] ?? 0;
+
+    const rarityRanks = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      legendary: 4
+    };
+
+    return items.filter(item => {
+      const rank = rarityRanks[item.rarity] ?? 0;
+      return bulkRarity === 'all' ? true : rank <= targetRank;
+    }).length;
+  }, [hero?.inventory?.loot, bulkRarity]);
 
   // Events abonnieren
   useEventBus(eventBus, EVENTS.UI_OPEN_HERO, () => setIsOpen(true));
@@ -295,6 +320,78 @@ export function HeroUI({ stateManager, eventBus, services }) {
       };
     }, 'hero/sellLoot');
     eventBus.publish('ui:showToast', { message: `Loot für ${value} Partikel verkauft.`, type: 'success', duration: 2000 });
+  };
+
+  // Massenverkauf (Loot)
+  const handleBulkSell = () => {
+    if (!hero || !resourceService || matchingLootCount === 0) return;
+
+    const targetRank = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      all: 4
+    }[bulkRarity] ?? 0;
+
+    const rarityRanks = {
+      common: 0,
+      uncommon: 1,
+      rare: 2,
+      epic: 3,
+      legendary: 4
+    };
+
+    const itemsToKeep = [];
+    const itemsToSell = [];
+
+    const items = hero.inventory?.loot || [];
+    items.forEach(item => {
+      const rank = rarityRanks[item.rarity] ?? 0;
+      const shouldSell = bulkRarity === 'all' ? true : rank <= targetRank;
+      if (shouldSell) {
+        itemsToSell.push(item);
+      } else {
+        itemsToKeep.push(item);
+      }
+    });
+
+    if (itemsToSell.length === 0) return;
+
+    // Sicherheitsabfrage für höhere Seltenheiten
+    const containsHighRarity = itemsToSell.some(item => ['rare', 'epic', 'legendary'].includes(item.rarity));
+    if (containsHighRarity) {
+      const confirmMsg = 'Möchtest du wirklich alle ausgewählten Loot-Gegenstände (einschließlich seltener, epischer oder legendärer) verkaufen?';
+      if (!confirm(confirmMsg)) return;
+    }
+
+    const totalValue = itemsToSell.reduce((acc, item) => {
+      const bonus = { common: 0, uncommon: 5, rare: 10, epic: 20, legendary: 50 }[item.rarity] || 0;
+      return acc + 5 + bonus;
+    }, 0);
+
+    resourceService.addParticles(totalValue);
+
+    stateManager.dispatch((state) => {
+      if (!state?.hero) return state;
+      return {
+        ...state,
+        hero: {
+          ...state.hero,
+          inventory: {
+            ...state.hero.inventory,
+            loot: itemsToKeep
+          }
+        }
+      };
+    }, 'hero/bulkSellLoot');
+
+    eventBus.publish(EVENTS.HERO_UPDATED);
+    eventBus.publish('ui:showToast', { 
+      message: `${itemsToSell.length} Gegenstände für ${totalValue} Partikel verkauft.`, 
+      type: 'success', 
+      duration: 3000 
+    });
   };
 
   // Tab wechseln
@@ -584,6 +681,31 @@ export function HeroUI({ stateManager, eventBus, services }) {
               <button class="inv-tab-btn ${activeTab === 'equipment' ? 'active' : ''}" onClick=${() => switchTab('equipment')}>Ausrüstung</button>
               <button class="inv-tab-btn ${activeTab === 'loot' ? 'active' : ''}" onClick=${() => switchTab('loot')}>Loot</button>
             </div>
+
+            ${activeTab === 'loot' && hero?.inventory?.loot?.length > 0 ? html`
+              <div class="bulk-actions-container">
+                <span class="text-muted text-xs cinzel" style="margin-right: auto; letter-spacing: 0.5px;">Massenverkauf:</span>
+                <select 
+                  class="ui-select" 
+                  value=${bulkRarity} 
+                  onChange=${(e) => setBulkRarity(e.target.value)}
+                  style="background: rgba(0, 0, 0, 0.4); border-color: rgba(197, 160, 89, 0.15); color: var(--color-gold-hover);"
+                >
+                  <option value="common">Nur Gewöhnlich</option>
+                  <option value="uncommon">Ungewöhnlich & schlechter</option>
+                  <option value="rare">Selten & schlechter</option>
+                  <option value="epic">Episch & schlechter</option>
+                  <option value="all">Alle Gegenstände</option>
+                </select>
+                <button 
+                  class="glass-btn btn-danger btn-small" 
+                  disabled=${matchingLootCount === 0}
+                  onClick=${handleBulkSell}
+                >
+                  Verkaufen (${matchingLootCount})
+                </button>
+              </div>
+            ` : ''}
 
             <div class="modal-scroll-area" style="flex: 1; overflow-y: auto; padding-right: 0.3rem; margin-top: 0.3rem;">
               ${renderTabContent()}
