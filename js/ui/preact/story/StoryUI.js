@@ -35,6 +35,18 @@ export function StoryUI({ stateManager, eventBus, services }) {
     }
   }, [storyState.battleState ? storyState.battleState.combatLog.length : 0]);
 
+  // Escape-Taste zum Schließen des Modals
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const maxUnlockedChapter = hero.prestige.bossProgress > 0 ? Math.floor(hero.prestige.bossProgress / 10) + 1 : 1;
@@ -72,7 +84,7 @@ export function StoryUI({ stateManager, eventBus, services }) {
   return html`
     <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
       <div class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;" onClick=${(e) => e.stopPropagation()}>
-        <button class="modal-close" id="story-close" onClick=${() => setIsOpen(false)}>×</button>
+        <button class="modal-close" id="story-close" style="z-index: 1001;" onClick=${() => setIsOpen(false)}>×</button>
         <h2 class="story-modal-title">📖 Story & Bosse</h2>
 
         <!-- Kapitel-Navigation (ausblenden während eines aktiven Kampfes für besseren Fokus) -->
@@ -141,7 +153,12 @@ export function StoryUI({ stateManager, eventBus, services }) {
                 <span class="boss-name-label cinzel" style="font-size: 1.2rem; color: var(--color-danger); font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.2);">
                   👹 ${battleState.boss.name} ${battleState.activeEffects.isEnraged ? html`<span style="color: #ff6600; font-weight: bold; animation: pulse 1s infinite;">🔥 WÜTEND!</span>` : ''}
                 </span>
-                <span style="font-size: 0.85rem; color: var(--color-text-muted);">Kapitel ${battleState.boss.chapter} Boss</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 0.85rem; color: var(--color-text-muted);">Kapitel ${battleState.boss.chapter} Boss</span>
+                  <button class="glass-btn btn-danger btn-small" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;" onClick=${() => storyService.fleeBattle()}>
+                    🏃 Fliehen
+                  </button>
+                </div>
               </div>
               
               <!-- Boss Lebensbalken -->
