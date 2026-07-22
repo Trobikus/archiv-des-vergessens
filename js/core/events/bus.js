@@ -160,4 +160,14 @@ export default class EventBus {
             queueLength: this._queue.length
         };
     }
+
+    /**
+     * Gibt die Anzahl der Subscriber für ein bestimmtes Event zurück.
+     * @param {string} event - Event-Name
+     * @returns {number} - Anzahl der Subscriber
+     */
+    countListeners(event) {
+        const subscribers = this._listeners.get(event);
+        return subscribers ? subscribers.length : 0;
+    }
 }

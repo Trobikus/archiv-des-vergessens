@@ -22,7 +22,7 @@ import { PACTS } from '../../../data/pacts.js';
  * Helden-UI – Hauptkomponente.
  */
 export function HeroUI({ stateManager, eventBus, services }) {
-  const { heroService, resourceService, forgeService, achievementService, dailyRewardService } = services;
+  const { heroService, resourceService, forgeService, achievementService, dailyRewardService, i18nService } = services;
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('resources');
   const [previewItem, setPreviewItem] = useState(null);
@@ -31,6 +31,118 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const [socketingItem, setSocketingItem] = useState(null);
   const [pactSelectionActive, setPactSelectionActive] = useState(false);
   const [pactChoices, setPactChoices] = useState([]);
+
+  // i18n Reaktivität
+  const [lang, setLang] = useState(i18nService.getLanguage());
+  useEventBus(eventBus, 'i18n:languageChanged', (newLang) => {
+    setLang(newLang);
+  });
+
+  const getLocText = (obj, prop = 'text') => {
+    if (!obj) return '';
+    if (lang === 'en' && obj[prop + '_en']) {
+      return obj[prop + '_en'];
+    }
+    return obj[prop] || '';
+  };
+
+  const translateItemName = (name) => {
+    if (!name) return '';
+    if (lang !== 'en') return name;
+    const dict = {
+      'Schattenklinge': 'Shadow Blade',
+      'Abgrundplatte': 'Abyss Plate',
+      'Amulett der Namenlosen': 'Amulet of the Nameless',
+      'Ring der Leere': 'Ring of the Void',
+      'Archiv-Klinge': 'Archive Blade',
+      'Chronisten-Robe': 'Chronicle Robe',
+      'Mneme-Amulett': 'Mneme Amulet',
+      'Ring der Erinnerung': 'Ring of Memory',
+      'Klinge der Ersten': 'Blade of the First',
+      'Ur-Rüstung': 'Ancient Armor',
+      'Amulett der Ewigkeit': 'Amulet of Eternity',
+      'Ring der Unendlichkeit': 'Ring of Infinity',
+      'Gott-Klinge': 'God Blade',
+      'Gott-Rüstung': 'God Armor',
+      'Mneme-Krone': 'Mneme Crown',
+      'Mneme-Krone der Wiederkehr': 'Mneme Crown of Return',
+      'Ring der Wiedergeburt': 'Ring of Rebirth',
+      'Amulett der Dämmerung': 'Amulet of Dawn',
+      'Amulett der Dämmerung ': 'Amulet of Dawn',
+      'Staubige Klinge': 'Dusty Blade',
+      'Architekten-Klinge': 'Architect Blade',
+      'Grundlegende Klinge': 'Basic Blade',
+      'Stahlklinge': 'Steel Blade',
+      'Dämonenklinge': 'Demon Blade',
+      'Göttliche Klinge': 'Divine Blade',
+      'Schicksalsklinge der Raids': 'Fate Blade of Raids',
+      'Schmuck-Katalysator': 'Jewelry Catalyst',
+      'Katalysator': 'Catalyst',
+      'Erinnerungssplitter': 'Memory Shard'
+    };
+    return dict[name.trim()] || name;
+  };
+
+  const translateItemDescription = (desc) => {
+    if (!desc) return '';
+    if (lang !== 'en') return desc;
+    let res = desc;
+    res = res.replace('Ein Werk der Artefakt-Schmiede.', 'A work of the Artifact Forge.');
+    res = res.replace('Gewonnen aus einem heroischen Clan-Raid.', 'Won from a heroic Clan Raid.');
+    res = res.replace('Meisterwerk-Qualität:', 'Masterwork Quality:');
+    res = res.replace('Ein Ausrüstungsgegenstand.', 'An equipment item.');
+    return res;
+  };
+
+  const getRarityLabel = (rarity) => {
+    if (lang === 'en') {
+      return {
+        common: 'Common',
+        uncommon: 'Uncommon',
+        rare: 'Rare',
+        epic: 'Epic',
+        legendary: 'Legendary'
+      }[rarity] || rarity;
+    }
+    return {
+      common: 'Gewöhnlich',
+      uncommon: 'Ungewöhnlich',
+      rare: 'Selten',
+      epic: 'Episch',
+      legendary: 'Legendär'
+    }[rarity] || rarity;
+  };
+
+  const getSlotLabel = (slot) => {
+    if (lang === 'en') {
+      return {
+        weapon: 'Weapon',
+        shield: 'Shield',
+        helmet: 'Helmet',
+        shoulders: 'Shoulders',
+        armor: 'Armor',
+        gloves: 'Gloves',
+        belt: 'Belt',
+        boots: 'Boots',
+        amulet: 'Amulet',
+        ring: 'Ring (left)',
+        ring2: 'Ring (right)'
+      }[slot] || slot;
+    }
+    return {
+      weapon: 'Waffe',
+      shield: 'Schild',
+      helmet: 'Helm',
+      shoulders: 'Schultern',
+      armor: 'Rüstung',
+      gloves: 'Handschuhe',
+      belt: 'Gürtel',
+      boots: 'Stiefel',
+      amulet: 'Amulett',
+      ring: 'Ring (links)',
+      ring2: 'Ring (rechts)'
+    }[slot] || slot;
+  };
 
   // Hilfsfunktion für Custom-Icons
   const getItemIcon = (item) => {
@@ -210,13 +322,17 @@ export function HeroUI({ stateManager, eventBus, services }) {
     if (!hero) return;
     if (hero.prestige?.bossProgress < 20) {
       eventBus.publish('ui:showToast', {
-        message: '⚔️ Verewigung erst nach dem letzten Boss möglich.',
+        message: lang === 'de' ? '⚔️ Verewigung erst nach dem letzten Boss möglich.' : '⚔️ Eternalization only possible after the last Boss.',
         type: 'warning',
         duration: 3000
       });
       return;
     }
-    if (await window.gameConfirm('Möchtest du deinen Helden verewigen? Alle Fortschritte außer Prestige-Level werden zurückgesetzt. Du kannst danach einen Finstren Pakt wählen.', 'VEREWIGUNG')) {
+    const confirmMsg = lang === 'de'
+      ? 'Möchtest du deinen Helden verewigen? Alle Fortschritte außer Prestige-Level werden zurückgesetzt. Du kannst danach einen Finstren Pakt wählen.'
+      : 'Do you want to eternalize your hero? All progress except Prestige Level will be reset. You can then choose a Dark Pact.';
+    const confirmTitle = lang === 'de' ? 'VEREWIGUNG' : 'ETERNALIZATION';
+    if (await window.gameConfirm(confirmMsg, confirmTitle)) {
       // 3 zufällige Pakte auswählen
       const allPacts = Object.values(PACTS);
       const shuffled = [...allPacts].sort(() => 0.5 - Math.random());
@@ -280,7 +396,8 @@ export function HeroUI({ stateManager, eventBus, services }) {
 
   // Item zerlegen
   const handleSalvageItem = async (itemData, idx, isLoot = false) => {
-    if (!(await window.gameConfirm('Gegenstand wirklich zerlegen?'))) return;
+    const confirmMsg = lang === 'de' ? 'Gegenstand wirklich zerlegen?' : 'Really salvage item?';
+    if (!(await window.gameConfirm(confirmMsg))) return;
     if (!forgeService || !forgeService.salvageItem) return;
     
     const inventory = isLoot ? hero?.inventory?.loot : hero?.inventory?.equipment;
@@ -298,7 +415,8 @@ export function HeroUI({ stateManager, eventBus, services }) {
     
     const result = forgeService.salvageItem(targetIdx, isLoot);
     if (result?.success) {
-      eventBus.publish('ui:showToast', { message: result.message, type: 'success', duration: 2000 });
+      const msg = lang === 'de' ? result.message : result.message.replace('zerlegt', 'salvaged').replace('Erhalten:', 'Received:');
+      eventBus.publish('ui:showToast', { message: msg, type: 'success', duration: 2000 });
     }
   };
 
@@ -333,7 +451,8 @@ export function HeroUI({ stateManager, eventBus, services }) {
         }
       };
     }, 'hero/sellLoot');
-    eventBus.publish('ui:showToast', { message: `Loot für ${value} Partikel verkauft.`, type: 'success', duration: 2000 });
+    const msg = lang === 'de' ? `Loot für ${value} Partikel verkauft.` : `Loot sold for ${value} particles.`;
+    eventBus.publish('ui:showToast', { message: msg, type: 'success', duration: 2000 });
   };
 
   // Massenverkauf (Loot)
@@ -375,8 +494,11 @@ export function HeroUI({ stateManager, eventBus, services }) {
     // Sicherheitsabfrage für höhere Seltenheiten
     const containsHighRarity = itemsToSell.some(item => ['rare', 'epic', 'legendary'].includes(item.rarity));
     if (containsHighRarity) {
-      const confirmMsg = 'Möchtest du wirklich alle ausgewählten Loot-Gegenstände (einschließlich seltener, epischer oder legendärer) verkaufen?';
-      if (!(await window.gameConfirm(confirmMsg, 'MASSENVERKAUF'))) return;
+      const confirmMsg = lang === 'de'
+        ? 'Möchtest du wirklich alle ausgewählten Loot-Gegenstände (einschließlich seltener, epischer oder legendärer) verkaufen?'
+        : 'Do you really want to sell all selected loot items (including rare, epic, or legendary)?';
+      const confirmTitle = lang === 'de' ? 'MASSENVERKAUF' : 'BULK SELL';
+      if (!(await window.gameConfirm(confirmMsg, confirmTitle))) return;
     }
 
     const totalValue = itemsToSell.reduce((acc, item) => {
@@ -401,8 +523,11 @@ export function HeroUI({ stateManager, eventBus, services }) {
     }, 'hero/bulkSellLoot');
 
     eventBus.publish(EVENTS.HERO_UPDATED);
+    const msg = lang === 'de'
+      ? `${itemsToSell.length} Gegenstände für ${totalValue} Partikel verkauft.`
+      : `${itemsToSell.length} items sold for ${totalValue} particles.`;
     eventBus.publish('ui:showToast', { 
-      message: `${itemsToSell.length} Gegenstände für ${totalValue} Partikel verkauft.`, 
+      message: msg, 
       type: 'success', 
       duration: 3000 
     });
@@ -474,10 +599,10 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const renderAttributes = () => {
     if (!attributes) return null;
     const attrConfig = [
-      { key: 'attack', label: '⚔️ Stärke' },
-      { key: 'defense', label: '🛡️ Zähigkeit' },
-      { key: 'agility', label: '⚡ Geschick' },
-      { key: 'stamina', label: '❤️ Vitalität' }
+      { key: 'attack', label: lang === 'de' ? '⚔️ Stärke' : '⚔️ Attack' },
+      { key: 'defense', label: lang === 'de' ? '🛡️ Zähigkeit' : '🛡️ Toughness' },
+      { key: 'agility', label: lang === 'de' ? '⚡ Geschick' : '⚡ Agility' },
+      { key: 'stamina', label: lang === 'de' ? '❤️ Vitalität' : '❤️ Vitality' }
     ];
     const canSpend = hero?.unspentStatPoints > 0;
     return attrConfig.map(({ key, label }) => {
@@ -498,11 +623,11 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const renderCombatStats = () => {
     if (!combatStats) return null;
     const stats = [
-      { key: 'maxHp', label: '❤️ Max Leben', format: (v) => Math.floor(v) },
-      { key: 'damageReduction', label: '🛡️ Schadensreduktion', format: (v) => (v * 100).toFixed(1) + '%' },
-      { key: 'critChance', label: '⚡ Krit-Chance', format: (v) => v.toFixed(1) + '%' },
-      { key: 'critDamage', label: '💥 Krit-Schaden', format: (v) => v.toFixed(1) + '%' },
-      { key: 'dodgeChance', label: '🌀 Ausweichen', format: (v) => v.toFixed(1) + '%' }
+      { key: 'maxHp', label: lang === 'de' ? '❤️ Max Leben' : '❤️ Max HP', format: (v) => Math.floor(v) },
+      { key: 'damageReduction', label: lang === 'de' ? '🛡️ Schadensreduktion' : '🛡️ Damage Reduction', format: (v) => (v * 100).toFixed(1) + '%' },
+      { key: 'critChance', label: lang === 'de' ? '⚡ Krit-Chance' : '⚡ Crit Chance', format: (v) => v.toFixed(1) + '%' },
+      { key: 'critDamage', label: lang === 'de' ? '💥 Krit-Schaden' : '💥 Crit Damage', format: (v) => v.toFixed(1) + '%' },
+      { key: 'dodgeChance', label: lang === 'de' ? '🌀 Ausweichen' : '🌀 Dodge Chance', format: (v) => v.toFixed(1) + '%' }
     ];
     return stats.map(({ key, label, format }) => html`
       <div class="flex-between mb-1 py-1" style="border-bottom: 1px solid rgba(255,255,255,0.02); padding: 0.2rem 0.5rem;">
@@ -517,39 +642,39 @@ export function HeroUI({ stateManager, eventBus, services }) {
     if (activeTab === 'resources') {
       return html`
         <div class="glass-inner-panel mb-2">
-          <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Erinnerungsschatz</h3>
-          <div class="flex-between mb-1"><span class="text-muted">Mneme-Partikel:</span> <span class="text-gold text-bold">${resources.particles}</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">Mneme-Relikte:</span> <span class="text-gold text-bold">${resources.relics}</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">Mneme-Artefakte:</span> <span class="text-gold text-bold">${resources.artifacts}</span></div>
-          <div class="flex-between"><span class="text-muted">Erinnerungsstaub:</span> <span class="text-dust text-bold">${resources.memoryDust}</span></div>
+          <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">${lang === 'de' ? 'Erinnerungsschatz' : 'Memory Vault'}</h3>
+          <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Mneme-Partikel:' : 'Mneme Particles:'}</span> <span class="text-gold text-bold">${resources.particles}</span></div>
+          <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Mneme-Relikte:' : 'Mneme Relics:'}</span> <span class="text-gold text-bold">${resources.relics}</span></div>
+          <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Mneme-Artefakte:' : 'Mneme Artifacts:'}</span> <span class="text-gold text-bold">${resources.artifacts}</span></div>
+          <div class="flex-between"><span class="text-muted">${lang === 'de' ? 'Erinnerungsstaub:' : 'Memory Dust:'}</span> <span class="text-dust text-bold">${resources.memoryDust}</span></div>
         </div>
         <div class="glass-inner-panel mb-2">
-          <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Heldentum & Prestige</h3>
-          <div class="flex-between mb-1"><span class="text-muted">Prestige-Stufe:</span> <span class="text-gold text-bold">Stufe ${hero?.prestige?.level || 0}</span></div>
-          <div class="flex-between mb-1"><span class="text-muted">Prestige-Punkte:</span> <span class="text-gold text-bold">${hero?.prestige?.points || 0}</span></div>
+          <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">${lang === 'de' ? 'Heldentum & Prestige' : 'Heroism & Prestige'}</h3>
+          <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Prestige-Stufe:' : 'Prestige Level:'}</span> <span class="text-gold text-bold">${lang === 'de' ? 'Stufe' : 'Level'} ${hero?.prestige?.level || 0}</span></div>
+          <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Prestige-Punkte:' : 'Prestige Points:'}</span> <span class="text-gold text-bold">${hero?.prestige?.points || 0}</span></div>
           ${(() => {
             const activePactId = hero?.prestige?.activePact;
             const activePactData = activePactId ? PACTS[activePactId] : null;
             if (activePactData) {
               return html`
                 <div style="margin-top: 0.6rem; padding: 0.5rem; background: rgba(212,175,55,0.03); border: 1px solid rgba(212,175,55,0.15); border-radius: 4px; box-shadow: inset 0 0 10px rgba(212,175,55,0.05);">
-                  <div style="font-size: 0.58rem; text-transform: uppercase; color: var(--color-gold); font-family: var(--font-header); font-weight: bold; letter-spacing: 0.5px;">Aktiver finsterer Pakt</div>
-                  <div class="text-gold text-bold" style="font-size: 0.78rem; font-family: var(--font-header); margin-top: 1px;">${activePactData.name}</div>
-                  <div style="font-size: 0.68rem; color: #2ecc71; margin-top: 4px; font-weight: 500;">${activePactData.passiveText}</div>
-                  <div style="font-size: 0.68rem; color: #e74c3c; margin-top: 2px; font-weight: 500;">${activePactData.curseText}</div>
+                  <div style="font-size: 0.58rem; text-transform: uppercase; color: var(--color-gold); font-family: var(--font-header); font-weight: bold; letter-spacing: 0.5px;">${lang === 'de' ? 'Aktiver finsterer Pakt' : 'Active Dark Pact'}</div>
+                  <div class="text-gold text-bold" style="font-size: 0.78rem; font-family: var(--font-header); margin-top: 1px;">${getLocText(activePactData, 'name')}</div>
+                  <div style="font-size: 0.68rem; color: #2ecc71; margin-top: 4px; font-weight: 500;">${getLocText(activePactData, 'passiveText')}</div>
+                  <div style="font-size: 0.68rem; color: #e74c3c; margin-top: 2px; font-weight: 500;">${getLocText(activePactData, 'curseText')}</div>
                 </div>
               `;
             } else {
               return html`
-                <div class="text-muted text-center" style="font-size: 0.68rem; margin-top: 0.6rem; font-style: italic; opacity: 0.6;">Kein aktiver Sündenpakt vorhanden.</div>
+                <div class="text-muted text-center" style="font-size: 0.68rem; margin-top: 0.6rem; font-style: italic; opacity: 0.6;">${lang === 'de' ? 'Kein aktiver Sündenpakt vorhanden.' : 'No active sin pact present.'}</div>
               `;
             }
           })()}
         </div>
         <div class="glass-inner-panel">
-          <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">Statistiken</h3>
-          <div class="flex-between mb-1"><span class="text-muted">Besiegte Bosse:</span> <span class="text-highlight text-bold">${hero?.prestige?.defeatedBosses?.length || 0}</span></div>
-          <div class="flex-between"><span class="text-muted">Erworbene Titel:</span> <span class="text-gold text-bold">${Array.from(new Set(hero?.titles || [])).length}</span></div>
+          <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">${lang === 'de' ? 'Statistiken' : 'Statistics'}</h3>
+          <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Besiegte Bosse:' : 'Defeated Bosses:'}</span> <span class="text-highlight text-bold">${hero?.prestige?.defeatedBosses?.length || 0}</span></div>
+          <div class="flex-between"><span class="text-muted">${lang === 'de' ? 'Erworbene Titel:' : 'Acquired Titles:'}</span> <span class="text-gold text-bold">${Array.from(new Set(hero?.titles || [])).length}</span></div>
         </div>
       `;
     }
@@ -557,7 +682,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
     if (activeTab === 'equipment') {
       const items = hero?.inventory?.equipment || [];
       if (items.length === 0) {
-        return html`<div class="text-disabled text-italic pt-1 text-center">Keine Ausrüstungsteile im Inventar.</div>`;
+        return html`<div class="text-disabled text-italic pt-1 text-center">${lang === 'de' ? 'Keine Ausrüstungsteile im Inventar.' : 'No equipment items in inventory.'}</div>`;
       }
       return items.map((item, idx) => html`
         <div 
@@ -571,20 +696,20 @@ export function HeroUI({ stateManager, eventBus, services }) {
           onMouseLeave=${() => setPreviewItem(null)}
         >
           <div style="display: flex; align-items: center; gap: 8px;">
-            ${getItemIcon(item) ? html`<img src="${getItemIcon(item)}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1);" alt="${item.name}" />` : ''}
+            ${getItemIcon(item) ? html`<img src="${getItemIcon(item)}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1);" alt="${translateItemName(item.name)}" />` : ''}
             <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
               <div style="display: flex; align-items: center; gap: 4px;">
-                <span>${item.name}</span>
+                <span>${translateItemName(item.name)}</span>
                 <span class="text-muted text-sm">Lv.${item.level}</span>
               </div>
               <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-bottom: 2px;">
-                ${rarityLabels[item.rarity] || item.rarity}
+                ${getRarityLabel(item.rarity)}
               </div>
               ${item.sockets && item.sockets.length > 0 ? html`
                 <div style="display: flex; gap: 4px; margin-top: 2px;">
                   ${item.sockets.map(sock => html`
                     <span style="font-size: 0.62rem; padding: 1px 4px; border-radius: 3px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; display: inline-flex; align-items: center; gap: 2px;">
-                      ${sock ? '💎 ' + sock.title : '⚪ Sockel leer'}
+                      ${sock ? '💎 ' + (lang === 'de' ? sock.title : sock.title_en || sock.title) : (lang === 'de' ? '⚪ Sockel leer' : '⚪ Socket empty')}
                     </span>
                   `)}
                 </div>
@@ -592,11 +717,11 @@ export function HeroUI({ stateManager, eventBus, services }) {
             </div>
           </div>
           <div class="item-actions" style="display: flex; gap: 4px; align-items: center;">
-            <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>Anlegen</button>
+            <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>${lang === 'de' ? 'Anlegen' : 'Equip'}</button>
             ${item.sockets && item.sockets.some(s => s === null) && BigInt(resources.catalyst || '0') >= BigInt(1) ? html`
-              <button class="glass-btn btn-small" style="border-color: var(--color-gold); color: var(--color-gold); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); setSocketingItem({ item, idx, isEquipped: false }); }}>💎 Sockeln</button>
+              <button class="glass-btn btn-small" style="border-color: var(--color-gold); color: var(--color-gold); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); setSocketingItem({ item, idx, isEquipped: false }); }}>💎 ${lang === 'de' ? 'Sockeln' : 'Socket'}</button>
             ` : ''}
-            <button class="glass-btn btn-danger btn-small" style="padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>Zerlegen</button>
+            <button class="glass-btn btn-danger btn-small" style="padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>${lang === 'de' ? 'Zerlegen' : 'Salvage'}</button>
           </div>
         </div>
       `);
@@ -605,7 +730,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
     if (activeTab === 'loot') {
       const items = hero?.inventory?.loot || [];
       if (items.length === 0) {
-        return html`<div class="text-disabled text-italic pt-1 text-center">Kein Loot im Besitz.</div>`;
+        return html`<div class="text-disabled text-italic pt-1 text-center">${lang === 'de' ? 'Kein Loot im Besitz.' : 'No loot owned.'}</div>`;
       }
       return items.map((item, idx) => {
         const value = 5 + ({ common: 0, uncommon: 5, rare: 10, epic: 20, legendary: 50 }[item.rarity] || 0);
@@ -621,12 +746,12 @@ export function HeroUI({ stateManager, eventBus, services }) {
             onMouseLeave=${() => setPreviewItem(null)}
           >
             <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
-              ${item.name} <span class="text-muted text-sm">(${rarityLabels[item.rarity] || item.rarity})</span>
+              ${translateItemName(item.name)} <span class="text-muted text-sm">(${getRarityLabel(item.rarity)})</span>
             </div>
             <div class="item-actions">
-              <span class="text-muted text-sm" style="margin-right: 8px;">+${value} Partikel</span>
-              <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);" onClick=${(e) => { e.stopPropagation(); handleSellLoot(item, idx); }}>Verkaufen</button>
-              <button class="glass-btn btn-danger btn-small" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, true); }}>Zerlegen</button>
+              <span class="text-muted text-sm" style="margin-right: 8px;">+${value} ${lang === 'de' ? 'Partikel' : 'Particles'}</span>
+              <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue);" onClick=${(e) => { e.stopPropagation(); handleSellLoot(item, idx); }}>${lang === 'de' ? 'Verkaufen' : 'Sell'}</button>
+              <button class="glass-btn btn-danger btn-small" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, true); }}>${lang === 'de' ? 'Zerlegen' : 'Salvage'}</button>
             </div>
           </div>
         `;
@@ -641,7 +766,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
     <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
       <div class="hero-modal-wide glass-panel" onClick=${(e) => e.stopPropagation()}>
         <button class="modal-close" id="hero-close" onClick=${() => setIsOpen(false)}>×</button>
-        <h2 class="modal-title glow-text cinzel text-center">Mein Held</h2>
+        <h2 class="modal-title glow-text cinzel text-center">${lang === 'de' ? 'Mein Held' : 'My Hero'}</h2>
 
         <div class="hero-split-layout">
           <!-- Linke Seite: Avatar & Stats -->
@@ -667,14 +792,14 @@ export function HeroUI({ stateManager, eventBus, services }) {
                   }
                 }}
               >
-                <option value="" style="font-style: normal; color: var(--color-text-muted);">Kein Titel</option>
+                <option value="" style="font-style: normal; color: var(--color-text-muted);">${lang === 'de' ? 'Kein Titel' : 'No Title'}</option>
                 ${Array.from(new Set(hero?.titles || [])).map(t => html`
                   <option value=${t} style="font-style: italic;">« ${t} »</option>
                 `)}
               </select>
             </div>
-            <div class="hero-name cinzel text-lg text-gold glow-text text-center">${hero?.name || 'Held'}</div>
-            <div class="hero-level text-muted text-sm text-center">Stufe ${hero?.level || 1}</div>
+            <div class="hero-name cinzel text-lg text-gold glow-text text-center">${hero?.name || (lang === 'de' ? 'Held' : 'Hero')}</div>
+            <div class="hero-level text-muted text-sm text-center">${lang === 'de' ? 'Stufe' : 'Level'} ${hero?.level || 1}</div>
 
             <div class="avatar-container">
               <div class="rune-halo"></div>
@@ -701,19 +826,19 @@ export function HeroUI({ stateManager, eventBus, services }) {
             </div>
 
             <div class="hero-exp text-sm text-center text-muted mb-1 w-100" style="background: rgba(10,10,12,0.6); border: 1px solid rgba(197,160,89,0.15); padding: 0.4rem 1rem; border-radius: 2px;">
-              Erfahrung: ${Math.floor(hero?.experience || 0)} / ${hero?.expToNext || 50} (${Math.floor(levelProgress || 0)}%)
+              ${lang === 'de' ? 'Erfahrung:' : 'Experience:'} ${Math.floor(hero?.experience || 0)} / ${hero?.expToNext || 50} (${Math.floor(levelProgress || 0)}%)
             </div>
 
             ${hero?.unspentStatPoints > 0 ? html`
               <div class="hero-stat-points w-100 mb-1 text-center" style="background: rgba(212,175,55,0.08); border: 1px solid var(--color-gold); padding: 0.5rem; border-radius: 2px;">
-                <span class="text-gold glow-text text-bold">✨ ${hero.unspentStatPoints} PUNKTE VERFÜGBAR ✨</span>
+                <span class="text-gold glow-text text-bold">✨ ${hero.unspentStatPoints} ${lang === 'de' ? 'PUNKTE VERFÜGBAR' : 'POINTS AVAILABLE'} ✨</span>
               </div>
             ` : ''}
 
-            <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-bottom: 0.5rem;">Attribute</h3>
+            <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-bottom: 0.5rem;">${lang === 'de' ? 'Attribute' : 'Attributes'}</h3>
             <div class="stats-grid w-100 pr-1">${renderAttributes()}</div>
 
-            <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">Kampfwerte</h3>
+            <h3 class="options-header w-100 text-center cinzel text-sm" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">${lang === 'de' ? 'Kampfwerte' : 'Combat Stats'}</h3>
             <div class="stats-grid w-100 pr-1">${renderCombatStats()}</div>
           </div>
 
@@ -721,37 +846,37 @@ export function HeroUI({ stateManager, eventBus, services }) {
           <div class="hero-details-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: rgba(0,0,0,0.2); border-radius: 2px; padding: 0.5rem 0.5rem 0.5rem 0.8rem; border: 1px solid rgba(197,160,89,0.05);">
             <div class="hero-action-buttons" style="display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.8rem; flex-shrink: 0;">
               <button class="glass-btn primary btn-small ${hero?.prestige?.bossProgress >= 20 ? 'epic-pulse' : ''}" onClick=${handlePrestige}>
-                ${hero?.prestige?.bossProgress >= 20 ? '🌌 Verewigen' : '🔒 Gesperrt'}
+                ${hero?.prestige?.bossProgress >= 20 ? (lang === 'de' ? '🌌 Verewigen' : '🌌 Eternalize') : (lang === 'de' ? '🔒 Gesperrt' : '🔒 Locked')}
               </button>
             </div>
 
             <div class="tab-container" style="display: flex; gap: 4px; border-bottom: 2px solid rgba(197,160,89,0.12); margin-bottom: 0.5rem; flex-shrink: 0;">
-              <button class="inv-tab-btn ${activeTab === 'resources' ? 'active' : ''}" onClick=${() => switchTab('resources')}>Ressourcen</button>
-              <button class="inv-tab-btn ${activeTab === 'equipment' ? 'active' : ''}" onClick=${() => switchTab('equipment')}>Ausrüstung</button>
-              <button class="inv-tab-btn ${activeTab === 'loot' ? 'active' : ''}" onClick=${() => switchTab('loot')}>Loot</button>
+              <button class="inv-tab-btn ${activeTab === 'resources' ? 'active' : ''}" onClick=${() => switchTab('resources')}>${lang === 'de' ? 'Ressourcen' : 'Resources'}</button>
+              <button class="inv-tab-btn ${activeTab === 'equipment' ? 'active' : ''}" onClick=${() => switchTab('equipment')}>${lang === 'de' ? 'Ausrüstung' : 'Equipment'}</button>
+              <button class="inv-tab-btn ${activeTab === 'loot' ? 'active' : ''}" onClick=${() => switchTab('loot')}>${lang === 'de' ? 'Loot' : 'Loot'}</button>
             </div>
 
             ${activeTab === 'loot' && hero?.inventory?.loot?.length > 0 ? html`
               <div class="bulk-actions-container">
-                <span class="text-muted text-xs cinzel" style="margin-right: auto; letter-spacing: 0.5px;">Massenverkauf:</span>
+                <span class="text-muted text-xs cinzel" style="margin-right: auto; letter-spacing: 0.5px;">${lang === 'de' ? 'Massenverkauf:' : 'Bulk Sell:'}</span>
                 <select 
                   class="ui-select" 
                   value=${bulkRarity} 
                   onChange=${(e) => setBulkRarity(e.target.value)}
                   style="background: rgba(0, 0, 0, 0.4); border-color: rgba(197, 160, 89, 0.15); color: var(--color-gold-hover);"
                 >
-                  <option value="common">Nur Gewöhnlich</option>
-                  <option value="uncommon">Ungewöhnlich & schlechter</option>
-                  <option value="rare">Selten & schlechter</option>
-                  <option value="epic">Episch & schlechter</option>
-                  <option value="all">Alle Gegenstände</option>
+                  <option value="common">${lang === 'de' ? 'Nur Gewöhnlich' : 'Common only'}</option>
+                  <option value="uncommon">${lang === 'de' ? 'Ungewöhnlich & schlechter' : 'Uncommon & lower'}</option>
+                  <option value="rare">${lang === 'de' ? 'Selten & schlechter' : 'Rare & lower'}</option>
+                  <option value="epic">${lang === 'de' ? 'Episch & schlechter' : 'Epic & lower'}</option>
+                  <option value="all">${lang === 'de' ? 'Alle Gegenstände' : 'All items'}</option>
                 </select>
                 <button 
                   class="glass-btn btn-danger btn-small" 
                   disabled=${matchingLootCount === 0}
                   onClick=${handleBulkSell}
                 >
-                  Verkaufen (${matchingLootCount})
+                  ${lang === 'de' ? 'Verkaufen' : 'Sell'} (${matchingLootCount})
                 </button>
               </div>
             ` : ''}
@@ -765,32 +890,46 @@ export function HeroUI({ stateManager, eventBus, services }) {
         <div class="hero-modal-footer" style="display: flex; justify-content: center; align-items: center; gap: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(197,160,89,0.08); flex-shrink: 0; margin-top: 0.3rem;">
           <span class="text-muted text-sm cinzel">MEMENTO MEMORIAE</span>
           <span class="footer-gem">✦</span>
-          <span class="text-gold text-sm cinzel">DER MNEME-BUND</span>
+          <span class="text-gold text-sm cinzel">${lang === 'de' ? 'DER MNEME-BUND' : 'THE MNEME COVENANT'}</span>
         </div>
       </div>
 
       ${previewItem ? html`
         <div class="custom-tooltip glass-panel" style="display: block; top: ${tooltipPos.y}px; left: ${tooltipPos.x}px; min-width: 220px; pointer-events: none; z-index: 10000;">
           <div class="tooltip-title" style="color: ${rarityColors[previewItem.rarity] || '#aaa'}; font-weight: bold; font-size: 0.95rem; font-family: var(--font-header);">
-            ${previewItem.name} <span class="text-muted text-sm" style="font-size: 0.75rem;">Lv.${previewItem.level}</span>
+            ${translateItemName(previewItem.name)} <span class="text-muted text-sm" style="font-size: 0.75rem;">Lv.${previewItem.level}</span>
           </div>
-          <div class="tooltip-desc" style="font-size: 0.75rem; color: #aaa; margin: 0.3rem 0;">${previewItem.description || 'Ein Ausrüstungsgegenstand.'}</div>
+          <div class="tooltip-desc" style="font-size: 0.75rem; color: #aaa; margin: 0.3rem 0;">${translateItemDescription(previewItem.description || 'Ein Ausrüstungsgegenstand.')}</div>
           <div class="tooltip-stats" style="margin-top: 0.4rem; font-size: 0.8rem;">
             ${Object.entries(previewItem.stats || {}).map(([stat, val]) => html`
               <div class="tooltip-stat" style="display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 2px;">
-                <span class="text-muted">${stat === 'attack' ? '⚔️ Stärke' : stat === 'defense' ? '🛡️ Zähigkeit' : stat === 'agility' ? '⚡ Geschick' : '❤️ Vitalität'}:</span>
+                <span class="text-muted">${
+                  stat === 'attack' ? (lang === 'de' ? '⚔️ Stärke' : '⚔️ Attack') :
+                  stat === 'defense' ? (lang === 'de' ? '🛡️ Zähigkeit' : '🛡️ Toughness') :
+                  stat === 'agility' ? (lang === 'de' ? '⚡ Geschick' : '⚡ Agility') :
+                  (lang === 'de' ? '❤️ Vitalität' : '❤️ Vitality')
+                }:</span>
                 <span class="text-highlight text-bold" style="color: var(--color-gold);">+${val}</span>
               </div>
             `)}
           </div>
           ${previewItem.sockets && previewItem.sockets.length > 0 ? html`
             <div class="tooltip-sockets" style="margin-top: 0.6rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem; text-align: left;">
-              <div class="text-xs text-muted mb-1" style="font-size: 0.68rem; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4);">Katalysatorsockel:</div>
+              <div class="text-xs text-muted mb-1" style="font-size: 0.68rem; font-family: var(--font-header); text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4);">${lang === 'de' ? 'Katalysatorsockel:' : 'Catalyst Sockets:'}</div>
               <div style="display: flex; flex-direction: column; gap: 3px;">
                 ${previewItem.sockets.map((sock, sIdx) => html`
                   <div style="display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: ${sock ? sock.color : '#888'};">
                     <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${sock ? sock.color : 'transparent'}; border: 1px solid ${sock ? sock.color : '#666'}; box-shadow: ${sock ? '0 0 4px ' + sock.color : 'none'};"></span>
-                    <span>Sockel ${sIdx + 1}: ${sock ? `${sock.title} (+5 ${sock.id === 'attack' ? 'Angriff' : sock.id === 'defense' ? 'Zähigkeit' : sock.id === 'agility' ? 'Geschick' : 'Vitalität'})` : 'Leerer Sockel'}</span>
+                    <span>
+                      ${lang === 'de' ? `Sockel ${sIdx + 1}:` : `Socket ${sIdx + 1}:`} ${
+                        sock ? `${lang === 'de' ? sock.title : sock.title_en || sock.title} (+5 ${
+                          sock.id === 'attack' ? (lang === 'de' ? 'Angriff' : 'Attack') :
+                          sock.id === 'defense' ? (lang === 'de' ? 'Zähigkeit' : 'Defense') :
+                          sock.id === 'agility' ? (lang === 'de' ? 'Geschick' : 'Agility') :
+                          (lang === 'de' ? 'Vitalität' : 'Vitality')
+                        })` : (lang === 'de' ? 'Leerer Sockel' : 'Empty Socket')
+                      }
+                    </span>
                   </div>
                 `)}
               </div>
@@ -803,36 +942,36 @@ export function HeroUI({ stateManager, eventBus, services }) {
         <div class="modal-overlay" style="display: flex; z-index: 11000;" onClick=${() => setSocketingItem(null)}>
           <div class="modal-content glass-panel" style="max-width: 440px; text-align: center; padding: 1.5rem; border: 1px solid rgba(197,160,89,0.25);" onClick=${(e) => e.stopPropagation()}>
             <button class="modal-close" onClick=${() => setSocketingItem(null)}>×</button>
-            <h3 class="modal-title glow-text cinzel" style="font-size: 1.3rem; margin-bottom: 0.3rem;">💎 Katalysatorsockel</h3>
-            <p class="text-muted text-sm mb-1" style="font-size: 0.8rem; line-height: 1.3; color: #bbb;">Wähle einen Katalysator-Rune, um sie in den nächsten freien Sockel dieses Gegenstandes einzusetzen.</p>
+            <h3 class="modal-title glow-text cinzel" style="font-size: 1.3rem; margin-bottom: 0.3rem;">💎 ${lang === 'de' ? 'Katalysatorsockel' : 'Catalyst Sockets'}</h3>
+            <p class="text-muted text-sm mb-1" style="font-size: 0.8rem; line-height: 1.3; color: #bbb;">${lang === 'de' ? 'Wähle eine Katalysator-Rune, um sie in den nächsten freien Sockel dieses Gegenstandes einzusetzen.' : 'Choose a catalyst rune to insert into the next free socket of this item.'}</p>
 
             <div class="glass-inner-panel mb-1" style="padding: 0.8rem; border-color: ${rarityColors[socketingItem.item.rarity] || 'var(--color-gold)'}; background: rgba(0,0,0,0.3); margin: 0.8rem 0;">
               <div class="text-bold cinzel" style="color: ${rarityColors[socketingItem.item.rarity] || 'var(--color-gold)'}; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.05);">
-                ${socketingItem.item.name}
+                ${translateItemName(socketingItem.item.name)}
               </div>
-              <div class="text-muted text-xs" style="font-size: 0.72rem; margin-top: 2px;">Lv.${socketingItem.item.level} (${rarityLabels[socketingItem.item.rarity]})</div>
+              <div class="text-muted text-xs" style="font-size: 0.72rem; margin-top: 2px;">Lv.${socketingItem.item.level} (${getRarityLabel(socketingItem.item.rarity)})</div>
               
               <!-- Sockets state -->
               <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
                 ${socketingItem.item.sockets?.map((sock, sIdx) => html`
                   <div style="padding: 0.3rem 0.6rem; border-radius: 4px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;">
                     <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${sock ? sock.color : 'transparent'}; border: 1px solid ${sock ? sock.color : '#666'};"></span>
-                    Sockel ${sIdx + 1}: ${sock ? sock.title : 'Leerer Sockel'}
+                    ${lang === 'de' ? `Sockel ${sIdx + 1}:` : `Socket ${sIdx + 1}:`} ${sock ? (lang === 'de' ? sock.title : sock.title_en || sock.title) : (lang === 'de' ? 'Leerer Sockel' : 'Empty Socket')}
                   </div>
                 `)}
               </div>
             </div>
 
             <div class="text-gold text-sm mb-1 text-bold" style="font-family: var(--font-header); font-size: 0.85rem;">
-              Verfügbare Katalysatoren: <span class="text-highlight" style="font-size: 1rem; color: var(--color-gold);">${resources.catalyst || 0}</span>
+              ${lang === 'de' ? 'Verfügbare Katalysatoren:' : 'Available Catalysts:'} <span class="text-highlight" style="font-size: 1rem; color: var(--color-gold);">${resources.catalyst || 0}</span>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
               ${[
-                { id: 'attack', title: 'Rubin der Glut', bonus: '+5 Angriff', desc: 'Fügt dem Gegenstand Angriffskraft hinzu', color: '#ff4d4d', icon: '⚔️' },
-                { id: 'defense', title: 'Saphir des Schutzes', bonus: '+5 Zähigkeit', desc: 'Fügt dem Gegenstand Zähigkeit hinzu', color: '#4d79ff', icon: '🛡️' },
-                { id: 'agility', title: 'Smaragd der Schnelligkeit', bonus: '+5 Geschick', desc: 'Fügt dem Gegenstand Geschicklichkeit hinzu', color: '#33cc33', icon: '⚡' },
-                { id: 'stamina', title: 'Bernstein des Lebens', bonus: '+5 Vitalität', desc: 'Fügt dem Gegenstand Vitalität hinzu', color: '#ffaa00', icon: '❤️' }
+                { id: 'attack', title: lang === 'de' ? 'Rubin der Glut' : 'Ruby of Embers', bonus: lang === 'de' ? '+5 Angriff' : '+5 Attack', desc: lang === 'de' ? 'Fügt dem Gegenstand Angriffskraft hinzu' : 'Adds attack power to the item', color: '#ff4d4d', icon: '⚔️' },
+                { id: 'defense', title: lang === 'de' ? 'Saphir des Schutzes' : 'Sapphire of Protection', bonus: lang === 'de' ? '+5 Zähigkeit' : '+5 Toughness', desc: lang === 'de' ? 'Fügt dem Gegenstand Zähigkeit hinzu' : 'Adds toughness to the item', color: '#4d79ff', icon: '🛡️' },
+                { id: 'agility', title: lang === 'de' ? 'Smaragd der Schnelligkeit' : 'Emerald of Swiftness', bonus: lang === 'de' ? '+5 Geschick' : '+5 Agility', desc: lang === 'de' ? 'Fügt dem Gegenstand Geschicklichkeit hinzu' : 'Adds agility to the item', color: '#33cc33', icon: '⚡' },
+                { id: 'stamina', title: lang === 'de' ? 'Bernstein des Lebens' : 'Amber of Vitality', bonus: lang === 'de' ? '+5 Vitalität' : '+5 Vitality', desc: lang === 'de' ? 'Fügt dem Gegenstand Vitalität hinzu' : 'Adds vitality to the item', color: '#ffaa00', icon: '❤️' }
               ].map(cat => {
                 // Finde den ersten freien Sockel
                 const emptySocketIdx = socketingItem.item.sockets?.findIndex(s => s === null);
@@ -878,9 +1017,12 @@ export function HeroUI({ stateManager, eventBus, services }) {
         <div class="modal-overlay fade-in active" style="z-index: 12000; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
           <div class="glass-panel" style="max-width: 850px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 2rem; border-color: var(--color-gold); background: rgba(10, 8, 5, 0.9); box-shadow: 0 0 40px rgba(212, 175, 55, 0.15); border-radius: 8px; position: relative;">
             
-            <h2 class="glow-text text-center text-gold cinzel" style="font-size: 1.8rem; letter-spacing: 2px; margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); text-transform: uppercase;">🌀 Finstre Pakte der Verewigung 🌀</h2>
+            <h2 class="glow-text text-center text-gold cinzel" style="font-size: 1.8rem; letter-spacing: 2px; margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); text-transform: uppercase;">${lang === 'de' ? '🌀 Finstre Pakte der Verewigung 🌀' : '🌀 Dark Pacts of Eternalization 🌀'}</h2>
             <p class="subtitle text-center" style="color: #ccc; font-size: 0.88rem; line-height: 1.4; max-width: 650px; margin: 0 auto 2rem auto; font-family: var(--font-header);">
-              Du stehst an den Grenzen des Archivs des Vergessens. Um den Kreislauf neu zu beginnen und deine Stufe zu erhöhen, musst du einen der drei angebotenen finsteren Pakte schließen. Wähle mit Bedacht – die Entscheidung ist bis zur nächsten Verewigung unumkehrbar.
+              ${lang === 'de'
+                ? 'Du stehst an den Grenzen des Archivs des Vergessens. Um den Kreislauf neu zu beginnen und deine Stufe zu erhöhen, musst du einen der drei angebotenen finsteren Pakte schließen. Wähle mit Bedacht – die Entscheidung ist bis zur nächsten Verewigung unumkehrbar.'
+                : 'You stand at the threshold of the Archive of the Forgotten. To begin the cycle anew and raise your level, you must seal one of the three dark pacts offered. Choose wisely – this decision is irreversible until the next eternalization.'
+              }
             </p>
 
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 1.5rem;">
@@ -902,19 +1044,19 @@ export function HeroUI({ stateManager, eventBus, services }) {
                      onClick=${() => handleSelectPact(pact.id)}>
                   
                   <div>
-                    <h3 class="text-gold cinzel" style="font-size: 1.1rem; margin-top: 0.2rem; margin-bottom: 0.8rem; font-weight: bold; letter-spacing: 1px;">${pact.name}</h3>
+                    <h3 class="text-gold cinzel" style="font-size: 1.1rem; margin-top: 0.2rem; margin-bottom: 0.8rem; font-weight: bold; letter-spacing: 1px;">${getLocText(pact, 'name')}</h3>
                     <div style="width: 40px; height: 1px; background: linear-gradient(90deg, transparent, var(--color-gold), transparent); margin: 0 auto 1rem auto;"></div>
                     <p style="font-size: 0.75rem; color: #aaa; line-height: 1.4; margin-bottom: 1.2rem; min-height: 3.2rem; display: flex; align-items: center; justify-content: center;">
-                      „${pact.desc}“
+                      „${getLocText(pact, 'desc')}“
                     </p>
                   </div>
 
                   <div style="display: flex; flex-direction: column; gap: 0.8rem; background: rgba(0,0,0,0.4); padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03);">
                     <!-- Segen -->
                     <div>
-                      <div class="text-success text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #2ecc71;">🌌 Segen (Positiv)</div>
+                      <div class="text-success text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #2ecc71;">${lang === 'de' ? '🌌 Segen (Positiv)' : '🌌 Blessing (Positive)'}</div>
                       <div style="font-size: 0.78rem; font-weight: bold; color: #e5ffe5; line-height: 1.2;">
-                        ${pact.passiveText}
+                        ${getLocText(pact, 'passiveText')}
                       </div>
                     </div>
 
@@ -922,22 +1064,22 @@ export function HeroUI({ stateManager, eventBus, services }) {
 
                     <!-- Fluch -->
                     <div>
-                      <div class="text-danger text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #e74c3c;">💀 Fluch (Negativ)</div>
+                      <div class="text-danger text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #e74c3c;">${lang === 'de' ? '💀 Fluch (Negativ)' : '💀 Curse (Negative)'}</div>
                       <div style="font-size: 0.78rem; font-weight: bold; color: #ffe5e5; line-height: 1.2;">
-                        ${pact.curseText}
+                        ${getLocText(pact, 'curseText')}
                       </div>
                     </div>
                   </div>
 
                   <button class="glass-btn primary cinzel" style="width: 100%; margin-top: 1.2rem; padding: 0.45rem; font-size: 0.75rem; border-color: rgba(212, 175, 55, 0.3); pointer-events: none;">
-                    Pakt besiegeln
+                    ${lang === 'de' ? 'Pakt besiegeln' : 'Seal Pact'}
                   </button>
                 </div>
               `)}
             </div>
 
             <div class="text-center" style="margin-top: 1.5rem;">
-              <button class="glass-btn secondary cinzel" style="font-size: 0.75rem; padding: 0.4rem 1.2rem; border-color: rgba(255,255,255,0.15);" onClick=${() => setPactSelectionActive(false)}>Abbrechen</button>
+              <button class="glass-btn secondary cinzel" style="font-size: 0.75rem; padding: 0.4rem 1.2rem; border-color: rgba(255,255,255,0.15);" onClick=${() => setPactSelectionActive(false)}>${lang === 'de' ? 'Abbrechen' : 'Cancel'}</button>
             </div>
           </div>
         </div>

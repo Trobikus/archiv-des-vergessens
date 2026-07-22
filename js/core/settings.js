@@ -15,7 +15,8 @@ export default class SettingsManager {
             sfx: true,
             volume: 0.7,
             cloudEnabled: true,
-            cloudInterval: 60000
+            cloudInterval: 60000,
+            language: 'de'
         };
         this.load();
     }

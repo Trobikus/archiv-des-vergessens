@@ -30,6 +30,7 @@ import ChallengeService from '../services/challenge-service.js';
 import LibraryService from '../services/library-service.js';
 import TutorialService from '../services/tutorial-service.js';
 import NetworkService from '../services/network-service.js';
+import I18nService from '../services/i18n-service.js';
 
 /**
  * Registriert ALLE Dienste im DI-Container.
@@ -39,13 +40,8 @@ export function registerServices(container) {
   // CORE
   // ============================================================
   
-  // HINWEIS: "stateManager" wird bewusst NICHT hier registriert.
-  // game-boot.js erstellt die EINE StateManager-Instanz (inkl. Middleware-Kette)
-  // und registriert sie im Container, BEVOR registerServices() aufgerufen wird.
-  // Eine zweite Registrierung hier würde eine losgelöste, nie initialisierte
-  // Zweit-Instanz erzeugen, die alle Services statt der echten bekämen
-  // (führte zu "state is null" / "dispatch vor init()"-Fehlern).
   container.register('settingsManager', () => new SettingsManager(container.get('eventBus')));
+  container.register('i18nService', (c) => new I18nService(c.get('eventBus'), c.get('settingsManager')));
   container.register('networkService', (c) => new NetworkService(c.get('stateManager'), c.get('eventBus')));
   container.register('cloudManager', (c) => new CloudManager(c.get('eventBus'), c.get('networkService')));
 

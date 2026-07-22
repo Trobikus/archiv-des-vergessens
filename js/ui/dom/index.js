@@ -5,12 +5,14 @@
  */
 
 import { initParticles } from './particles.js';
+import { initClickBurst } from './click-burst.js';
 import { initFloatingText } from './floating-text.js';
 import { EVENTS } from '../../core/events/definitions.js';
 
 export function initDOMUI({ eventBus, stateManager, settingsManager }) {
   // Partikel initialisieren
-  const particles = initParticles();
+  const particles = initParticles(stateManager, eventBus);
+  const clickBurst = initClickBurst(stateManager);
 
   // Floating-Texts
   const floatingText = initFloatingText(eventBus, settingsManager);
@@ -32,6 +34,7 @@ export function initDOMUI({ eventBus, stateManager, settingsManager }) {
   return {
     destroy: () => {
       particles.destroy();
+      clickBurst.destroy();
       floatingText.destroy();
     }
   };
