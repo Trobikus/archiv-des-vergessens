@@ -1,9 +1,21 @@
 // ============================================================
 // FILE: js/ui/preact/combat/CombatAnalyticsModal.js – Combat Stats Report Modal
 // ============================================================
-import { h, html } from '../setup.js';
+import { h, html, useState, useEffect } from '../setup.js';
 
-export function CombatAnalyticsModal({ analyticsService, onClose }) {
+export function CombatAnalyticsModal({ analyticsService, eventBus, services, onClose }) {
+  const i18nService = services?.i18nService;
+  const [lang, setLang] = useState(i18nService ? i18nService.getLanguage() : 'de');
+
+  useEffect(() => {
+    if (eventBus) {
+      const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
+        setLang(data.language);
+      });
+      return unsub;
+    }
+  }, [eventBus]);
+
   const stats = analyticsService ? analyticsService.getStats() : {
     dps: 0,
     totalDamage: 0,
@@ -26,8 +38,12 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.6rem;">⚔️</span>
             <div>
-              <h2 style="margin: 0; color: #ffd700; font-size: 1.3rem;">Kampf-Analyse & DPS-Meter</h2>
-              <span style="color: #8a9bb0; font-size: 0.85rem;">Echtzeit-Statistiken der aktuellen Begegnung</span>
+              <h2 style="margin: 0; color: #ffd700; font-size: 1.3rem;">
+                ${lang === 'de' ? 'Kampf-Analyse & DPS-Meter' : 'Combat Analytics & DPS Meter'}
+              </h2>
+              <span style="color: #8a9bb0; font-size: 0.85rem;">
+                ${lang === 'de' ? 'Echtzeit-Statistiken der aktuellen Begegnung' : 'Real-time statistics for current encounter'}
+              </span>
             </div>
           </div>
           <button style="background-color: transparent; border: none; color: #8a9bb0; font-size: 1.4rem; cursor: pointer;" onClick=${onClose}>✕</button>
@@ -38,44 +54,60 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
           
           <!-- Main DPS Card -->
           <div style="background-color: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2); border-radius: 12px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-            <span style="color: #8a9bb0; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Current DPS</span>
+            <span style="color: #8a9bb0; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">
+              ${lang === 'de' ? 'Aktueller DPS' : 'Current DPS'}
+            </span>
             <strong style="color: #00e5ff; font-size: 2.8rem; text-shadow: 0 0 15px rgba(0,229,255,0.5); margin: 4px 0;">
               ${stats.dps}
             </strong>
-            <span style="color: #a0b0c0; font-size: 0.85rem;">Kampfdauer: ${stats.durationSeconds}s</span>
+            <span style="color: #a0b0c0; font-size: 0.85rem;">
+              ${lang === 'de' ? `Kampfdauer: ${stats.durationSeconds}s` : `Duration: ${stats.durationSeconds}s`}
+            </span>
           </div>
 
           <!-- Stats Grid -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Gesamtschaden</span>
+              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">
+                ${lang === 'de' ? 'Gesamtschaden' : 'Total Damage'}
+              </span>
               <strong style="color: #ffffff; font-size: 1.2rem;">${stats.totalDamage}</strong>
             </div>
 
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Höchster Treffer</span>
+              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">
+                ${lang === 'de' ? 'Höchster Treffer' : 'Max Hit'}
+              </span>
               <strong style="color: #ffaa00; font-size: 1.2rem;">${stats.maxHit}</strong>
             </div>
 
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Durchschnitt / Treffer</span>
+              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">
+                ${lang === 'de' ? 'Durchschnitt / Treffer' : 'Avg Hit'}
+              </span>
               <strong style="color: #ffffff; font-size: 1.2rem;">${stats.avgHit}</strong>
             </div>
 
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Kritische Trefferquote</span>
+              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">
+                ${lang === 'de' ? 'Kritische Trefferquote' : 'Crit Rate'}
+              </span>
               <strong style="color: #ff5555; font-size: 1.2rem;">
                 ${stats.critRatePercent}% (${stats.critHits}/${stats.totalHits})
               </strong>
             </div>
 
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Verursachte Heilung</span>
+              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">
+                ${lang === 'de' ? 'Verursachte Heilung' : 'Total Healing'}
+              </span>
               <strong style="color: #40ff80; font-size: 1.2rem;">${stats.totalHeal}</strong>
             </div>
 
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Geerntetes Mneme</span>
+              <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">
+                ${lang === 'de' ? 'Geerntetes Mneme' : 'Mneme Harvested'}
+              </span>
               <strong style="color: #aa00ff; font-size: 1.2rem;">${stats.totalMneme} ✨</strong>
             </div>
           </div>
@@ -88,10 +120,10 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
                 if (analyticsService) analyticsService.reset();
               }}
             >
-              🔄 Statistiken Zurücksetzen
+              🔄 ${lang === 'de' ? 'Statistiken Zurücksetzen' : 'Reset Stats'}
             </button>
             <button style="background-color: #ffd700; border: none; color: #000000; font-weight: bold; padding: 10px 24px; border-radius: 8px; cursor: pointer;" onClick=${onClose}>
-              Schließen
+              ${lang === 'de' ? 'Schließen' : 'Close'}
             </button>
           </div>
 

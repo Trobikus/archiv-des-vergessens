@@ -1099,6 +1099,8 @@ export function HeroUI({ stateManager, eventBus, services }) {
       ${isSkillTreeOpen && html`
         <${SkillTreeModal}
           talentService=${services?.talentService}
+          eventBus=${eventBus}
+          services=${services}
           onClose=${() => setIsSkillTreeOpen(false)}
         />
       `}
