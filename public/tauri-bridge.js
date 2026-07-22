@@ -42,7 +42,7 @@
     // --- App Info ---
     getVersion: async () => {
       // Return a clean fallback version matching our Cargo/package.json
-      return "1.7.1";
+      return "1.8.0";
     },
 
     getResourcesPath: async () => {
