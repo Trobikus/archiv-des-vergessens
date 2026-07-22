@@ -2,6 +2,7 @@ import { h, html, useStateSelector, useState, useMemo, useEffect } from '../setu
 import { EVENTS } from '../../../core/events/definitions.js';
 import { PACTS } from '../../../data/pacts.js';
 import { ITEM_TEMPLATES } from '../../../data/items.js';
+import { AccountBadge } from '../account/AccountBadge.js';
 
 export function HubView({ stateManager, eventBus, services }) {
   const hero = useStateSelector(stateManager, (state) => state.hero);
@@ -66,7 +67,8 @@ export function HubView({ stateManager, eventBus, services }) {
             </div>
           </div>
         </div>
-        <div class="hub-header-right">
+        <div class="hub-header-right" style="display: flex; align-items: center; gap: 12px;">
+          <${AccountBadge} eventBus=${eventBus} services=${services} onClick=${() => eventBus.publish('ui:openAccountModal')} />
           <div class="hub-player-card">
             <div class="hub-avatar" aria-hidden="true">
               <span class="avatar-icon">⚔️</span>
@@ -106,10 +108,6 @@ export function HubView({ stateManager, eventBus, services }) {
           <img src="icons/Kern (Core).png" class="tab-icon-img" aria-hidden="true" alt="Kern" />
           <span class="tab-label">${lang === 'de' ? 'Kern' : 'Core'}</span>
         </button>
-        <button class="hub-tab-btn ${activeCategory === 'progression' ? 'active' : ''}" onClick=${() => handleTabClick('progression')} type="button">
-          <img src="icons/Fortschritt (Progression).png" class="tab-icon-img" aria-hidden="true" alt="Fortschritt" />
-          <span class="tab-label">${lang === 'de' ? 'Fortschritt' : 'Progression'}</span>
-        </button>
         <button class="hub-tab-btn ${activeCategory === 'crafting' ? 'active' : ''}" onClick=${() => handleTabClick('crafting')} type="button">
           <img src="icons/Handwerk (Crafting).png" class="tab-icon-img" aria-hidden="true" alt="Handwerk" />
           <span class="tab-label">${t('hub.crafting')}</span>
@@ -121,6 +119,10 @@ export function HubView({ stateManager, eventBus, services }) {
         <button class="hub-tab-btn ${activeCategory === 'social' ? 'active' : ''}" onClick=${() => handleTabClick('social')} type="button">
           <img src="icons/Gemeinschaft (Social).png" class="tab-icon-img" aria-hidden="true" alt="Gemeinschaft" />
           <span class="tab-label">${lang === 'de' ? 'Gemeinschaft' : 'Social'}</span>
+        </button>
+        <button class="hub-tab-btn ${activeCategory === 'settings' ? 'active' : ''}" onClick=${() => handleTabClick('settings')} type="button">
+          <span class="icon" aria-hidden="true" style="font-size: 1.2rem; margin-right: 4px;">⚙️</span>
+          <span class="tab-label">${lang === 'de' ? 'Einstellungen' : 'Settings'}</span>
         </button>
       </nav>
 
@@ -142,6 +144,12 @@ export function HubView({ stateManager, eventBus, services }) {
                 <span class="label">${lang === 'de' ? 'Ausrüstung & Stats' : 'Equipment & Stats'}</span>
                 <span class="hub-btn-glow"></span>
               </button>
+              <button class="hub-btn" id="hub-vault" onClick=${() => handleAction('ui:openSharedVault')} type="button">
+                <span style="font-size: 2.2rem; margin-bottom: 4px; display: block;">🏦</span>
+                <span class="cinzel text-lg">${lang === 'de' ? 'Account-Lager' : 'Account Vault'}</span>
+                <span class="label">${lang === 'de' ? 'Gemeinsamer Tresor' : 'Shared Vault'}</span>
+                <span class="hub-btn-glow"></span>
+              </button>
               <button class="hub-btn" id="hub-story" onClick=${() => handleAction(EVENTS.UI_OPEN_STORY)} type="button">
                 <img src="icons/Bossfight.png" class="hub-btn-img" aria-hidden="true" alt="Story & Bosse" />
                 <span class="cinzel text-lg">${lang === 'de' ? 'Story & Bosse' : 'Story & Bosses'}</span>
@@ -156,42 +164,6 @@ export function HubView({ stateManager, eventBus, services }) {
                   <span class="hub-btn-glow"></span>
                 </button>
               ` : null}
-            </div>
-          </div>
-        ` : null}
-
-        <!-- FORTSCHRITT -->
-        ${activeCategory === 'progression' ? html`
-          <div id="hub-category-progression" class="hub-category">
-            <div class="hub-grid">
-              <button class="hub-btn" id="hub-leaderboard" onClick=${() => handleAction(EVENTS.UI_OPEN_LEADERBOARD, { tab: 'personal' })} type="button">
-                <img src="icons/Ruhmeshalle (Rekorde).png" class="hub-btn-img" aria-hidden="true" alt="Ruhmeshalle" />
-                <span class="cinzel text-lg">${lang === 'de' ? 'Ruhmeshalle' : 'Hall of Fame'}</span>
-                <span class="label">${lang === 'de' ? 'Persönliche Rekorde' : 'Personal Records'}</span>
-                <span class="hub-btn-glow"></span>
-              </button>
-              ${bossProgress >= 3 ? html`
-                <button class="hub-btn" id="hub-relic" onClick=${() => handleAction(EVENTS.UI_OPEN_RELICHUNT)} type="button">
-                  <img src="icons/Relikt-Jagd (Relikte).png" class="hub-btn-img" aria-hidden="true" alt="Relikte" />
-                  <span class="cinzel text-lg">${t('hub.relicHunt')}</span>
-                  <span class="label">${lang === 'de' ? 'Relikte finden' : 'Find relics'}</span>
-                  <span class="hub-btn-glow"></span>
-                </button>
-              ` : null}
-              ${prestigeLevel > 0 ? html`
-                <button class="hub-btn hub-btn-danger span-2" id="hub-challenges" onClick=${() => handleAction('ui:openChallenges')} type="button">
-                  <img src="icons/Anomalien (Challenges).png" class="hub-btn-img" aria-hidden="true" alt="Anomalien" />
-                  <span class="cinzel text-lg text-danger">${lang === 'de' ? 'Anomalien' : 'Anomalies'}</span>
-                  <span class="label">${lang === 'de' ? 'Extreme Herausforderungen' : 'Extreme Challenges'}</span>
-                  <span class="hub-btn-glow"></span>
-                </button>
-              ` : null}
-              <button class="hub-btn" id="hub-wiki" onClick=${() => { setIsWikiOpen(true); setSelectedWikiItem(null); }} type="button">
-                <span class="icon" aria-hidden="true">📖</span>
-                <span class="cinzel text-lg">${lang === 'de' ? 'Archiv-Kodex' : 'Archive Codex'}</span>
-                <span class="label">${lang === 'de' ? 'Lexikon & Spiel-Wiki' : 'Lexicon & Game Wiki'}</span>
-                <span class="hub-btn-glow"></span>
-              </button>
             </div>
           </div>
         ` : null}
@@ -230,12 +202,22 @@ export function HubView({ stateManager, eventBus, services }) {
         ${activeCategory === 'collection' ? html`
           <div id="hub-category-collection" class="hub-category">
             <div class="hub-grid">
-              <button class="hub-btn" id="hub-codex" onClick=${() => handleAction(EVENTS.UI_OPEN_CODEX)} type="button">
-                <span class="icon" aria-hidden="true">📚</span>
-                <span class="cinzel text-lg">${t('hub.codex')}</span>
-                <span class="label">${lang === 'de' ? 'Tagebuch & Lore' : 'Journal & Lore'}</span>
-                <span class="hub-btn-glow"></span>
-              </button>
+              ${bossProgress >= 3 ? html`
+                <button class="hub-btn" id="hub-relic" onClick=${() => handleAction(EVENTS.UI_OPEN_RELICHUNT)} type="button">
+                  <img src="icons/Relikt-Jagd (Relikte).png" class="hub-btn-img" aria-hidden="true" alt="Relikte" />
+                  <span class="cinzel text-lg">${t('hub.relicHunt')}</span>
+                  <span class="label">${lang === 'de' ? 'Relikte finden' : 'Find relics'}</span>
+                  <span class="hub-btn-glow"></span>
+                </button>
+              ` : null}
+              ${prestigeLevel > 0 ? html`
+                <button class="hub-btn hub-btn-danger" id="hub-challenges" onClick=${() => handleAction('ui:openChallenges')} type="button">
+                  <img src="icons/Anomalien (Challenges).png" class="hub-btn-img" aria-hidden="true" alt="Anomalien" />
+                  <span class="cinzel text-lg text-danger">${lang === 'de' ? 'Anomalien' : 'Anomalies'}</span>
+                  <span class="label">${lang === 'de' ? 'Extreme Herausforderungen' : 'Extreme Challenges'}</span>
+                  <span class="hub-btn-glow"></span>
+                </button>
+              ` : null}
             </div>
           </div>
         ` : null}
@@ -266,6 +248,32 @@ export function HubView({ stateManager, eventBus, services }) {
                 <span class="icon" aria-hidden="true">💬</span>
                 <span class="cinzel text-lg">${t('hub.chat')}</span>
                 <span class="label">${lang === 'de' ? 'Globaler Chat' : 'Global chat'}</span>
+                <span class="hub-btn-glow"></span>
+              </button>
+            </div>
+          </div>
+        ` : null}
+
+        <!-- EINSTELLUNGEN -->
+        ${activeCategory === 'settings' ? html`
+          <div id="hub-category-settings" class="hub-category">
+            <div class="hub-grid">
+              <button class="hub-btn" id="hub-wiki" onClick=${() => { setIsWikiOpen(true); setSelectedWikiItem(null); }} type="button">
+                <span class="icon" aria-hidden="true">📖</span>
+                <span class="cinzel text-lg">${lang === 'de' ? 'Archiv-Kodex' : 'Archive Codex'}</span>
+                <span class="label">${lang === 'de' ? 'Lexikon & Spiel-Wiki' : 'Lexicon & Game Wiki'}</span>
+                <span class="hub-btn-glow"></span>
+              </button>
+              <button class="hub-btn" id="hub-codex" onClick=${() => handleAction(EVENTS.UI_OPEN_CODEX)} type="button">
+                <span class="icon" aria-hidden="true">📚</span>
+                <span class="cinzel text-lg">${t('hub.codex')}</span>
+                <span class="label">${lang === 'de' ? 'Tagebuch & Lore' : 'Journal & Lore'}</span>
+                <span class="hub-btn-glow"></span>
+              </button>
+              <button class="hub-btn" id="hub-options" onClick=${() => handleAction('menu:options')} type="button">
+                <span class="icon" aria-hidden="true">⚙️</span>
+                <span class="cinzel text-lg">${lang === 'de' ? 'Optionen' : 'Options'}</span>
+                <span class="label">${lang === 'de' ? 'Audio & Grafik' : 'Audio & Graphics'}</span>
                 <span class="hub-btn-glow"></span>
               </button>
             </div>

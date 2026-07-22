@@ -48,6 +48,7 @@
  * @property {import('../services/library-service.js').default} libraryService
  * @property {import('../services/tutorial-service.js').default} tutorialService
  * @property {import('../services/network-service.js').default} networkService
+ * @property {import('../services/auth-service.js').default} authService
  */
 
 export {};

@@ -1,18 +1,23 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vite'
+import { readFileSync } from 'fs'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
 
 /**
  * Vite Configuration File
  * https://vite.dev/config/
  */
 export default defineConfig({
+  define: {
+    '__APP_VERSION__': JSON.stringify(pkg.version)
+  },
   // Setzt den korrekten Pfad für das GitHub-Pages-Unterverzeichnis oder relativ für Tauri
   base: process.env.TAURI_ENV_PLATFORM ? '' : '/archiv-des-vergessens/',
 
   // Server-Konfiguration für die lokale Entwicklung
   server: {
     port: 3000,
-    open: true,
+    open: 'chrome',
     host: true
   },
 
@@ -22,7 +27,29 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: true,
     target: 'es2022',
-    minify: 'esbuild'
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        launcher: 'launcher.html'
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('preact') || id.includes('htm')) {
+              return 'vendor-preact';
+            }
+            if (id.includes('@tauri-apps')) {
+              return 'vendor-tauri';
+            }
+            return 'vendor';
+          }
+          if (id.includes('js/data/')) {
+            return 'game-data';
+          }
+        }
+      }
+    }
   },
 
   // Vitest Test-Konfiguration

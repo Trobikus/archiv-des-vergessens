@@ -4,6 +4,8 @@
  * ============================================================
  */
 
+globalThis.__APP_VERSION__ = '1.8.0';
+
 // Mock für localStorage
 if (!globalThis.localStorage) {
   globalThis.localStorage = {

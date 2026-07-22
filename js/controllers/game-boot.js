@@ -25,6 +25,7 @@ import { initDOMUI } from '../ui/dom/index.js';
 import SaveManager from '../core/persistence/save-manager.js';
 import CloudManager from '../core/persistence/cloud-manager.js';
 import { Logger } from '../core/logger.js';
+import { APP_VERSION } from '../utils/version.js';
 import SettingsManager from '../core/settings.js';
 import { EVENTS } from '../core/events/definitions.js';
 import { CONFIG } from '../data/config.js';
@@ -153,9 +154,13 @@ export async function bootGame() {
   const tutorialService = container.get('tutorialService');
   const networkService = container.get('networkService');
   const i18nService = container.get('i18nService');
+  const accountVaultService = container.get('accountVaultService');
 
   // Querverweise für Netzwerk-Verarbeitung initialisieren
   networkService.setServices(chatService, leaderboardService, cloudManager);
+
+  // Account-Lager initialisieren
+  await accountVaultService.init();
 
   // ============================================================
   // 5. STATE INITIALISIEREN
@@ -724,8 +729,8 @@ export async function bootGame() {
       setTimeout(() => {
         introContainer.style.display = 'none';
 
-        // Menü anzeigen
-        navigation.showMenu();
+        // Login-Portal anzeigen (zwischen Intro und Hauptmenü)
+        navigation.showLogin();
 
         // GameLoop starten
         gameLoop.start();
@@ -733,7 +738,7 @@ export async function bootGame() {
         // Event veröffentlichen
         eventBus.publish(EVENTS.GAME_BOOTED, {
           timestamp: Date.now(),
-          version: '1.6',
+          version: APP_VERSION,
           services: Array.from(container.getKeys())
         });
 
@@ -911,7 +916,7 @@ export async function bootGame() {
 
     eventBus.publish(EVENTS.GAME_BOOTED, {
       timestamp: Date.now(),
-      version: '1.6',
+      version: APP_VERSION,
       services: Array.from(container.getKeys())
     });
 

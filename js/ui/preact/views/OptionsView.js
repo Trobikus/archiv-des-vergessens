@@ -144,6 +144,21 @@ export function OptionsView({ stateManager, eventBus, services }) {
             </span>
           </div>
  
+          <!-- Account -->
+          <h3 class="options-header mt-1">${t('auth.title')}</h3>
+          <div class="option-row flex-between mb-2">
+            <span class="option-label text-muted">
+              ${services?.authService?.getCurrentUser()?.isGuest 
+                ? (lang === 'de' ? 'Status: Gast-Konto' : 'Status: Guest Account')
+                : `${t('auth.loggedInAs')}: ${services?.authService?.getCurrentUser()?.username || ''}`}
+            </span>
+            <span class="option-control">
+              <button class="glass-btn btn-small" type="button" onClick=${() => eventBus.publish('ui:openAccountModal')}>
+                🛡️ ${services?.authService?.getCurrentUser()?.isGuest ? t('auth.login') : t('auth.accountDetails')}
+              </button>
+            </span>
+          </div>
+
           <!-- Cloud -->
           <h3 class="options-header mt-1">${t('options.cloudSync')}</h3>
           <div class="option-row flex-between mb-1">

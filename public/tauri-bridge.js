@@ -36,13 +36,20 @@
     : null;
 
   const updateListeners = {};
+  let activeUpdate = null;
 
   // Global API exposed to the frontend
   window.electronAPI = {
     // --- App Info ---
     getVersion: async () => {
-      // Return a clean fallback version matching our Cargo/package.json
-      return "1.8.0";
+      if (window.__TAURI__ && window.__TAURI__.app && typeof window.__TAURI__.app.getVersion === 'function') {
+        try {
+          return await window.__TAURI__.app.getVersion();
+        } catch (e) {
+          // fallback
+        }
+      }
+      return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : "1.8.0";
     },
 
     getResourcesPath: async () => {
@@ -53,8 +60,20 @@
 
     // --- Auto-Updater ---
     checkForUpdate: async () => {
-      // Da wir in einer installierten Tauri-App laufen, simulieren wir eine kurze professionelle
-      // Update-Prüfung und feuern dann 'update:not-available', um direkt den Spielstart zu erlauben.
+      if (window.__TAURI__ && window.__TAURI__.updater) {
+        try {
+          const update = await window.__TAURI__.updater.check();
+          if (update && update.available) {
+            activeUpdate = update;
+            if (typeof updateListeners['update:available'] === 'function') {
+              updateListeners['update:available']({ version: update.version });
+            }
+            return { status: 'update-available', version: update.version };
+          }
+        } catch (e) {
+          console.warn('[Tauri Bridge] Echtzeit-Update-Prüfung konnte nicht ausgeführt werden:', e);
+        }
+      }
       setTimeout(() => {
         if (typeof updateListeners['update:not-available'] === 'function') {
           updateListeners['update:not-available']();
@@ -63,12 +82,39 @@
       return { status: 'up-to-date' };
     },
 
-    startDownload: () => {
-      console.log('[Tauri Bridge] startDownload requested (no-op in bridge simulation)');
+    startDownload: async () => {
+      if (activeUpdate) {
+        try {
+          let downloaded = 0;
+          let contentLength = 0;
+          await activeUpdate.downloadAndInstall((event) => {
+            if (event.event === 'Started') {
+              contentLength = event.data.contentLength || 0;
+            } else if (event.event === 'Progress') {
+              downloaded += event.data.chunkLength;
+              const percent = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
+              if (typeof updateListeners['update:progress'] === 'function') {
+                updateListeners['update:progress']({ percent });
+              }
+            }
+          });
+          if (typeof updateListeners['update:downloaded'] === 'function') {
+            updateListeners['update:downloaded']({ version: activeUpdate.version });
+          }
+        } catch (e) {
+          console.error('[Tauri Bridge] Fehler beim Herunterladen/Installieren des Updates:', e);
+        }
+      } else {
+        console.log('[Tauri Bridge] startDownload aufgerufen ohne aktives Update');
+      }
     },
 
-    quitAndInstall: () => {
-      console.log('[Tauri Bridge] quitAndInstall requested');
+    quitAndInstall: async () => {
+      if (window.__TAURI__ && window.__TAURI__.process && typeof window.__TAURI__.process.relaunch === 'function') {
+        await window.__TAURI__.process.relaunch();
+      } else {
+        invoke('quit_app');
+      }
     },
 
     onUpdateEvent: (channel, callback) => {

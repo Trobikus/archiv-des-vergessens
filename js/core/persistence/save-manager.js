@@ -1,10 +1,10 @@
 /**
  * ============================================================
- * FILE: core/persistence/save-manager.js – Speichern & Laden (v2.0 FINAL)
+ * FILE: core/persistence/save-manager.js – Speichern & Laden (v2.0 Multi-Slot)
  * ============================================================
  * 
  * VERANTWORTUNG:
- * - IndexedDB für persistente Speicherung
+ * - IndexedDB für persistente Speicherung mit Multi-Slot Support (max 5 Slots pro User)
  * - Prüfsumme zur Korruptionserkennung (mit Fehlertoleranz)
  * - Queue für parallele Save/Load-Operationen
  * - Integration mit dem Security-Worker
@@ -13,11 +13,12 @@
 
 import { Checksum } from '../security.js';
 import RNG from '../../utils/rng.js';
+import { APP_VERSION } from '../../utils/version.js';
 
 const DB_NAME = 'ArchivDB';
 const STORE_NAME = 'saves';
 const SAVE_KEY = 'main_save';
-const LATEST_VERSION = '1.6';
+const LATEST_VERSION = APP_VERSION;
 
 export class SaveManager {
   static _db = null;
@@ -28,24 +29,35 @@ export class SaveManager {
   static _workerManager = null;
   static _services = {};
   static _dbReady = false;
+  static _activeSlotId = 1;
 
-  /**
-   * Setzt den WorkerManager für asynchrone Operationen.
-   */
   static setWorkerManager(workerManager) {
     this._workerManager = workerManager;
   }
 
-  /**
-   * Setzt die Service-Referenzen für die Hydration.
-   */
   static setServices(services) {
     this._services = services;
   }
 
-  /**
-   * Öffnet die IndexedDB-Datenbank.
-   */
+  static setActiveSlot(slotId) {
+    if (slotId >= 1 && slotId <= 5) {
+      this._activeSlotId = slotId;
+    }
+  }
+
+  static getActiveSlot() {
+    return this._activeSlotId;
+  }
+
+  static _getSlotKey(slotId = this._activeSlotId, userId = null) {
+    let uId = userId;
+    if (!uId && this._services?.authService) {
+      const u = this._services.authService.getCurrentUser();
+      if (u && !u.isGuest) uId = u.id || u.username;
+    }
+    return uId ? `slot_u${uId}_${slotId}` : `slot_guest_${slotId}`;
+  }
+
   static async _getDB() {
     if (this._db && this._dbReady) return this._db;
     
@@ -63,7 +75,6 @@ export class SaveManager {
       request.onsuccess = () => {
         this._db = request.result;
         this._dbReady = true;
-        // Fehlerbehandlung für die DB
         this._db.onerror = (event) => {
           console.error('[SaveManager] Datenbank-Fehler:', event.target.error);
         };
@@ -78,20 +89,71 @@ export class SaveManager {
   }
 
   /**
-   * Speichert den State asynchron.
+   * Listet alle 5 Slots mit Meta-Informationen auf.
    */
-  static async save(state) {
+  static async listSlots(userId = null) {
+    const db = await this._getDB();
+    const slots = [];
+
+    for (let i = 1; i <= 5; i++) {
+      const key = this._getSlotKey(i, userId);
+      
+      let storedData = await new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      });
+
+      // Legacy Migration for Slot 1 if empty
+      if (!storedData && i === 1) {
+        storedData = await new Promise((resolve) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(SAVE_KEY);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        });
+      }
+
+      if (storedData && storedData.state) {
+        const st = storedData.state;
+        slots.push({
+          slotId: i,
+          hasSave: true,
+          name: st.hero?.name || st.character?.name || 'Hüter',
+          level: st.hero?.level || 1,
+          avatar: st.hero?.avatar || '🛡️',
+          classTitle: st.hero?.title || 'Schatten-Hüter',
+          timestamp: storedData.timestamp || Date.now()
+        });
+      } else {
+        slots.push({
+          slotId: i,
+          hasSave: false
+        });
+      }
+    }
+
+    return slots;
+  }
+
+  /**
+   * Speichert den State in den aktiven Slot.
+   */
+  static async save(state, slotId = this._activeSlotId) {
     if (this._saveLock) {
       return new Promise((resolve) => this._saveQueue.push(resolve));
     }
     this._saveLock = true;
+    this.setActiveSlot(slotId);
 
     try {
       const db = await this._getDB();
-
       const saveTime = Date.now();
+      const slotKey = this._getSlotKey(slotId);
 
-      // State-Kopie mit aktualisiertem lastSave & isSaving Status
       const stateToSave = {
         ...state,
         system: {
@@ -101,7 +163,6 @@ export class SaveManager {
         }
       };
 
-      // Save-Daten vorbereiten
       const saveData = {
         timestamp: saveTime,
         version: LATEST_VERSION,
@@ -109,13 +170,11 @@ export class SaveManager {
         state: stateToSave
       };
 
-      // Prüfsumme berechnen (im Worker, wenn verfügbar)
       let checksum;
       if (this._workerManager && this._workerManager.isAvailable()) {
         try {
           checksum = await this._workerManager.execute('checksum:calculate', saveData);
         } catch (e) {
-          console.warn('[SaveManager] Worker-Checksum fehlgeschlagen, Fallback:', e);
           checksum = Checksum.calculate(saveData);
         }
       } else {
@@ -123,16 +182,22 @@ export class SaveManager {
       }
       saveData._checksum = checksum;
 
-      // In IndexedDB speichern
       await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.put(saveData, SAVE_KEY);
+        const req = store.put(saveData, slotKey);
         req.onsuccess = () => resolve(true);
         req.onerror = () => reject(req.error);
       });
 
-      // In-Memory State synchronisieren
+      // Synchronisiere auch Legacy SAVE_KEY bei Slot 1
+      if (slotId === 1) {
+        try {
+          const tx2 = db.transaction(STORE_NAME, 'readwrite');
+          tx2.objectStore(STORE_NAME).put(saveData, SAVE_KEY);
+        } catch (e) {}
+      }
+
       if (this._services?.stateManager) {
         this._services.stateManager.dispatch((s) => ({
           ...s,
@@ -144,7 +209,6 @@ export class SaveManager {
         }), 'setSavingStatus');
       }
 
-      // Queue abarbeiten
       const queue = [...this._saveQueue];
       this._saveQueue = [];
       for (const resolve of queue) resolve(true);
@@ -160,37 +224,47 @@ export class SaveManager {
     }
   }
 
-
-
   /**
-   * Lädt den State asynchron (mit Fehlertoleranz bei Prüfsumme).
+   * Lädt den State aus einem Slot.
    */
-  static async load() {
+  static async load(slotId = this._activeSlotId) {
     if (this._loadLock) {
       return new Promise((resolve) => this._loadQueue.push(resolve));
     }
     this._loadLock = true;
+    this.setActiveSlot(slotId);
 
     try {
       const db = await this._getDB();
+      const slotKey = this._getSlotKey(slotId);
 
-      const storedData = await new Promise((resolve, reject) => {
+      let storedData = await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readonly');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.get(SAVE_KEY);
+        const req = store.get(slotKey);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
+
+      // Legacy Fallback for Slot 1
+      if (!storedData && slotId === 1) {
+        storedData = await new Promise((resolve) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const store = tx.objectStore(STORE_NAME);
+          const req = store.get(SAVE_KEY);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        });
+      }
 
       if (!storedData) {
         this._loadQueue = [];
         return null;
       }
 
-      // Prüfsumme validieren (mit Fehlertoleranz)
       if (storedData._checksum) {
         const expectedChecksum = storedData._checksum;
-        delete storedData._checksum; // Temporär entfernen, da bei der Generierung in save() auch kein _checksum Feld existierte
+        delete storedData._checksum;
 
         let valid = false;
         if (this._workerManager && this._workerManager.isAvailable()) {
@@ -198,27 +272,21 @@ export class SaveManager {
             const calculated = await this._workerManager.execute('checksum:calculate', storedData);
             valid = calculated === expectedChecksum;
           } catch (e) {
-            console.warn('[SaveManager] Worker-Checksum-Validierung fehlgeschlagen, Fallback:', e);
             valid = Checksum.calculate(storedData) === expectedChecksum;
           }
         } else {
           valid = Checksum.calculate(storedData) === expectedChecksum;
         }
 
-        if (!valid) {
-          console.warn('[SaveManager] Prüfsummen-Fehler! Lade trotzdem (Daten könnten korrupt sein).');
-          // Event-Bus Benachrichtigung
-          if (this._services?.eventBus) {
-            this._services.eventBus.publish('ui:showToast', {
-              message: '⚠️ Spielstand-Checksumme fehlerhaft – wurde trotzdem geladen.',
-              type: 'warning',
-              duration: 5000
-            });
-          }
+        if (!valid && this._services?.eventBus) {
+          this._services.eventBus.publish('ui:showToast', {
+            message: '⚠️ Spielstand-Checksumme fehlerhaft – wurde trotzdem geladen.',
+            type: 'warning',
+            duration: 5000
+          });
         }
       }
 
-      // RNG-Seed wiederherstellen
       if (storedData.rngSeed !== undefined) {
         RNG.setSeed(storedData.rngSeed);
       }
@@ -241,15 +309,16 @@ export class SaveManager {
   }
 
   /**
-   * Prüft, ob ein Save existiert.
+   * Prüft, ob ein Save im aktiven Slot existiert.
    */
-  static async hasSave() {
+  static async hasSave(slotId = this._activeSlotId) {
     try {
       const db = await this._getDB();
+      const slotKey = this._getSlotKey(slotId);
       return new Promise((resolve) => {
         const tx = db.transaction(STORE_NAME, 'readonly');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.count(SAVE_KEY);
+        const req = store.count(slotKey);
         req.onsuccess = () => resolve(req.result > 0);
         req.onerror = () => resolve(false);
       });
@@ -259,29 +328,86 @@ export class SaveManager {
   }
 
   /**
-   * Löscht den Save.
+   * Löscht einen bestimmten Slot.
    */
-  static async deleteSave() {
+  static async deleteSlot(slotId) {
     while (this._saveLock || this._loadLock) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     try {
       const db = await this._getDB();
-      return new Promise((resolve) => {
+      const slotKey = this._getSlotKey(slotId);
+
+      await new Promise((resolve) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.delete(SAVE_KEY);
+        const req = store.delete(slotKey);
         req.onsuccess = () => resolve(true);
         req.onerror = () => resolve(false);
       });
+
+      if (slotId === 1) {
+        try {
+          const tx2 = db.transaction(STORE_NAME, 'readwrite');
+          tx2.objectStore(STORE_NAME).delete(SAVE_KEY);
+        } catch (e) {}
+      }
+
+      return true;
     } catch {
       return false;
     }
   }
 
-  /**
-   * Bereinigt den Manager (für Tests).
-   */
+  static async deleteSave() {
+    return this.deleteSlot(this._activeSlotId);
+  }
+
+  static _getVaultKey(userId = null) {
+    let uId = userId;
+    if (!uId && this._services?.authService) {
+      const u = this._services.authService.getCurrentUser();
+      if (u && !u.isGuest) uId = u.id || u.username;
+    }
+    return uId ? `vault_u${uId}` : `vault_guest`;
+  }
+
+  static async saveAccountVault(vaultData, userId = null) {
+    try {
+      const db = await this._getDB();
+      const vaultKey = this._getVaultKey(userId);
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put({ timestamp: Date.now(), data: vaultData }, vaultKey);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+      return true;
+    } catch (e) {
+      console.error('[SaveManager] Fehler beim Speichern des Account-Lagers:', e);
+      return false;
+    }
+  }
+
+  static async loadAccountVault(userId = null) {
+    try {
+      const db = await this._getDB();
+      const vaultKey = this._getVaultKey(userId);
+      const res = await new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(vaultKey);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      });
+      return res ? res.data : null;
+    } catch (e) {
+      console.error('[SaveManager] Fehler beim Laden des Account-Lagers:', e);
+      return null;
+    }
+  }
+
   static destroy() {
     this._saveLock = false;
     this._saveQueue = [];

@@ -25,10 +25,17 @@ import { LeaderboardUI } from '../leaderboard/LeaderboardUI.js';
 import { TutorialUI } from '../tutorial/TutorialUI.js';
 import { FriendsUI } from '../friends/FriendsUI.js';
 
+import { LoginView } from './LoginView.js';
+import { CharacterSelectView } from './CharacterSelectView.js';
+import { AccountModal } from '../account/AccountModal.js';
+import { SharedVaultModal } from '../shared/SharedVaultModal.js';
+
 export function MainApp({ stateManager, eventBus, services }) {
   const { i18nService } = services;
   const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [vaultModalOpen, setVaultModalOpen] = useState(false);
   const [newGameName, setNewGameName] = useState('Der Mneme-Bund');
 
   // i18n Reaktivität
@@ -52,6 +59,8 @@ export function MainApp({ stateManager, eventBus, services }) {
   useEffect(() => {
     const showNewGame = () => setNewGameModalOpen(true);
     const hideNewGame = () => setNewGameModalOpen(false);
+    const openAccount = () => setAccountModalOpen(true);
+    const closeAccount = () => setAccountModalOpen(false);
 
     const openConfirm = (data) => {
       setConfirmModal({
@@ -64,13 +73,20 @@ export function MainApp({ stateManager, eventBus, services }) {
       });
     };
 
-    eventBus.subscribe('ui:showNewGameModal', showNewGame);
-    eventBus.subscribe('ui:hideNewGameModal', hideNewGame);
-    eventBus.subscribe('ui:openConfirm', openConfirm);
+    const sub1 = eventBus.subscribe('ui:showNewGameModal', showNewGame);
+    const sub2 = eventBus.subscribe('ui:hideNewGameModal', hideNewGame);
+    const sub3 = eventBus.subscribe('ui:openAccountModal', openAccount);
+    const sub4 = eventBus.subscribe('ui:closeAccountModal', closeAccount);
+    const sub5 = eventBus.subscribe('ui:openConfirm', openConfirm);
+    const sub6 = eventBus.subscribe('ui:openSharedVault', () => setVaultModalOpen(true));
 
     return () => {
-      // unsubscribing happens automatically on unmount if we use eventBus helper,
-      // but since we subscribed manually here, we will just let it be or unsubscribe if needed.
+      eventBus.unsubscribe(sub1);
+      eventBus.unsubscribe(sub2);
+      eventBus.unsubscribe(sub3);
+      eventBus.unsubscribe(sub4);
+      eventBus.unsubscribe(sub5);
+      eventBus.unsubscribe(sub6);
     };
   }, [eventBus, lang]);
 
@@ -87,6 +103,10 @@ export function MainApp({ stateManager, eventBus, services }) {
     switch (currentView) {
       case 'intro':
         return html`<${IntroView} />`;
+      case 'login':
+        return html`<${LoginView} eventBus=${eventBus} services=${services} />`;
+      case 'characterSelect':
+        return html`<${CharacterSelectView} eventBus=${eventBus} services=${services} />`;
       case 'menu':
         return html`<${MenuView} eventBus=${eventBus} services=${services} />`;
       case 'options':
@@ -124,6 +144,12 @@ export function MainApp({ stateManager, eventBus, services }) {
       <${LeaderboardUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${TutorialUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${FriendsUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
+
+      <!-- ACCOUNT MODAL -->
+      <${AccountModal} isOpen=${accountModalOpen} onClose=${() => setAccountModalOpen(false)} eventBus=${eventBus} services=${services} />
+
+      <!-- SHARED ACCOUNT VAULT MODAL -->
+      <${SharedVaultModal} isOpen=${vaultModalOpen} onClose=${() => setVaultModalOpen(false)} eventBus=${eventBus} services=${services} />
 
       <!-- NEUES SPIEL DIALOG -->
       ${newGameModalOpen ? html`

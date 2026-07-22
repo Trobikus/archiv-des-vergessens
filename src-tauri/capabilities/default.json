@@ -3,6 +3,8 @@
   "description": "Default capabilities for the frontend",
   "windows": ["*"],
   "permissions": [
-    "core:default"
+    "core:default",
+    "updater:default",
+    "process:default"
   ]
 }

@@ -18,7 +18,6 @@ export function ForgeUI({ stateManager, eventBus, services }) {
   const recipes = forgeService.getRecipes();
 
   useEventBus(eventBus, EVENTS.UI_OPEN_FORGE, () => setIsOpen(true));
-  useEventBus(eventBus, 'forge:crafted', () => setIsOpen(false));
 
   if (!isOpen) return null;
 

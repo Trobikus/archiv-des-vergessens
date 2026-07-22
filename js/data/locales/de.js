@@ -1,3 +1,5 @@
+import { APP_VERSION } from '../../utils/version.js';
+
 export const DE = {
     // ===== MENU =====
     'menu.title': 'ARCHIV DES VERGESSENS',
@@ -6,7 +8,7 @@ export const DE = {
     'menu.continue': 'Weiter',
     'menu.options': 'Optionen',
     'menu.quit': 'Beenden',
-    'menu.version': 'Version 1.7 – AAA Overhaul',
+    'menu.version': `Version ${APP_VERSION} – AAA Overhaul`,
 
     // ===== OPTIONS =====
     'options.title': 'Spieleinstellungen',
@@ -50,6 +52,33 @@ export const DE = {
     'hero.inventory': 'Inventar',
     'hero.equipment': 'Ausrüstung',
     'hero.stats': 'Attribute',
+
+    // ===== AUTH & ACCOUNT =====
+    'auth.title': 'BENUTZERKONTO',
+    'auth.login': 'Anmelden',
+    'auth.register': 'Registrieren',
+    'auth.logout': 'Abmelden',
+    'auth.guest': 'Gast-Modus',
+    'auth.username': 'Benutzername',
+    'auth.email': 'E-Mail-Adresse',
+    'auth.password': 'Passwort',
+    'auth.guestBadge': 'Gast-Hüter',
+    'auth.loggedInAs': 'Angemeldet als',
+    'auth.upgradeGuest': 'Konto jetzt registrieren',
+    'auth.accountDetails': 'Konto-Details',
+    'auth.created': 'Mitglied seit',
+    'auth.syncStatus': 'Cloud-Synchronisation',
+    'auth.error.missing_fields': 'Bitte fülle alle erforderlichen Felder aus.',
+    'auth.error.user_not_found': 'Benutzer oder E-Mail wurde nicht gefunden.',
+    'auth.error.wrong_password': 'Das eingegebene Passwort ist falsch.',
+    'auth.error.username_short': 'Benutzername muss mindestens 3 Zeichen lang sein.',
+    'auth.error.email_invalid': 'Bitte gib eine gültige E-Mail-Adresse ein.',
+    'auth.error.password_short': 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+    'auth.error.username_taken': 'Dieser Benutzername ist bereits vergeben.',
+    'auth.error.email_taken': 'Diese E-Mail-Adresse wird bereits verwendet.',
+    'auth.success.registered': 'Konto erfolgreich erstellt und angemeldet!',
+    'auth.success.login': 'Willkommen zurück, Hüter!',
+    'auth.success.guestConverted': 'Gast-Konto erfolgreich umgewandelt!',
 
     // ===== COMMON =====
     'common.confirm': 'Bestätigen',

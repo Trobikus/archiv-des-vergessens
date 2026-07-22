@@ -53,6 +53,14 @@ export class NavigationController {
   }
 
   _bindEvents() {
+    // --- Auth / Login-Events ---
+    this._eventBus.subscribe('auth:proceedToMenu', () => this.showCharacterSelect());
+    this._eventBus.subscribe('auth:showLogin', () => this.showLogin());
+
+    // --- Character-Events ---
+    this._eventBus.subscribe('character:select', (data) => this._selectCharacterSlot(data.slotId));
+    this._eventBus.subscribe('character:create', (data) => this._createCharacterSlot(data));
+
     // --- Menü-Events ---
     this._eventBus.subscribe('menu:newGame', () => this._showNewGameModal());
     this._eventBus.subscribe('menu:continue', () => this._loadGame());
@@ -74,7 +82,7 @@ export class NavigationController {
     this._eventBus.subscribe('options:back', () => this._saveAndExitOptions());
 
     // --- Hub-Events ---
-    this._eventBus.subscribe('hub:backToMenu', () => this.showMenu());
+    this._eventBus.subscribe('hub:backToMenu', () => this.showCharacterSelect());
     this._eventBus.subscribe('hub:enterGame', () => this.showGame());
 
     // --- In-Game-Events ---
@@ -112,6 +120,40 @@ export class NavigationController {
 
   // ---- VIEW-WECHSEL ----
 
+  showLogin() {
+    this._stateManager.dispatch(setCurrentView('login'));
+  }
+
+  showCharacterSelect() {
+    this._stateManager.dispatch(setCurrentView('characterSelect'));
+  }
+
+  async _selectCharacterSlot(slotId) {
+    this._saveManager.setActiveSlot(slotId);
+    const loadedState = await this._saveManager.load(slotId);
+    if (loadedState) {
+      this._stateManager.dispatch(() => loadedState, 'character/load');
+    }
+    this.showHub();
+  }
+
+  async _createCharacterSlot({ slotId, name, avatar, title }) {
+    this._saveManager.setActiveSlot(slotId);
+    this._stateManager.reset();
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      hero: {
+        ...state.hero,
+        name: name || 'Hüter',
+        avatar: avatar || '🛡️',
+        title: title || 'Schatten-Hüter'
+      }
+    }), 'character/create');
+
+    await this._saveManager.save(this._stateManager.getState(), slotId);
+    this.showHub();
+  }
+
   showMenu() {
     this._stateManager.dispatch(setCurrentView('menu'));
     this._eventBus.publish(EVENTS.UI_REFRESH_QUEST);
@@ -131,6 +173,10 @@ export class NavigationController {
   }
 
   showOptions() {
+    const currentView = this._stateManager.getState()?.system?.currentView || 'hub';
+    if (currentView !== 'options') {
+      this._previousView = (currentView === 'menu' ? 'hub' : currentView);
+    }
     this._stateManager.dispatch(setCurrentView('options'));
   }
 
@@ -532,7 +578,20 @@ export class NavigationController {
     }).catch((err) => {
       console.error('[Settings] Fehler beim automatischen Speichern der Einstellungen:', err);
     });
-    this.showMenu();
+
+    const targetView = this._previousView && this._previousView !== 'options' && this._previousView !== 'menu'
+      ? this._previousView
+      : 'hub';
+
+    if (targetView === 'characterSelect') {
+      this.showCharacterSelect();
+    } else if (targetView === 'game') {
+      this.showGame();
+    } else if (targetView === 'login') {
+      this.showLogin();
+    } else {
+      this.showHub();
+    }
   }
 
   async _hardReset() {

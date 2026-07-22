@@ -1,3 +1,5 @@
+import { APP_VERSION } from '../../utils/version.js';
+
 export const EN = {
     // ===== MENU =====
     'menu.title': 'ARCHIVE OF FORGOTTEN MEMORIES',
@@ -6,7 +8,7 @@ export const EN = {
     'menu.continue': 'Continue',
     'menu.options': 'Settings',
     'menu.quit': 'Exit Game',
-    'menu.version': 'Version 1.7 – AAA Overhaul',
+    'menu.version': `Version ${APP_VERSION} – AAA Overhaul`,
 
     // ===== OPTIONS =====
     'options.title': 'Game Settings',
@@ -50,6 +52,33 @@ export const EN = {
     'hero.inventory': 'Inventory',
     'hero.equipment': 'Equipment',
     'hero.stats': 'Attributes',
+
+    // ===== AUTH & ACCOUNT =====
+    'auth.title': 'USER ACCOUNT',
+    'auth.login': 'Sign In',
+    'auth.register': 'Register',
+    'auth.logout': 'Sign Out',
+    'auth.guest': 'Guest Mode',
+    'auth.username': 'Username',
+    'auth.email': 'Email Address',
+    'auth.password': 'Password',
+    'auth.guestBadge': 'Guest Keeper',
+    'auth.loggedInAs': 'Signed in as',
+    'auth.upgradeGuest': 'Register Account Now',
+    'auth.accountDetails': 'Account Details',
+    'auth.created': 'Member since',
+    'auth.syncStatus': 'Cloud Sync',
+    'auth.error.missing_fields': 'Please fill in all required fields.',
+    'auth.error.user_not_found': 'User or email not found.',
+    'auth.error.wrong_password': 'The entered password is incorrect.',
+    'auth.error.username_short': 'Username must be at least 3 characters.',
+    'auth.error.email_invalid': 'Please enter a valid email address.',
+    'auth.error.password_short': 'Password must be at least 6 characters.',
+    'auth.error.username_taken': 'This username is already taken.',
+    'auth.error.email_taken': 'This email address is already in use.',
+    'auth.success.registered': 'Account created and signed in successfully!',
+    'auth.success.login': 'Welcome back, Keeper!',
+    'auth.success.guestConverted': 'Guest account successfully registered!',
 
     // ===== COMMON =====
     'common.confirm': 'Confirm',
