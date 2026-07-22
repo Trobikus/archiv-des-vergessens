@@ -17,6 +17,7 @@ export class Item {
     this.quality = 100;
     this.isMasterwork = false;
     this.sockets = []; // Liste von Sockel-Objekten (null = leerer Sockel, oder Catalyst-Objekt)
+    this.enchantment = null; // Verzauberung (Name & Stat-Boni)
     if (this.rarity === 'rare' || this.rarity === 'epic') {
       this.sockets = [null];
     } else if (this.rarity === 'legendary') {
@@ -33,10 +34,16 @@ export class Item {
       stamina: Math.floor(this.baseStats.stamina * multiplier)
     };
 
-    // Sockel-Katalysator-Boni hinzurechnen
+    // Sockel-Katalysator & Edelstein-Boni hinzurechnen
     if (this.sockets && Array.isArray(this.sockets)) {
       for (const socket of this.sockets) {
-        if (socket && typeof socket === 'object' && socket.effects) {
+        if (socket && typeof socket === 'object' && socket.stats) {
+          for (const key in socket.stats) {
+            if (base[key] !== undefined) {
+              base[key] += socket.stats[key];
+            }
+          }
+        } else if (socket && typeof socket === 'object' && socket.effects) {
           for (const key in socket.effects) {
             if (base[key] !== undefined) {
               base[key] += socket.effects[key];
@@ -44,6 +51,12 @@ export class Item {
           }
         }
       }
+    }
+
+    // Verzauberungs-Boni
+    if (this.enchantment && this.enchantment.stats) {
+      if (this.enchantment.stats.flatDamage) base.attack += this.enchantment.stats.flatDamage;
+      if (this.enchantment.stats.flatDefense) base.defense += this.enchantment.stats.flatDefense;
     }
 
     return base;
@@ -104,7 +117,8 @@ export class Item {
       level: this.level,
       quality: this.quality,
       isMasterwork: this.isMasterwork,
-      sockets: this.sockets
+      sockets: this.sockets,
+      enchantment: this.enchantment
     };
   }
 
@@ -122,6 +136,7 @@ export class Item {
     item.quality = data.quality || 100;
     item.isMasterwork = data.isMasterwork || false;
     item.sockets = data.sockets || [];
+    item.enchantment = data.enchantment || null;
     return item;
   }
 }

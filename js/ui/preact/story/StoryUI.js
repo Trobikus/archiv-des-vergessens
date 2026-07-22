@@ -6,12 +6,15 @@
 
 import { h, html, useStateSelector, useEventBus, useState, useEffect, useRef } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
+import { FloatingDamageOverlay } from '../combat/FloatingDamageOverlay.js';
+import { CombatAnalyticsModal } from '../combat/CombatAnalyticsModal.js';
 
 export function StoryUI({ stateManager, eventBus, services }) {
-  const { storyService, heroService } = services;
+  const { storyService, heroService, combatAnalyticsService } = services;
   const [isOpen, setIsOpen] = useState(false);
   const [currentChapter, setCurrentChapter] = useState(1);
   const [fightResult, setFightResult] = useState('');
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
 
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const storyState = useStateSelector(stateManager, (state) => state.story);
@@ -220,11 +223,25 @@ export function StoryUI({ stateManager, eventBus, services }) {
               <div class="boss-stat"><span class="stat-label">🛡️ Verteidigung</span><span class="stat-value def">${currentBoss.defense}</span></div>
             </div>
             ${fightResult ? html`<div class="story-fight-result">${fightResult}</div>` : ''}
-            <button class="glass-btn primary story-fight-btn" onClick=${handleFight} disabled=${isBossFightActive}>
-              ${isBossFightActive ? '⚔️ Kampf läuft...' : '⚔️ Bosskampf starten'}
-            </button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button class="glass-btn primary story-fight-btn" style="flex: 1;" onClick=${handleFight} disabled=${isBossFightActive}>
+                ${isBossFightActive ? '⚔️ Kampf läuft...' : '⚔️ Bosskampf starten'}
+              </button>
+              <button class="glass-btn secondary" onClick=${() => setIsAnalyticsOpen(true)}>
+                📊 DPS-Meter
+              </button>
+            </div>
           </div>
         ` : ''}
+
+        <${FloatingDamageOverlay} eventBus=${eventBus} />
+
+        ${isAnalyticsOpen && html`
+          <${CombatAnalyticsModal}
+            analyticsService=${combatAnalyticsService}
+            onClose=${() => setIsAnalyticsOpen(false)}
+          />
+        `}
       </div>
     </div>
   `;

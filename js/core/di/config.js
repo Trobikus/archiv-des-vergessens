@@ -31,6 +31,8 @@ import LibraryService from '../services/library-service.js';
 import TutorialService from '../services/tutorial-service.js';
 import NetworkService from '../services/network-service.js';
 import I18nService from '../services/i18n-service.js';
+import TalentService from '../services/talent-service.js';
+import CombatAnalyticsService from '../services/combat-analytics-service.js';
 import AuthService from '../services/auth-service.js';
 import AccountVaultService from '../services/account-vault-service.js';
 
@@ -70,6 +72,8 @@ export function registerServices(container) {
   container.register('leaderboardService', (c) => new LeaderboardService(c.get('stateManager'), c.get('eventBus'), c.get('networkService')));
   container.register('storyBranchService', (c) => new StoryBranchService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('skillTreeService', (c) => new SkillTreeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
+  container.register('talentService', (c) => new TalentService(c.get('stateManager'), c.get('eventBus')));
+  container.register('combatAnalyticsService', (c) => new CombatAnalyticsService(c.get('eventBus')));
   container.register('challengeService', (c) => new ChallengeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('libraryService', (c) => new LibraryService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService')));
   container.register('tutorialService', (c) => new TutorialService(c.get('stateManager'), c.get('eventBus')));

@@ -16,6 +16,7 @@ import * as Actions from '../state/actions.js';
 import { selectResources } from '../state/selectors.js';
 import { FORGE_RECIPES } from '../../data/recipes.js';
 import { Item } from '../../models/item.js';
+import { GEMS, ENCHANTMENTS } from '../../data/gems_enchants.js';
 import RNG from '../../utils/rng.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 
@@ -367,6 +368,131 @@ export class ForgeService {
     });
 
     return { success: true, item, message: 'Katalysator erfolgreich gesockelt!' };
+  }
+
+  /**
+   * Sockelt einen Edelstein in einen freien Sockel.
+   * @param {string|number} slotOrIndex
+   * @param {number} socketIndex
+   * @param {string} gemId
+   * @param {boolean} [isEquipped=false]
+   */
+  socketGem(slotOrIndex, socketIndex, gemId, isEquipped = false) {
+    const gem = GEMS[gemId];
+    if (!gem) {
+      return { success: false, message: 'Ungültiger Edelstein.' };
+    }
+
+    const state = this._stateManager.getState();
+    const itemData = isEquipped
+      ? state.hero.equipment[slotOrIndex]
+      : state.hero.inventory.equipment[slotOrIndex];
+
+    if (!itemData) {
+      return { success: false, message: 'Gegenstand nicht gefunden.' };
+    }
+
+    const item = Item.fromJSON(itemData);
+    if (!item.sockets) item.sockets = [null, null];
+
+    if (socketIndex < 0 || socketIndex >= item.sockets.length) {
+      return { success: false, message: 'Ungültiger Sockelplatz.' };
+    }
+
+    item.sockets[socketIndex] = {
+      id: gem.id,
+      title: gem.name,
+      color: gem.color,
+      icon: gem.icon,
+      stats: gem.stats
+    };
+
+    this._stateManager.dispatch((st) => {
+      const updatedHero = { ...st.hero };
+      if (isEquipped) {
+        updatedHero.equipment = {
+          ...updatedHero.equipment,
+          [slotOrIndex]: item.toJSON ? item.toJSON() : item
+        };
+      } else {
+        const index = Number(slotOrIndex);
+        const newEquip = [...updatedHero.inventory.equipment];
+        newEquip[index] = item.toJSON ? item.toJSON() : item;
+        updatedHero.inventory = {
+          ...updatedHero.inventory,
+          equipment: newEquip
+        };
+      }
+      return { ...st, hero: updatedHero };
+    }, 'forge/socketGem');
+
+    if (this._eventBus) {
+      this._eventBus.publish('ui:showToast', {
+        message: `💎 ${gem.name} erfolgreich gesockelt!`,
+        type: 'success',
+        duration: 3000
+      });
+    }
+
+    return { success: true, item, message: `${gem.name} erfolgreich gesockelt!` };
+  }
+
+  /**
+   * Verzaubert einen Gegenstand mit einer Schriftrolle.
+   * @param {string|number} slotOrIndex
+   * @param {string} scrollId
+   * @param {boolean} [isEquipped=false]
+   */
+  enchantItem(slotOrIndex, scrollId, isEquipped = false) {
+    const enchant = ENCHANTMENTS[scrollId];
+    if (!enchant) {
+      return { success: false, message: 'Ungültige Verzauberungsrolle.' };
+    }
+
+    const state = this._stateManager.getState();
+    const itemData = isEquipped
+      ? state.hero.equipment[slotOrIndex]
+      : state.hero.inventory.equipment[slotOrIndex];
+
+    if (!itemData) {
+      return { success: false, message: 'Gegenstand nicht gefunden.' };
+    }
+
+    const item = Item.fromJSON(itemData);
+    item.enchantment = {
+      id: enchant.id,
+      name: enchant.enchantName,
+      stats: enchant.stats
+    };
+
+    this._stateManager.dispatch((st) => {
+      const updatedHero = { ...st.hero };
+      if (isEquipped) {
+        updatedHero.equipment = {
+          ...updatedHero.equipment,
+          [slotOrIndex]: item.toJSON ? item.toJSON() : item
+        };
+      } else {
+        const index = Number(slotOrIndex);
+        const newEquip = [...updatedHero.inventory.equipment];
+        newEquip[index] = item.toJSON ? item.toJSON() : item;
+        updatedHero.inventory = {
+          ...updatedHero.inventory,
+          equipment: newEquip
+        };
+      }
+      return { ...st, hero: updatedHero };
+    }, 'forge/enchantItem');
+
+    if (this._eventBus) {
+      this._eventBus.publish('ui:showToast', {
+        message: `✨ ${item.name} wurde verzaubert: ${enchant.enchantName}!`,
+        type: 'success',
+        duration: 3000
+      });
+    }
+
+    return { success: true, item, message: `Erfolgreich verzaubert!` };
   }
 }
 

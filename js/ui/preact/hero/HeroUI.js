@@ -17,6 +17,7 @@ import { EVENTS } from '../../../core/events/definitions.js';
 import { selectHero, selectHeroAttributes, selectHeroCombatStats, selectHeroLevelProgress, selectResources } from '../../../core/state/selectors.js';
 import { Item } from '../../../models/item.js';
 import { PACTS } from '../../../data/pacts.js';
+import { SkillTreeModal } from '../skilltree/SkillTreeModal.js';
 
 /**
  * Helden-UI – Hauptkomponente.
@@ -31,6 +32,7 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const [socketingItem, setSocketingItem] = useState(null);
   const [pactSelectionActive, setPactSelectionActive] = useState(false);
   const [pactChoices, setPactChoices] = useState([]);
+  const [isSkillTreeOpen, setIsSkillTreeOpen] = useState(false);
 
   // i18n Reaktivität
   const [lang, setLang] = useState(i18nService.getLanguage());
@@ -652,6 +654,15 @@ export function HeroUI({ stateManager, eventBus, services }) {
           <h3 class="options-header cinzel text-sm" style="margin-bottom: 0.8rem;">${lang === 'de' ? 'Heldentum & Prestige' : 'Heroism & Prestige'}</h3>
           <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Prestige-Stufe:' : 'Prestige Level:'}</span> <span class="text-gold text-bold">${lang === 'de' ? 'Stufe' : 'Level'} ${hero?.prestige?.level || 0}</span></div>
           <div class="flex-between mb-1"><span class="text-muted">${lang === 'de' ? 'Prestige-Punkte:' : 'Prestige Points:'}</span> <span class="text-gold text-bold">${hero?.prestige?.points || 0}</span></div>
+          <div style="margin-top: 0.8rem;">
+            <button
+              class="glass-btn primary cinzel"
+              style="width: 100%; padding: 0.6rem; font-size: 0.85rem; border-color: #00e5ff; color: #00e5ff;"
+              onClick=${() => setIsSkillTreeOpen(true)}
+            >
+              🌌 Mneme-Talentbaum
+            </button>
+          </div>
           ${(() => {
             const activePactId = hero?.prestige?.activePact;
             const activePactData = activePactId ? PACTS[activePactId] : null;
@@ -1084,6 +1095,13 @@ export function HeroUI({ stateManager, eventBus, services }) {
           </div>
         </div>
       ` : ''}
+
+      ${isSkillTreeOpen && html`
+        <${SkillTreeModal}
+          talentService=${services?.talentService}
+          onClose=${() => setIsSkillTreeOpen(false)}
+        />
+      `}
     </div>
   `;
 }
