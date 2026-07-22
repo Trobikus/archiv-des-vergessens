@@ -1,5 +1,5 @@
 // ============================================================
-// FILE: js/ui/preact/skilltree/SkillTreeModal.js – Path of Exile Style Skill Tree UI
+// FILE: js/ui/preact/skilltree/SkillTreeModal.js – Path of Exile Style Skill Tree UI (AAA)
 // ============================================================
 import { h, html, useState, useEffect, useRef } from '../setup.js';
 import { TALENT_NODES } from '../../../data/talent-nodes.js';
@@ -8,7 +8,7 @@ export function SkillTreeModal({ talentService, onClose }) {
   const [allocatedIds, setAllocatedIds] = useState([]);
   const [points, setPoints] = useState(0);
   const [hoveredNode, setHoveredNode] = useState(null);
-  const [pan, setPan] = useState({ x: 300, y: 300 });
+  const [pan, setPan] = useState({ x: 320, y: 320 });
   const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -74,8 +74,8 @@ export function SkillTreeModal({ talentService, onClose }) {
       const isBothAllocated = allocatedIds.includes(node.id) && allocatedIds.includes(connId);
       const isOneAllocated = allocatedIds.includes(node.id) || allocatedIds.includes(connId);
 
-      const strokeColor = isBothAllocated ? '#ffd700' : isOneAllocated ? '#00e5ff' : '#2a3a4e';
-      const strokeW = isBothAllocated ? 4 : isOneAllocated ? 2.5 : 1.5;
+      const strokeColor = isBothAllocated ? 'var(--color-gold)' : isOneAllocated ? 'var(--color-blue-hover)' : 'rgba(110, 110, 122, 0.3)';
+      const strokeW = isBothAllocated ? 3.5 : isOneAllocated ? 2 : 1.2;
 
       lines.push(html`
         <line
@@ -87,49 +87,49 @@ export function SkillTreeModal({ talentService, onClose }) {
           stroke=${strokeColor}
           stroke-width=${strokeW}
           stroke-dasharray=${!isOneAllocated ? '4 4' : 'none'}
-          style=${isBothAllocated ? 'filter: drop-shadow(0 0 6px rgba(255,215,0,0.8));' : ''}
+          style=${isBothAllocated ? 'filter: drop-shadow(0 0 8px var(--color-gold-glow));' : ''}
         />
       `);
     }
   }
 
   return html`
-    <div className="modal-backdrop" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(5, 8, 15, 0.85); backdrop-filter: blur(8px); z-index: 9999; display: flex; align-items: center; justify-content: center;" onClick=${onClose}>
-      <div className="skilltree-modal-container" style="width: 92vw; height: 88vh; background-color: #0b101d; border-radius: 16px; border: 1px solid rgba(255,215,0,0.3); box-shadow: 0 0 40px rgba(0,0,0,0.9); display: flex; flex-direction: column; overflow: hidden;" onClick=${e => e.stopPropagation()}>
+    <div className="modal-backdrop" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5, 5, 7, 0.88); backdrop-filter: blur(12px); z-index: 9999; display: flex; align-items: center; justify-content: center;" onClick=${onClose}>
+      <div className="glass-panel" style="width: 92vw; height: 88vh; background: var(--color-surface); border: var(--border-highlight); box-shadow: 0 0 50px rgba(0,0,0,0.95), inset 0 0 20px rgba(197, 160, 89, 0.08); display: flex; flex-direction: column; overflow: hidden; border-radius: var(--border-radius-lg);" onClick=${e => e.stopPropagation()}>
         
         {/* AAA Header */}
-        <div style="padding: 16px 24px; background-color: #101728; border-bottom: 1px solid rgba(255,215,0,0.2); display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 1.8rem;">🌌</span>
+        <div style="padding: 1.2rem 1.8rem; background: rgba(18, 18, 26, 0.9); border-bottom: var(--border-glass); display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <span style="font-size: 2rem; filter: drop-shadow(0 0 10px var(--color-gold-glow));">🌌</span>
             <div>
-              <h2 style="margin: 0; color: #ffd700; font-size: 1.4rem;">Mneme-Sternenbild (Talentbaum)</h2>
-              <span style="color: #8a9bb0; font-size: 0.85rem;">Path of Exile – Verzweigtes Passiv-Netzwerk</span>
+              <h2 className="options-header cinzel text-gold" style="margin: 0; font-size: 1.4rem; letter-spacing: 1px;">Mneme-Sternenbild (Talentbaum)</h2>
+              <span className="text-muted" style="font-size: 0.82rem; font-family: var(--font-body);">Path of Exile – Passives Sternen-Netzwerk</span>
             </div>
           </div>
           
-          <div style="display: flex; align-items: center; gap: 16px;">
-            <div style="background-color: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.3); padding: 6px 14px; border-radius: 20px; color: #c0e0f0; font-size: 0.9rem;">
-              <span>Freie Talentpunkte:</span>
-              <strong style="color: #00e5ff; font-size: 1.2rem; margin-left: 6px;">${points}</strong>
+          <div style="display: flex; align-items: center; gap: 1.2rem;">
+            <div style="background: rgba(197, 160, 89, 0.08); border: var(--border-highlight); padding: 0.5rem 1.2rem; border-radius: 20px; font-family: var(--font-header);">
+              <span className="text-muted" style="font-size: 0.85rem;">Freie Punkte:</span>
+              <strong className="text-gold" style="font-size: 1.25rem; margin-left: 0.5rem; text-shadow: 0 0 10px var(--color-gold-glow);">${points}</strong>
             </div>
-            <button style="background-color: rgba(255,85,85,0.15); border: 1px solid #ff5555; color: #ffaaaa; padding: 6px 14px; border-radius: 8px; cursor: pointer;" onClick=${handleReset}>⚡ Zurücksetzen</button>
-            <button style="background-color: transparent; border: none; color: #8a9bb0; font-size: 1.5rem; cursor: pointer;" onClick=${onClose}>✕</button>
+            <button className="glass-btn secondary cinzel" style="padding: 0.45rem 1rem; font-size: 0.8rem; border-color: rgba(139, 28, 28, 0.5); color: #ff8888;" onClick=${handleReset}>⚡ Zurücksetzen</button>
+            <button className="glass-btn secondary" style="padding: 0.45rem 0.8rem; font-size: 1.1rem; color: var(--color-text-muted);" onClick=${onClose}>✕</button>
           </div>
         </div>
 
         {/* Main Canvas + Sidebar Area */}
         <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
           
-          {/* Zoom Controls */}
-          <div style="position: absolute; bottom: 16px; left: 16px; z-index: 10; display: flex; gap: 8px; background-color: rgba(16,23,40,0.9); padding: 6px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-            <button onClick=${() => setZoom(z => Math.min(2, z + 0.15))}>➕</button>
-            <button onClick=${() => setZoom(z => Math.max(0.5, z - 0.15))}>➖</button>
-            <button onClick=${() => { setPan({ x: 300, y: 300 }); setZoom(1); }}>🎯 Zentrieren</button>
+          {/* Zoom & Pan Controls */}
+          <div style="position: absolute; bottom: 1.2rem; left: 1.2rem; z-index: 10; display: flex; gap: 0.5rem; background: rgba(10, 10, 14, 0.85); backdrop-filter: blur(8px); padding: 0.4rem; border-radius: var(--border-radius-lg); border: var(--border-glass);">
+            <button className="glass-btn secondary" style="padding: 0.3rem 0.7rem; font-size: 0.9rem;" onClick=${() => setZoom(z => Math.min(2, z + 0.15))}>➕</button>
+            <button className="glass-btn secondary" style="padding: 0.3rem 0.7rem; font-size: 0.9rem;" onClick=${() => setZoom(z => Math.max(0.5, z - 0.15))}>➖</button>
+            <button className="glass-btn secondary cinzel" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;" onClick=${() => { setPan({ x: 320, y: 320 }); setZoom(1); }}>🎯 Zentrieren</button>
           </div>
 
           {/* Interactive Graph Canvas */}
           <div
-            style="flex: 1; position: relative; overflow: hidden; cursor: grab; background-color: #070b14;"
+            style="flex: 1; position: relative; overflow: hidden; cursor: ${isDragging ? 'grabbing' : 'grab'}; background: var(--color-bg);"
             onMouseDown=${handleMouseDown}
             onMouseMove=${handleMouseMove}
             onMouseUp=${handleMouseUp}
@@ -147,16 +147,16 @@ export function SkillTreeModal({ talentService, onClose }) {
                 const isAllocatable = talentService ? talentService.isNodeAllocatable(node.id) : false;
                 const canUnallocate = talentService ? talentService.canUnallocateNode(node.id) : false;
 
-                let size = node.type === 'start' ? 56 : node.type === 'keystone' ? 52 : node.type === 'notable' ? 44 : 36;
-                let borderColor = isAllocated ? '#ffd700' : isAllocatable ? '#00e5ff' : '#3a4a5e';
-                let bgColor = isAllocated ? 'rgba(255,215,0,0.2)' : isAllocatable ? 'rgba(0,229,255,0.15)' : 'rgba(15,22,35,0.85)';
-                let boxShadow = isAllocated ? '0 0 15px rgba(255,215,0,0.6)' : isAllocatable ? '0 0 10px rgba(0,229,255,0.4)' : 'none';
+                let size = node.type === 'start' ? 58 : node.type === 'keystone' ? 54 : node.type === 'notable' ? 46 : 38;
+                let borderColor = isAllocated ? 'var(--color-gold)' : isAllocatable ? 'var(--color-blue-hover)' : 'rgba(110, 110, 122, 0.35)';
+                let bgColor = isAllocated ? 'rgba(197, 160, 89, 0.25)' : isAllocatable ? 'rgba(74, 139, 153, 0.2)' : 'rgba(18, 18, 26, 0.9)';
+                let boxShadow = isAllocated ? '0 0 20px var(--color-gold-glow), inset 0 0 10px rgba(235, 213, 118, 0.3)' : isAllocatable ? '0 0 12px rgba(111, 181, 199, 0.4)' : 'none';
 
                 return html`
                   <div
                     key=${node.id}
                     className="skill-node"
-                    style="position: absolute; left: ${node.x - size / 2}px; top: ${node.y - size / 2}px; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid ${borderColor}; background-color: ${bgColor}; display: flex; align-items: center; justify-content: center; cursor: ${isAllocatable || canUnallocate ? 'pointer' : 'default'}; box-shadow: ${boxShadow}; z-index: 2; user-select: none; transition: all 0.2s ease;"
+                    style="position: absolute; left: ${node.x - size / 2}px; top: ${node.y - size / 2}px; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid ${borderColor}; background: ${bgColor}; display: flex; align-items: center; justify-content: center; cursor: ${isAllocatable || canUnallocate ? 'pointer' : 'default'}; box-shadow: ${boxShadow}; z-index: 2; user-select: none; transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);"
                     onMouseEnter=${() => setHoveredNode(node)}
                     onMouseLeave=${() => setHoveredNode(null)}
                     onClick=${() => {
@@ -164,7 +164,7 @@ export function SkillTreeModal({ talentService, onClose }) {
                       else if (canUnallocate) handleUnallocate(node.id);
                     }}
                   >
-                    <span style="font-size: ${size * 0.45}px;">${node.icon}</span>
+                    <span style="font-size: ${size * 0.44}px; filter: ${isAllocated ? 'drop-shadow(0 0 5px var(--color-gold-glow))' : 'none'};">${node.icon}</span>
                   </div>
                 `;
               })}
@@ -172,44 +172,50 @@ export function SkillTreeModal({ talentService, onClose }) {
           </div>
 
           {/* Sidebar: Tooltip & Aggregated Stats */}
-          <div style="width: 320px; background-color: #0f1626; border-left: 1px solid rgba(255,215,0,0.2); padding: 20px; display: flex; flex-direction: column; gap: 16px;">
-            <h3 style="margin: 0 0 12px 0; color: #ffd700; font-size: 1.1rem;">📊 Aktive Talent-Boni</h3>
-            <div style="flex: 1; overflow-y: auto; background-color: rgba(5,8,15,0.5); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+          <div style="width: 340px; background: rgba(10, 10, 14, 0.95); border-left: var(--border-glass); padding: 1.4rem; display: flex; flex-direction: column; gap: 1.2rem;">
+            <h3 className="cinzel text-gold" style="margin: 0; font-size: 1.1rem; letter-spacing: 0.5px; border-bottom: 2px solid var(--color-gold); padding-bottom: 0.4rem;">📊 Aktive Talent-Boni</h3>
+            
+            <div style="flex: 1; overflow-y: auto; background: var(--color-panel-inner); padding: 0.8rem; border-radius: var(--border-radius-lg); border: var(--border-glass);">
               ${Object.entries(aggregatedStats).filter(([, val]) => val !== 0).map(([key, val]) => html`
-                <div key=${key} style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem;">
-                  <span style="color: #a0b0c0;">${formatStatName(key)}:</span>
-                  <strong style="color: ${val > 0 ? '#40ff80' : '#ff5555'};">
+                <div key=${key} style="display: flex; justify-content: space-between; padding: 0.45rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem;">
+                  <span className="text-muted">${formatStatName(key)}:</span>
+                  <strong style="color: ${val > 0 ? '#40ff80' : 'var(--color-danger)'}; font-family: var(--font-header);">
                     ${val > 0 ? `+${val}%` : `${val}%`}
                   </strong>
                 </div>
               `)}
+              ${Object.values(aggregatedStats).every(v => v === 0) ? html`
+                <div className="text-muted" style="text-align: center; padding: 1.5rem 0; font-style: italic; font-size: 0.85rem;">
+                  Noch keine Passiv-Knoten freigeschaltet.
+                </div>
+              ` : ''}
             </div>
 
             {/* Selected / Hovered Node Tooltip Panel */}
-            <div style="height: 150px; background-color: rgba(16,23,40,0.8); padding: 14px; border-radius: 8px; border: 1px solid rgba(0,229,255,0.2);">
+            <div style="min-height: 160px; background: var(--color-panel-inner); padding: 1rem; border-radius: var(--border-radius-lg); border: var(--border-highlight); box-shadow: inset 0 0 15px rgba(0,0,0,0.5);">
               ${hoveredNode ? html`
                 <div>
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    <span style="font-size: 1.5rem;">${hoveredNode.icon}</span>
+                  <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem;">
+                    <span style="font-size: 1.6rem; filter: drop-shadow(0 0 8px var(--color-gold-glow));">${hoveredNode.icon}</span>
                     <div>
-                      <h4 style="margin: 0; color: ${hoveredNode.type === 'keystone' ? '#ff5555' : hoveredNode.type === 'notable' ? '#ffd700' : '#ffffff'};">
+                      <h4 className="cinzel" style="margin: 0; color: ${hoveredNode.type === 'keystone' ? '#ff6666' : hoveredNode.type === 'notable' ? 'var(--color-gold)' : 'var(--color-text-main)'}; font-size: 1rem;">
                         ${hoveredNode.name}
                       </h4>
-                      <span style="font-size: 0.75rem; color: #8a9bb0; text-transform: uppercase;">
+                      <span className="text-muted" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px;">
                         ${hoveredNode.type}
                       </span>
                     </div>
                   </div>
-                  <p style="color: #d0e0f0; font-size: 0.85rem; margin: 0 0 10px 0; line-height: 1.4;">
+                  <p style="color: var(--color-text-main); font-size: 0.85rem; margin: 0 0 0.8rem 0; line-height: 1.45;">
                     ${hoveredNode.description}
                   </p>
-                  <div style="font-size: 0.8rem; color: #8a9bb0;">
-                    Kosten: <strong style="color: #00e5ff;">${hoveredNode.cost} Punkt(e)</strong>
+                  <div className="text-muted" style="font-size: 0.8rem;">
+                    Kosten: <strong className="text-gold" style="font-family: var(--font-header);">${hoveredNode.cost} Punkt(e)</strong>
                   </div>
                 </div>
               ` : html`
-                <div style="color: #6a7b90; font-size: 0.85rem; text-align: center; padding-top: 20px;">
-                  Fahre über einen Knotenpunkt, um Details und Effekte zu sehen.
+                <div className="text-muted" style="text-align: center; padding-top: 1.8rem; font-size: 0.85rem; font-style: italic;">
+                  Fahre über einen Sternenknoten, um Details & Effekte zu sehen.
                 </div>
               `}
             </div>
