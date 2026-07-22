@@ -21,10 +21,30 @@ export class ResourceService {
   /**
    * @param {StateManager} stateManager
    * @param {EventBus} eventBus
+   * @param {import('./account-vault-service.js').AccountVaultService} [accountVaultService]
    */
-  constructor(stateManager, eventBus) {
+  constructor(stateManager, eventBus, accountVaultService = null) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
+    this._accountVaultService = accountVaultService;
+  }
+
+  setAccountVaultService(accountVaultService) {
+    this._accountVaultService = accountVaultService;
+  }
+
+  /**
+   * Ermittelt die Sammel-Spezialisierung des Helden.
+   */
+  getClassSpecialization() {
+    const state = this._stateManager.getState();
+    const title = state.hero?.title || '';
+    const avatar = state.hero?.avatar || '';
+    if (avatar === '🛡️' || title.includes('Krieger')) return 'WARRIOR';
+    if (avatar === '🔮' || title.includes('Erzmagier') || title.includes('Magier')) return 'MAGE';
+    if (avatar === '🗡️' || title.includes('Schatten')) return 'ROGUE';
+    if (avatar === '🏹' || title.includes('Hüter')) return 'HUNTER';
+    return 'BALANCED';
   }
   
   /**
@@ -49,7 +69,7 @@ export class ResourceService {
   }
   
   /**
-   * Fügt Partikel hinzu.
+   * Fügt Partikel hinzu (mit Klassen-Bonus für Krieger).
    */
   addParticles(amount) {
     const safeAmount = sanitizeNumber(amount, 0);
@@ -58,6 +78,12 @@ export class ResourceService {
     // Lore-Bonus (Fluss der Seelen)
     const state = this._stateManager.getState();
     let multiplier = 1.0;
+
+    // Krieger-Spezialisierung: +50% Partikel
+    if (this.getClassSpecialization() === 'WARRIOR') {
+      multiplier *= 1.5;
+    }
+
     if (state.lore?.decrypted?.node_cataclysm === 'soulflow') {
       multiplier *= 1.20;
     }
@@ -73,6 +99,11 @@ export class ResourceService {
     const finalAmount = Math.floor(safeAmount * multiplier);
     
     this._stateManager.dispatch(Actions.addParticles(finalAmount), 'resource/addParticles');
+
+    if (this._accountVaultService) {
+      this._accountVaultService.depositResource('particles', finalAmount);
+    }
+
     this._eventBus.publish('resources:updated', { 
       type: 'particles', 
       amount: finalAmount,
@@ -101,20 +132,24 @@ export class ResourceService {
   }
   
   /**
-   * Fügt Relikte hinzu.
+   * Fügt Relikte hinzu (mit Klassen-Bonus für Hüter des Archivs).
    */
   addRelics(amount) {
     const safeAmount = sanitizeNumber(amount, 0);
     if (safeAmount <= 0) return;
     
-    // Lore-Bonus (Stein der Weisen)
     const state = this._stateManager.getState();
     let multiplier = 1.0;
+
+    // Hüter-Spezialisierung: +50% Relikte
+    if (this.getClassSpecialization() === 'HUNTER') {
+      multiplier *= 1.5;
+    }
+
     if (state.lore?.decrypted?.node_cataclysm === 'philosopher') {
       multiplier *= 1.15;
     }
 
-    // Finstre Pakte Multiplikatoren
     const activePact = state.hero?.prestige?.activePact;
     if (activePact === 'greedy_souls') {
       multiplier *= 0.6;
@@ -125,6 +160,11 @@ export class ResourceService {
     const finalAmount = Math.floor(safeAmount * multiplier);
     
     this._stateManager.dispatch(Actions.addRelics(finalAmount), 'resource/addRelics');
+
+    if (this._accountVaultService) {
+      this._accountVaultService.depositResource('relics', finalAmount);
+    }
+
     this._eventBus.publish('resources:updated', { 
       type: 'relics', 
       amount: finalAmount,
@@ -153,16 +193,29 @@ export class ResourceService {
   }
   
   /**
-   * Fügt Artefakte hinzu.
+   * Fügt Artefakte hinzu (mit Klassen-Bonus für Schattenläufer).
    */
   addArtifacts(amount) {
     const safeAmount = sanitizeNumber(amount, 0);
     if (safeAmount <= 0) return;
 
-    this._stateManager.dispatch(Actions.addArtifacts(safeAmount), 'resource/addArtifacts');
+    let multiplier = 1.0;
+    // Schattenläufer-Spezialisierung: +50% Artefakte
+    if (this.getClassSpecialization() === 'ROGUE') {
+      multiplier *= 1.5;
+    }
+
+    const finalAmount = Math.floor(safeAmount * multiplier);
+
+    this._stateManager.dispatch(Actions.addArtifacts(finalAmount), 'resource/addArtifacts');
+
+    if (this._accountVaultService) {
+      this._accountVaultService.depositResource('artifacts', finalAmount);
+    }
+
     this._eventBus.publish('resources:updated', {
       type: 'artifacts',
-      amount: safeAmount,
+      amount: finalAmount,
       total: this.getResources().artifacts
     });
   }

@@ -13,6 +13,8 @@
  */
 
 import { deepFreeze, isPlainObject, getNestedValue } from '../../utils/object-utils.js';
+import { EVENTS } from '../events/definitions.js';
+import { APP_VERSION } from '../../utils/version.js';
 
 /**
  * Friert nur den Root-State und seine direkten Kind-Objekte ein (O(n) statt O(n²)).
@@ -198,7 +200,7 @@ export class StateManager {
         currentView: 'intro',
         isSaving: false,
         lastSave: null,
-        gameVersion: '1.7',
+        gameVersion: APP_VERSION,
         tutorialStep: 0,
         tutorialFinished: false,
         timeWarpCharge: 0,

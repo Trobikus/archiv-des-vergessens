@@ -12,7 +12,8 @@
  */
 
 import { sanitizeString, sanitizeNumber } from '../../utils/sanitizer.js';
-import SaveManager from './save-manager.js';
+import { SaveManager } from './save-manager.js';
+import { APP_VERSION } from '../../utils/version.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -40,6 +41,18 @@ export class CloudManager {
     this._saveTimeout = null;
     this._pendingLoadResolve = null;
     this._loadTimeout = null;
+
+    if (this._eventBus) {
+      this._eventBus.subscribe('auth:stateChanged', (data) => {
+        if (data && data.user) {
+          this._userId = data.user.id;
+          localStorage.setItem(this._USER_ID_KEY, this._userId);
+          if (this._isEnabled) {
+            this.sync();
+          }
+        }
+      });
+    }
 
     if (this._isEnabled && this._autoSync) {
       this._startAutoSync();
@@ -112,10 +125,10 @@ export class CloudManager {
       if (!data) {
         try {
           data = await SaveManager.load();
-          if (!data) data = { timestamp: Date.now(), version: '1.6' };
+          if (!data) data = { timestamp: Date.now(), version: APP_VERSION };
         } catch (e) {
           console.warn('[CloudManager] SaveManager nicht verfügbar, verwende leeres Objekt:', e);
-          data = { timestamp: Date.now(), version: '1.6' };
+          data = { timestamp: Date.now(), version: APP_VERSION };
         }
       }
 
@@ -123,7 +136,7 @@ export class CloudManager {
         userId: this._userId,
         timestamp: Date.now(),
         saveData: data,
-        version: data.version || '1.6',
+        version: data.version || APP_VERSION,
         device: navigator.userAgent || 'unknown'
       };
 
@@ -314,7 +327,7 @@ export class CloudManager {
         userId: this._userId,
         timestamp: payload.timestamp || Date.now(),
         saveData: payload.saveData,
-        version: payload.version || '1.6',
+        version: payload.version || APP_VERSION,
         device: 'cloud-server'
       };
       localStorage.setItem(this._STORAGE_KEY, JSON.stringify(cloudData));

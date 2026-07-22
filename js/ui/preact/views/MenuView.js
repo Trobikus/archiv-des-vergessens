@@ -1,4 +1,5 @@
 import { h, html, useState, useEffect } from '../setup.js';
+import { AccountBadge } from '../account/AccountBadge.js';
 
 export function MenuView({ eventBus, services }) {
   const [hasSave, setHasSave] = useState(false);
@@ -14,10 +15,10 @@ export function MenuView({ eventBus, services }) {
 
   useEffect(() => {
     if (eventBus) {
-      const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
+      const subId = eventBus.subscribe('i18n:languageChanged', (data) => {
         setLang(data.language);
       });
-      return unsub;
+      return () => eventBus.unsubscribe(subId);
     }
   }, [eventBus]);
 
@@ -44,8 +45,17 @@ export function MenuView({ eventBus, services }) {
     eventBus.publish('menu:quit');
   };
 
+  const handleOpenAccount = () => {
+    eventBus.publish('ui:openAccountModal');
+  };
+
   return html`
-    <section id="menu-container" class="center-layout fade-in" role="main" aria-label="Hauptmenü" style="display: flex;">
+    <section id="menu-container" class="center-layout fade-in" role="main" aria-label="Hauptmenü" style="display: flex; position: relative;">
+      <!-- Account Badge top right -->
+      <div style="position: absolute; top: 24px; right: 24px; z-index: 100; pointer-events: auto;">
+        <${AccountBadge} eventBus=${eventBus} services=${services} onClick=${handleOpenAccount} />
+      </div>
+
       <h1 class="glow-text">${t('menu.title')}</h1>
       <p class="subtitle" aria-label="Untertitel">${t('menu.subtitle')}</p>
 

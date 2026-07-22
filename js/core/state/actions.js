@@ -418,7 +418,7 @@ export function updateClanMemberProgress(memberId, progress) {
  * Setzt die aktuelle View.
  */
 export function setCurrentView(view) {
-  const validViews = ['menu', 'hub', 'game', 'options'];
+  const validViews = ['intro', 'login', 'characterSelect', 'menu', 'hub', 'game', 'options'];
   if (!validViews.includes(view)) return (state) => state;
   
   return (state) => ({

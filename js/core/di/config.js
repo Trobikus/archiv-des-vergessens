@@ -31,6 +31,8 @@ import LibraryService from '../services/library-service.js';
 import TutorialService from '../services/tutorial-service.js';
 import NetworkService from '../services/network-service.js';
 import I18nService from '../services/i18n-service.js';
+import AuthService from '../services/auth-service.js';
+import AccountVaultService from '../services/account-vault-service.js';
 
 /**
  * Registriert ALLE Dienste im DI-Container.
@@ -42,6 +44,8 @@ export function registerServices(container) {
   
   container.register('settingsManager', () => new SettingsManager(container.get('eventBus')));
   container.register('i18nService', (c) => new I18nService(c.get('eventBus'), c.get('settingsManager')));
+  container.register('authService', (c) => new AuthService(c.get('eventBus'), c.get('settingsManager')));
+  container.register('accountVaultService', (c) => new AccountVaultService(c.get('eventBus'), c.get('authService')));
   container.register('networkService', (c) => new NetworkService(c.get('stateManager'), c.get('eventBus')));
   container.register('cloudManager', (c) => new CloudManager(c.get('eventBus'), c.get('networkService')));
 
@@ -50,7 +54,7 @@ export function registerServices(container) {
   // ============================================================
   
   container.register('heroService', (c) => new HeroService(c.get('stateManager'), c.get('eventBus')));
-  container.register('resourceService', (c) => new ResourceService(c.get('stateManager'), c.get('eventBus')));
+  container.register('resourceService', (c) => new ResourceService(c.get('stateManager'), c.get('eventBus'), c.get('accountVaultService')));
   container.register('clanService', (c) => new ClanService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService')));
   container.register('storyService', (c) => new StoryService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
   container.register('forgeService', (c) => new ForgeService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));

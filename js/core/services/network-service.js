@@ -23,6 +23,9 @@ export class NetworkService {
     this._connected = false;
     this._reconnectTimer = null;
     this._reconnectInterval = 5000;
+    this._maxReconnectInterval = 60000;
+    this._reconnectAttempts = 0;
+    this._maxConsecutiveLogs = 2;
     this._userId = this._getUserId();
 
     // Live Server-URL auf deiner Google Cloud VM
@@ -60,11 +63,20 @@ export class NetworkService {
       return;
     }
 
-    console.log(`[Network] Verbinde mit Multiplayer-Server unter ${this._serverUrl}...`);
-    this._ws = new WebSocket(this._serverUrl);
+    if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
+      console.log(`[Network] Verbinde mit Multiplayer-Server unter ${this._serverUrl}...`);
+    }
+
+    try {
+      this._ws = new WebSocket(this._serverUrl);
+    } catch (e) {
+      this._triggerReconnect();
+      return;
+    }
 
     this._ws.onopen = () => {
       this._connected = true;
+      this._reconnectAttempts = 0;
       console.log('[Network] Verbindung hergestellt! Starte Handshake...');
       this._startReconnectTimer(); // Falls vorher einer lief, aufräumen
       this._authenticate();
@@ -85,8 +97,9 @@ export class NetworkService {
     };
 
     this._ws.onerror = (err) => {
-      console.error('[Network] WebSocket-Fehler aufgetreten:', err);
-      // onclose wird automatisch danach gefeuert, daher hier kein Reconnect nötig
+      if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
+        console.warn('[Network] Multiplayer-Server offline oder nicht erreichbar.');
+      }
     };
   }
 
@@ -195,11 +208,21 @@ export class NetworkService {
 
   _triggerReconnect() {
     if (this._reconnectTimer) return;
-    console.log(`[Network] Versuche Wiederverbindung in ${this._reconnectInterval / 1000} Sekunden...`);
+    this._reconnectAttempts++;
+
+    const nextInterval = Math.min(
+      this._reconnectInterval * Math.pow(1.5, Math.min(this._reconnectAttempts, 8) - 1),
+      this._maxReconnectInterval
+    );
+
+    if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
+      console.log(`[Network] Offline - Naechster Verbindungsversuch in ${Math.round(nextInterval / 1000)}s...`);
+    }
+
     this._reconnectTimer = setTimeout(() => {
       this._reconnectTimer = null;
       this.connect();
-    }, this._reconnectInterval);
+    }, nextInterval);
   }
 
   _startReconnectTimer() {
