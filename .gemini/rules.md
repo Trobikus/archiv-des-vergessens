@@ -39,3 +39,8 @@ export default defineConfig({
 })
 ```
 Additionally, move any external local assets (e.g., background images) used by the launcher or game from root to the `public/` directory, and load them as root-relative URLs (e.g. `url('/background.png')`) to satisfy modern Webview security constraints.
+
+### 5. Modal UI & Overlay Invariants
+1. **Modal Close Button Z-Index:** Always give `.modal-close` buttons an explicit `z-index` higher than any internal modal overlays or cutscene boxes (e.g., `z-index: 1001`) to ensure the user can always close the window regardless of internal modal state.
+2. **Keyboard Accessibility (`Escape` key):** Every interactive modal component MUST register an `Escape` key listener via `useEffect` to allow closing the modal using the standard `Esc` key.
+3. **Active Loop Controls:** Active state modals (e.g. combat loops, timers) MUST provide explicit user actions (e.g. "Fliehen / Abbrechen") to cleanly interrupt and exit the active state loop.
