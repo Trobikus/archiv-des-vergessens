@@ -62,7 +62,7 @@ export function ForgeUI({ stateManager, eventBus, services }) {
         <h2 class="glow-text text-gold cinzel text-center">Artefakt-Schmiede</h2>
         <p class="text-center text-muted mb-1">Schmiede, sockele Edelsteine und verzaubere deine Ausrüstung</p>
 
-        {/* Tab Navigation */}
+        <!-- Tab Navigation -->
         <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 1rem;">
           <button
             class=${`glass-btn ${activeTab === 'crafting' ? 'primary' : ''}`}
@@ -84,7 +84,7 @@ export function ForgeUI({ stateManager, eventBus, services }) {
           </button>
         </div>
 
-        {/* Resource Overview Bar */}
+        <!-- Resource Overview Bar -->
         <div class="forge-resource-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem;">
           <div class="resource-chip"><span class="text-muted text-sm">Partikel</span><span class="text-gold text-bold">${resources.particles}</span></div>
           <div class="resource-chip"><span class="text-muted text-sm">Relikte</span><span class="text-gold text-bold">${resources.relics}</span></div>
@@ -92,7 +92,7 @@ export function ForgeUI({ stateManager, eventBus, services }) {
           <div class="resource-chip"><span class="text-muted text-sm">Staub</span><span class="text-dust text-bold">${resources.memoryDust}</span></div>
         </div>
 
-        {/* Tab 1: Crafting & Upgrading */}
+        <!-- Tab 1: Crafting & Upgrading -->
         ${activeTab === 'crafting' && html`
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
             <div class="forge-column glass-inner-panel">
@@ -140,7 +140,7 @@ export function ForgeUI({ stateManager, eventBus, services }) {
           </div>
         `}
 
-        {/* Tab 2: Socketing Gems */}
+        <!-- Tab 2: Socketing Gems -->
         ${activeTab === 'sockets' && html`
           <div class="glass-inner-panel" style="padding: 1rem;">
             <h3 class="options-header text-center" style="color: #00e5ff;">💎 Edelsteine Sockeln</h3>
@@ -174,7 +174,7 @@ export function ForgeUI({ stateManager, eventBus, services }) {
           </div>
         `}
 
-        {/* Tab 3: Enchantments */}
+        <!-- Tab 3: Enchantments -->
         ${activeTab === 'enchant' && html`
           <div class="glass-inner-panel" style="padding: 1rem;">
             <h3 class="options-header text-center" style="color: #ffaa00;">📜 Verzauberungen</h3>

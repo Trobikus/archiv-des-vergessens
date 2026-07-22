@@ -97,7 +97,7 @@ export function SkillTreeModal({ talentService, onClose }) {
     <div className="modal-backdrop" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5, 5, 7, 0.88); backdrop-filter: blur(12px); z-index: 9999; display: flex; align-items: center; justify-content: center;" onClick=${onClose}>
       <div className="glass-panel" style="width: 92vw; height: 88vh; background: var(--color-surface); border: var(--border-highlight); box-shadow: 0 0 50px rgba(0,0,0,0.95), inset 0 0 20px rgba(197, 160, 89, 0.08); display: flex; flex-direction: column; overflow: hidden; border-radius: var(--border-radius-lg);" onClick=${e => e.stopPropagation()}>
         
-        {/* AAA Header */}
+        <!-- Header -->
         <div style="padding: 1.2rem 1.8rem; background: rgba(18, 18, 26, 0.9); border-bottom: var(--border-glass); display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 1rem;">
             <span style="font-size: 2rem; filter: drop-shadow(0 0 10px var(--color-gold-glow));">🌌</span>
@@ -117,17 +117,17 @@ export function SkillTreeModal({ talentService, onClose }) {
           </div>
         </div>
 
-        {/* Main Canvas + Sidebar Area */}
+        <!-- Canvas and Sidebar -->
         <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
           
-          {/* Zoom & Pan Controls */}
+          <!-- Zoom Controls -->
           <div style="position: absolute; bottom: 1.2rem; left: 1.2rem; z-index: 10; display: flex; gap: 0.5rem; background: rgba(10, 10, 14, 0.85); backdrop-filter: blur(8px); padding: 0.4rem; border-radius: var(--border-radius-lg); border: var(--border-glass);">
             <button className="glass-btn secondary" style="padding: 0.3rem 0.7rem; font-size: 0.9rem;" onClick=${() => setZoom(z => Math.min(2, z + 0.15))}>➕</button>
             <button className="glass-btn secondary" style="padding: 0.3rem 0.7rem; font-size: 0.9rem;" onClick=${() => setZoom(z => Math.max(0.5, z - 0.15))}>➖</button>
             <button className="glass-btn secondary cinzel" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;" onClick=${() => { setPan({ x: 320, y: 320 }); setZoom(1); }}>🎯 Zentrieren</button>
           </div>
 
-          {/* Interactive Graph Canvas */}
+          <!-- Canvas -->
           <div
             style="flex: 1; position: relative; overflow: hidden; cursor: ${isDragging ? 'grabbing' : 'grab'}; background: var(--color-bg);"
             onMouseDown=${handleMouseDown}
@@ -136,12 +136,12 @@ export function SkillTreeModal({ talentService, onClose }) {
           >
             <div style="transform: translate(${pan.x}px, ${pan.y}px) scale(${zoom}); transform-origin: 0 0; position: absolute; width: 0; height: 0; transition: ${isDragging ? 'none' : 'transform 0.05s ease-out'};">
               
-              {/* SVG Connector Lines */}
+              <!-- SVG Lines -->
               <svg style="position: absolute; overflow: visible; left: 0; top: 0; width: 1px; height: 1px;">
                 ${lines}
               </svg>
 
-              {/* Skill Nodes */}
+              <!-- Skill Nodes -->
               ${Object.values(TALENT_NODES).map(node => {
                 const isAllocated = allocatedIds.includes(node.id);
                 const isAllocatable = talentService ? talentService.isNodeAllocatable(node.id) : false;
@@ -171,7 +171,7 @@ export function SkillTreeModal({ talentService, onClose }) {
             </div>
           </div>
 
-          {/* Sidebar: Tooltip & Aggregated Stats */}
+          <!-- Sidebar -->
           <div style="width: 340px; background: rgba(10, 10, 14, 0.95); border-left: var(--border-glass); padding: 1.4rem; display: flex; flex-direction: column; gap: 1.2rem;">
             <h3 className="cinzel text-gold" style="margin: 0; font-size: 1.1rem; letter-spacing: 0.5px; border-bottom: 2px solid var(--color-gold); padding-bottom: 0.4rem;">📊 Aktive Talent-Boni</h3>
             
@@ -191,7 +191,7 @@ export function SkillTreeModal({ talentService, onClose }) {
               ` : ''}
             </div>
 
-            {/* Selected / Hovered Node Tooltip Panel */}
+            <!-- Tooltip Panel -->
             <div style="min-height: 160px; background: var(--color-panel-inner); padding: 1rem; border-radius: var(--border-radius-lg); border: var(--border-highlight); box-shadow: inset 0 0 15px rgba(0,0,0,0.5);">
               ${hoveredNode ? html`
                 <div>
