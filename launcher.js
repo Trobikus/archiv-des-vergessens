@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 /* ============================================================
    LAUNCHER.JS - AAA Native Tauri Launcher
@@ -196,7 +197,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           setTimeout(async () => {
             console.log('[Launcher] Installation abgeschlossen. Starte App neu...');
             // App neu starten
-            const { relaunch } = await import('@tauri-apps/plugin-process');
             await relaunch();
           }, 1500);
 
