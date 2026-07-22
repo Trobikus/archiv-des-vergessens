@@ -126,6 +126,35 @@ export class StoryService {
   }
 
   /**
+   * Flieht aus dem aktuellen Bosskampf und setzt den Kampfstatus zurück.
+   */
+  fleeBattle() {
+    const state = this._stateManager.getState();
+    if (!state.story.battleInProgress) return;
+
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      story: {
+        ...state.story,
+        battleInProgress: false,
+        battleTimer: 0,
+        battleState: null
+      }
+    }), 'story/battleFlee');
+
+    this._eventBus.publish('story:battleResult', {
+      boss: state.story.battleState?.boss || { name: 'Boss' },
+      victory: false
+    });
+
+    this._eventBus.publish('ui:showToast', {
+      message: '🏃 Du bist aus dem Bosskampf geflohen.',
+      type: 'warning',
+      duration: 2500
+    });
+  }
+
+  /**
    * Startet einen Bosskampf im Echtzeit-System v2.0 mit v3.0 Story-Intro-Check.
    */
   startBossFight() {
