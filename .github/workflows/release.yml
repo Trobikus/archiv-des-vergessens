@@ -37,11 +37,19 @@ jobs:
       - name: Run TypeCheck
         run: npm run typecheck
 
+      - name: Load Signing Key
+        shell: bash
+        run: |
+          if [ -f updater.key ]; then
+            KEY=$(cat updater.key)
+            echo "TAURI_KEY=$KEY" >> $GITHUB_ENV
+          fi
+
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY || env.TAURI_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: app-v__VERSION__
