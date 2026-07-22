@@ -35,8 +35,9 @@ export class NavigationController {
    * @param {SaveManager} deps.saveManager
    * @param {import('../core/settings.js').default} deps.settingsManager
    * @param {import('../core/persistence/cloud-manager.js').default} deps.cloudManager
+   * @param {import('../core/services/i18n-service.js').default} [deps.i18nService]
    */
-  constructor({ eventBus, stateManager, gameLoop, heroService, resourceService, clanService, saveManager, settingsManager, cloudManager }) {
+  constructor({ eventBus, stateManager, gameLoop, heroService, resourceService, clanService, saveManager, settingsManager, cloudManager, i18nService }) {
     this._eventBus = eventBus;
     this._stateManager = stateManager;
     this._gameLoop = gameLoop;
@@ -46,6 +47,7 @@ export class NavigationController {
     this._saveManager = saveManager;
     this._settingsManager = settingsManager;
     this._cloudManager = cloudManager;
+    this._i18nService = i18nService;
 
     this._bindEvents();
   }
@@ -59,6 +61,7 @@ export class NavigationController {
     this._eventBus.subscribe('menu:startNewGame', (data) => this._startNewGame(data.name));
 
     // --- Options-Events ---
+    this._eventBus.subscribe('options:setLanguage', (data) => this._setLanguage(data.value));
     this._eventBus.subscribe('options:setParticles', (data) => this._setParticles(data.value));
     this._eventBus.subscribe('options:setFloating', (data) => this._setFloating(data.value));
     this._eventBus.subscribe('options:toggleAudio', () => this._toggleAudio());
@@ -403,7 +406,11 @@ export class NavigationController {
     if (await window.gameConfirm('Möchtest du das Spiel wirklich beenden?')) {
       this._eventBus.publish('save:started');
       this._saveManager.save(this._stateManager.getState()).then(() => {
-        window.close();
+        if (window.electronAPI && typeof window.electronAPI.sendQuitReady === 'function') {
+          window.electronAPI.sendQuitReady();
+        } else {
+          window.close();
+        }
       });
     }
   }
@@ -424,6 +431,17 @@ export class NavigationController {
       ...state,
       settings: { ...state.settings, floatingText: val }
     }), 'settings/updateFloatingText');
+  }
+
+  _setLanguage(val) {
+    if (this._i18nService) {
+      this._i18nService.setLanguage(val);
+    }
+    this._settingsManager.set('language', val);
+    this._stateManager.dispatch((state) => ({
+      ...state,
+      settings: { ...state.settings, language: val }
+    }), 'settings/updateLanguage');
   }
 
   _toggleAudio() {

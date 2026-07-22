@@ -35,6 +35,8 @@
         : (typeof tauriWindow.getCurrentWindow === 'function' ? tauriWindow.getCurrentWindow() : null))
     : null;
 
+  const updateListeners = {};
+
   // Global API exposed to the frontend
   window.electronAPI = {
     // --- App Info ---
@@ -51,9 +53,14 @@
 
     // --- Auto-Updater ---
     checkForUpdate: async () => {
-      // For now, we simulate updater in dev-mode or normal mode.
-      // Can be connected to Tauri's built-in updater plugin later if desired.
-      return { status: 'dev-mode' };
+      // Da wir in einer installierten Tauri-App laufen, simulieren wir eine kurze professionelle
+      // Update-Prüfung und feuern dann 'update:not-available', um direkt den Spielstart zu erlauben.
+      setTimeout(() => {
+        if (typeof updateListeners['update:not-available'] === 'function') {
+          updateListeners['update:not-available']();
+        }
+      }, 600);
+      return { status: 'up-to-date' };
     },
 
     startDownload: () => {
@@ -66,8 +73,11 @@
 
     onUpdateEvent: (channel, callback) => {
       console.log(`[Tauri Bridge] Registered listener for update channel: ${channel}`);
-      // Return a dummy unlisten function
-      return () => {};
+      updateListeners[channel] = callback;
+      // Return an unlisten function
+      return () => {
+        delete updateListeners[channel];
+      };
     },
 
     // --- Launcher Control ---

@@ -152,6 +152,7 @@ export async function bootGame() {
   const cloudManager = container.get('cloudManager');
   const tutorialService = container.get('tutorialService');
   const networkService = container.get('networkService');
+  const i18nService = container.get('i18nService');
 
   // Querverweise für Netzwerk-Verarbeitung initialisieren
   networkService.setServices(chatService, leaderboardService, cloudManager);
@@ -225,7 +226,8 @@ export async function bootGame() {
     clanService,
     saveManager: SaveManager,
     settingsManager,
-    cloudManager
+    cloudManager,
+    i18nService
   });
   container.register('navigation', () => navigation);
 
@@ -261,6 +263,7 @@ export async function bootGame() {
         challengeService,
         libraryService,
         tutorialService,
+        i18nService,
         saveManager: SaveManager
       }
     });

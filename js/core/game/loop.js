@@ -38,6 +38,7 @@ export class GameLoop {
     this._frameId = null;
     this._catchupActive = false;
     this._speedWarned = false;
+    this._passiveWarpTimer = 0;
     // Einmalig binden – kein GC-Druck durch neue Funktion pro Frame
     this._boundTick = this._tick.bind(this);
   }
@@ -56,6 +57,7 @@ export class GameLoop {
   stop() {
     if (!this._running) return;
     this._running = false;
+    this._passiveWarpTimer = 0;
     if (this._frameId !== null) {
       cancelAnimationFrame(this._frameId);
       this._frameId = null;

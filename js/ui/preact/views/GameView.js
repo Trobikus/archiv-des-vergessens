@@ -1,11 +1,19 @@
-import { h, html, useStateSelector } from '../setup.js';
+import { h, html, useStateSelector, useEventBus } from '../setup.js';
 import { ClanUI } from '../clan/ClanUI.js';
 import { CONFIG } from '../../../data/config.js';
 
 export function GameView({ stateManager, eventBus, services }) {
+  const { i18nService } = services;
   const resources = useStateSelector(stateManager, (state) => state.resources);
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const systemState = useStateSelector(stateManager, (state) => state.system || {});
+
+  // i18n Reaktivität
+  const [lang, setLang] = useStateSelector(stateManager, () => i18nService.getLanguage());
+  useEventBus(eventBus, 'i18n:languageChanged', (newLang) => {
+    // Erzwinge re-rendering
+    stateManager.dispatch((state) => ({ ...state }), 'i18n/refresh');
+  });
 
   const timeWarpActive = systemState.timeWarpActive || false;
   const timeWarpCharge = systemState.timeWarpCharge || 0;
@@ -52,24 +60,27 @@ export function GameView({ stateManager, eventBus, services }) {
     }), 'system/activateTimeWarp');
     
     eventBus.publish('timeWarp:started', {});
+    const msg = lang === 'de'
+      ? '🌀 Mneme-Zeitkrümmung entfesselt! 3-fache Spielgeschwindigkeit für 30 Sekunden!'
+      : '🌀 Mneme Time Warp unleashed! 3x game speed for 30 seconds!';
     eventBus.publish('ui:showToast', {
-      message: '🌀 Mneme-Zeitkrümmung entfesselt! 3-fache Spielgeschwindigkeit für 30 Sekunden!',
+      message: msg,
       type: 'success',
       duration: 4000
     });
   };
 
   return html`
-    <section id="game-container" class="fade-in active ${timeWarpActive ? 'time-warp-blur-filter' : ''}" style="display: flex;" role="main" aria-label="Archiv des Vergessens – Spiel">
+    <section id="game-container" class="fade-in active ${timeWarpActive ? 'time-warp-blur-filter' : ''}" style="display: flex;" role="main" aria-label=${lang === 'de' ? 'Archiv des Vergessens – Spiel' : 'Archive of the Forgotten – Game'}>
       ${timeWarpActive ? html`<div class="time-warp-fullscreen-overlay"></div>` : ''}
       <!-- Game-Header -->
       <header id="game-header">
         <div class="header-left">
-          <button id="back-to-hub-btn" class="glass-btn primary" onClick=${handleBackToHub} type="button" title="Zurück zur Übersicht">« Zurück zum Hub</button>
+          <button id="back-to-hub-btn" class="glass-btn primary" onClick=${handleBackToHub} type="button" title=${lang === 'de' ? 'Zurück zur Übersicht' : 'Back to overview'}>${lang === 'de' ? '« Zurück zum Hub' : '« Back to Hub'}</button>
         </div>
         <div class="header-center">
-          <h1 class="glow-text text-center">ARCHIV DES VERGESSENS</h1>
-          <p class="subtitle text-center">Der Mneme-Bund</p>
+          <h1 class="glow-text text-center">${lang === 'de' ? 'ARCHIV DES VERGESSENS' : 'ARCHIVE OF THE FORGOTTEN'}</h1>
+          <p class="subtitle text-center">${lang === 'de' ? 'Der Mneme-Bund' : 'The Mneme Covenant'}</p>
         </div>
         <div class="header-right">
           <!-- Floating Time Warp Clock Button -->
@@ -79,7 +90,7 @@ export function GameView({ stateManager, eventBus, services }) {
             disabled=${!timeWarpActive && timeWarpCharge < 100}
             onClick=${handleActivateTimeWarp}
             type="button"
-            title=${timeWarpActive ? `Zeitkrümmung aktiv: noch ${Math.ceil(timeWarpRemaining)}s` : timeWarpCharge >= 100 ? 'Klicke, um 3x Zeitkrümmung zu aktivieren!' : `Fokus aufladen: ${Math.floor(timeWarpCharge)}%`}
+            title=${timeWarpActive ? (lang === 'de' ? `Zeitkrümmung aktiv: noch ${Math.ceil(timeWarpRemaining)}s` : `Time warp active: ${Math.ceil(timeWarpRemaining)}s remaining`) : timeWarpCharge >= 100 ? (lang === 'de' ? 'Klicke, um 3x Zeitkrümmung zu aktivieren!' : 'Click to activate 3x Time Warp!') : (lang === 'de' ? `Fokus aufladen: ${Math.floor(timeWarpCharge)}%` : `Charging focus: ${Math.floor(timeWarpCharge)}%`)}
           >
             <span style="font-size: 1.5rem; line-height: 1;">${timeWarpActive ? '⏳' : '🌀'}</span>
             <span style="font-size: 0.6rem; font-weight: bold; margin-top: 2px; font-family: var(--font-header);">
@@ -90,29 +101,29 @@ export function GameView({ stateManager, eventBus, services }) {
       </header>
 
       <!-- Ressourcen-Leiste -->
-      <div id="resource-bar" class="resource-bar-flex glass-panel" role="status" aria-label="Ressourcen">
+      <div id="resource-bar" class="resource-bar-flex glass-panel" role="status" aria-label=${lang === 'de' ? 'Ressourcen' : 'Resources'}>
         <div class="resource-group">
           <div class="resource-item" id="res-particle">
-            <span class="resource-label">Partikel:</span>
+            <span class="resource-label">${lang === 'de' ? 'Partikel:' : 'Particles:'}</span>
             <span class="resource-value text-gold glow-text" id="particle-display">${resources?.particles || '0'}</span>
           </div>
           <div class="resource-item" id="res-relic">
-            <span class="resource-label">Relikte:</span>
+            <span class="resource-label">${lang === 'de' ? 'Relikte:' : 'Relics:'}</span>
             <span class="resource-value text-gold glow-text" id="relic-display">${resources?.relics || '0'}</span>
           </div>
           <div class="resource-item" id="res-artifact">
-            <span class="resource-label">Artefakte:</span>
+            <span class="resource-label">${lang === 'de' ? 'Artefakte:' : 'Artifacts:'}</span>
             <span class="resource-value text-gold glow-text" id="node-artifact-display">${resources?.artifacts || '0'}</span>
           </div>
         </div>
-        <button id="open-achievements-btn" class="glass-btn primary" onClick=${handleOpenAchievements} type="button">🏆 Erfolge ansehen</button>
+        <button id="open-achievements-btn" class="glass-btn primary" onClick=${handleOpenAchievements} type="button">${lang === 'de' ? '🏆 Erfolge ansehen' : '🏆 View Achievements'}</button>
       </div>
 
       <!-- Sammel-Bereich -->
       <div class="gather-section">
-        <button id="manual-gather-btn" class="primary epic-pulse text-gold cinzel" onClick=${handleManualGather} type="button">✨ Mneme-Partikel extrahieren ✨</button>
+        <button id="manual-gather-btn" class="primary epic-pulse text-gold cinzel" onClick=${handleManualGather} type="button">${lang === 'de' ? '✨ Mneme-Partikel extrahieren ✨' : '✨ Extract Mneme Particles ✨'}</button>
         <button id="upgrade-click-btn" class="glass-btn ${canUpgrade ? 'text-highlight' : 'text-muted'}" disabled=${!canUpgrade} onClick=${handleUpgradeClick} type="button">
-          Klick-Stärke verbessern (Kosten: ${cost} Partikel)
+          ${lang === 'de' ? `Klick-Stärke verbessern (Kosten: ${cost} Partikel)` : `Improve Click Power (Cost: ${cost} Particles)`}
         </button>
       </div>
 

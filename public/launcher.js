@@ -275,10 +275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
       window.electronAPI.checkForUpdate().then(res => {
         console.log('[Launcher] Update-Abfrage Ergebnis:', res);
-        if (res && res.status === 'dev-mode') {
-          isDevMode = true;
-          setUIState('dev-mode');
-        }
+        // Für Release-Versionen überspringen wir den Simulationsmodus vollständig
+        setUIState('ready-to-play');
       }).catch(err => {
         console.error('[Launcher] Fehler bei Update-Abfrage:', err);
         setUIState('ready-to-play');
@@ -287,10 +285,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   } else {
     // Fallback für Browser-Tests (außerhalb Electron)
-    console.warn('[Launcher] Kein Electron-Kontext erkannt. Fallback zu Dev-Modus.');
-    isDevMode = true;
+    console.warn('[Launcher] Kein Electron-Kontext erkannt. Direkt spielbereit.');
+    isDevMode = false;
     setTimeout(() => {
-      setUIState('dev-mode');
+      setUIState('ready-to-play');
     }, 1000);
   }
 });

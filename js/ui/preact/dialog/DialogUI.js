@@ -9,11 +9,24 @@ import { EVENTS } from '../../../core/events/definitions.js';
 import { getNPC, getDialog } from '../../../data/dialogs.js';
 
 export function DialogUI({ stateManager, eventBus, services }) {
-  const { storyBranchService, codexService, resourceService } = services;
+  const { storyBranchService, codexService, resourceService, i18nService } = services;
   const [isOpen, setIsOpen] = useState(false);
   const [npcId, setNpcId] = useState(null);
   const [dialogId, setDialogId] = useState(null);
   const [history, setHistory] = useState([]);
+
+  const [lang, setLang] = useState(i18nService.getLanguage());
+  useEventBus(eventBus, 'i18n:languageChanged', (newLang) => {
+    setLang(newLang);
+  });
+
+  const getLocText = (obj, prop = 'text') => {
+    if (!obj) return '';
+    if (lang === 'en' && obj[prop + '_en']) {
+      return obj[prop + '_en'];
+    }
+    return obj[prop] || '';
+  };
 
   const flags = useStateSelector(stateManager, (state) => state.storyBranch.flags);
 
@@ -53,13 +66,13 @@ export function DialogUI({ stateManager, eventBus, services }) {
             resourceService.removeParticles(100);
             resourceService.addRelics(10);
             eventBus.publish('ui:showToast', {
-              message: '⚗️ 100 Partikel gegen 10 Relikte getauscht!',
+              message: lang === 'de' ? '⚗️ 100 Partikel gegen 10 Relikte getauscht!' : '⚗️ Traded 100 Particles for 10 Relics!',
               type: 'success',
               duration: 2000
             });
           } else {
             eventBus.publish('ui:showToast', {
-              message: '❌ Nicht genug Partikel für den Tausch.',
+              message: lang === 'de' ? '❌ Nicht genug Partikel für den Tausch.' : '❌ Not enough Particles for the trade.',
               type: 'warning',
               duration: 2000
             });
@@ -74,7 +87,7 @@ export function DialogUI({ stateManager, eventBus, services }) {
     if (nextDialogId) {
       const nextDialog = getDialog(npcId, nextDialogId);
       if (nextDialog) {
-        setHistory([...history, { from: dialogId, option: option.text, to: nextDialogId }]);
+        setHistory([...history, { from: dialogId, option: getLocText(option, 'text'), to: nextDialogId }]);
         setDialogId(nextDialogId);
         // Codex-Einträge freischalten
         if (codexService && codexService.unlockFromNPC) {
@@ -92,25 +105,25 @@ export function DialogUI({ stateManager, eventBus, services }) {
     <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
       <div class="modal-content glass-panel" style="width: 600px; max-width: 95vw; max-height: 80vh;" onClick=${(e) => e.stopPropagation()}>
         <button class="modal-close" onClick=${() => setIsOpen(false)}>×</button>
-
+ 
         <div class="dialog-npc-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(197,160,89,0.1);">
           <span class="dialog-npc-portrait" style="font-size: 2.8rem; filter: drop-shadow(0 0 10px var(--color-gold-glow));">${npc.portrait || '👤'}</span>
           <div class="dialog-npc-info" style="flex: 1;">
-            <div class="dialog-npc-name" style="font-family: var(--font-header); font-size: 1.2rem; color: var(--color-gold);">${npc.name}</div>
-            <div class="dialog-npc-title" style="color: var(--color-text-muted); font-size: 0.85rem;">${npc.title || ''}</div>
+            <div class="dialog-npc-name" style="font-family: var(--font-header); font-size: 1.2rem; color: var(--color-gold);">${getLocText(npc, 'name')}</div>
+            <div class="dialog-npc-title" style="color: var(--color-text-muted); font-size: 0.85rem;">${getLocText(npc, 'title')}</div>
           </div>
         </div>
 
         <div class="dialog-text-content" style="padding: 1rem 1.2rem; min-height: 80px; line-height: 1.8; background: rgba(0,0,0,0.25); border-left: 3px solid var(--color-gold); border-radius: 2px;">
-          ${dialog.text}
+          ${getLocText(dialog, 'text')}
         </div>
 
         <div class="dialog-options" style="margin-top: 1rem;">
           ${dialog.isEnding || dialog.options.length === 0 ? html`
-            <button class="glass-btn primary dialog-close-btn" style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 0.5rem;" onClick=${() => setIsOpen(false)}>✕ Schließen</button>
+            <button class="glass-btn primary dialog-close-btn" style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 0.5rem;" onClick=${() => setIsOpen(false)}>✕ ${lang === 'de' ? 'Schließen' : 'Close'}</button>
           ` : dialog.options.map(opt => html`
             <button class="glass-btn dialog-option-btn" style="width: 100%; padding: 0.8rem 1.2rem; margin-bottom: 0.5rem; justify-content: flex-start; text-align: left; background: rgba(0,0,0,0.2); border-left: 2px solid var(--color-text-muted); transition: all 0.3s ease;" onClick=${() => handleOption(opt)}>
-              ${opt.text}
+              ${getLocText(opt, 'text')}
             </button>
           `)}
         </div>

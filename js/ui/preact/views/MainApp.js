@@ -26,13 +26,23 @@ import { TutorialUI } from '../tutorial/TutorialUI.js';
 import { FriendsUI } from '../friends/FriendsUI.js';
 
 export function MainApp({ stateManager, eventBus, services }) {
+  const { i18nService } = services;
   const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
   const [newGameName, setNewGameName] = useState('Der Mneme-Bund');
+
+  // i18n Reaktivität
+  const [lang, setLang] = useState(i18nService.getLanguage());
+  useEffect(() => {
+    const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
+      setLang(data.language);
+    });
+    return unsub;
+  }, [eventBus]);
   
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
-    title: 'BESTÄTIGUNG',
+    title: '',
     message: '',
     isAlert: false,
     onConfirm: null,
@@ -46,7 +56,7 @@ export function MainApp({ stateManager, eventBus, services }) {
     const openConfirm = (data) => {
       setConfirmModal({
         isOpen: true,
-        title: data.title || (data.isAlert ? 'HINWEIS' : 'BESTÄTIGUNG'),
+        title: data.title || (data.isAlert ? (lang === 'de' ? 'HINWEIS' : 'NOTICE') : (lang === 'de' ? 'BESTÄTIGUNG' : 'CONFIRMATION')),
         message: data.message || '',
         isAlert: data.isAlert || false,
         onConfirm: data.onConfirm,
@@ -62,7 +72,7 @@ export function MainApp({ stateManager, eventBus, services }) {
       // unsubscribing happens automatically on unmount if we use eventBus helper,
       // but since we subscribed manually here, we will just let it be or unsubscribe if needed.
     };
-  }, [eventBus]);
+  }, [eventBus, lang]);
 
   const handleNewGameCancel = () => {
     setNewGameModalOpen(false);
@@ -82,7 +92,7 @@ export function MainApp({ stateManager, eventBus, services }) {
       case 'options':
         return html`<${OptionsView} stateManager=${stateManager} eventBus=${eventBus} services=${services} />`;
       case 'hub':
-        return html`<${HubView} stateManager=${stateManager} eventBus=${eventBus} />`;
+        return html`<${HubView} stateManager=${stateManager} eventBus=${eventBus} services=${services} />`;
       case 'game':
         return html`<${GameView} stateManager=${stateManager} eventBus=${eventBus} services=${services} />`;
       default:
@@ -117,14 +127,14 @@ export function MainApp({ stateManager, eventBus, services }) {
 
       <!-- NEUES SPIEL DIALOG -->
       ${newGameModalOpen ? html`
-        <div id="new-game-modal-overlay" class="modal-overlay" style="display: flex; z-index: 9999;" role="dialog" aria-label="Neues Spiel">
+        <div id="new-game-modal-overlay" class="modal-overlay" style="display: flex; z-index: 9999;" role="dialog" aria-label=${lang === 'de' ? 'Neues Spiel' : 'New Game'}>
           <div id="new-game-modal" class="modal-content-small glass-panel">
-            <h2 class="glow-text text-gold cinzel text-center">NEUES ARCHIV ÖFFNEN</h2>
-            <p class="text-muted text-center mb-2">Wie lautet der Name deines Helden?</p>
-            <input type="text" id="new-game-hero-name" class="ui-select w-100 mb-2 text-center text-lg" style="padding: 1rem; color: var(--color-gold);" value=${newGameName} onInput=${(e) => setNewGameName(e.target.value)} autocomplete="off" spellcheck="false" aria-label="Heldenname" />
+            <h2 class="glow-text text-gold cinzel text-center">${lang === 'de' ? 'NEUES ARCHIV ÖFFNEN' : 'OPEN NEW ARCHIVE'}</h2>
+            <p class="text-muted text-center mb-2">${lang === 'de' ? 'Wie lautet der Name deines Helden?' : "What is your hero's name?"}</p>
+            <input type="text" id="new-game-hero-name" class="ui-select w-100 mb-2 text-center text-lg" style="padding: 1rem; color: var(--color-gold);" value=${newGameName} onInput=${(e) => setNewGameName(e.target.value)} autocomplete="off" spellcheck="false" aria-label=${lang === 'de' ? 'Heldenname' : "Hero's Name"} />
             <div class="flex-row gap-md">
-              <button id="new-game-cancel-btn" class="glass-btn" style="flex: 1;" type="button" onClick=${handleNewGameCancel}>Abbrechen</button>
-              <button id="new-game-start-btn" class="glass-btn primary" style="flex: 1.5;" type="button" onClick=${handleNewGameStart}>Reise beginnen</button>
+              <button id="new-game-cancel-btn" class="glass-btn" style="flex: 1;" type="button" onClick=${handleNewGameCancel}>${lang === 'de' ? 'Abbrechen' : 'Cancel'}</button>
+              <button id="new-game-start-btn" class="glass-btn primary" style="flex: 1.5;" type="button" onClick=${handleNewGameStart}>${lang === 'de' ? 'Reise beginnen' : 'Begin Journey'}</button>
             </div>
           </div>
         </div>
@@ -132,7 +142,7 @@ export function MainApp({ stateManager, eventBus, services }) {
 
       <!-- SYSTEMEIGENER BESTÄTIGUNGS-MODAL (CUSTOM POPUP) -->
       ${confirmModal.isOpen ? html`
-        <div class="modal-overlay" style="display: flex; z-index: 12000;" role="dialog" aria-label="Bestätigung">
+        <div class="modal-overlay" style="display: flex; z-index: 12000;" role="dialog" aria-label=${lang === 'de' ? 'Bestätigung' : 'Confirmation'}>
           <div class="modal-content-small glass-panel" style="width: 450px; text-align: center; max-width: 95vw;">
             <h2 class="glow-text text-gold cinzel text-center" style="margin-bottom: 0.8rem; font-size: 1.4rem;">${confirmModal.title}</h2>
             <div class="glass-inner-panel mb-2" style="padding: 1.2rem; line-height: 1.6; text-align: center; background: rgba(0,0,0,0.3); border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.15);">
@@ -143,7 +153,7 @@ export function MainApp({ stateManager, eventBus, services }) {
                 <button class="glass-btn btn-small" style="flex: 1; padding: 0.8rem 1rem;" onClick=${() => {
                   setConfirmModal(prev => ({ ...prev, isOpen: false }));
                   if (confirmModal.onCancel) confirmModal.onCancel();
-                }}>ABBRECHEN</button>
+                }}>${lang === 'de' ? 'ABBRECHEN' : 'CANCEL'}</button>
               ` : null}
               <button class="glass-btn primary btn-small" style=${confirmModal.isAlert ? "flex: 1; max-width: 200px; padding: 0.8rem 1rem;" : "flex: 1.5; padding: 0.8rem 1rem;"} onClick=${() => {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
