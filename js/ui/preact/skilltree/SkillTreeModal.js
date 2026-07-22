@@ -21,7 +21,7 @@ export function SkillTreeModal({ talentService, eventBus, services, onClose }) {
       const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
         setLang(data.language);
       });
-      return unsub;
+      return () => eventBus.unsubscribe(unsub);
     }
   }, [eventBus]);
 
