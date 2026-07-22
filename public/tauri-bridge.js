@@ -131,6 +131,22 @@
       invoke('launch_game');
     },
 
+    onGameLaunched: (callback) => {
+      if (tauriEvent && typeof tauriEvent.listen === 'function') {
+        let unlistenFn = null;
+        tauriEvent.listen('launcher:game-launched', () => {
+          callback();
+        }).then(unlisten => {
+          unlistenFn = unlisten;
+        });
+
+        return () => {
+          if (unlistenFn) unlistenFn();
+        };
+      }
+      return () => {};
+    },
+
     minimizeLauncher: () => {
       if (currentWindow) {
         currentWindow.minimize();

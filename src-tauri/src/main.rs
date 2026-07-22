@@ -6,10 +6,12 @@ use tauri::{AppHandle, Manager, Emitter};
 // Command to transition from launcher to main game
 #[tauri::command]
 fn launch_game(app: AppHandle) {
-    // 1. Show and focus the main window
+    // 1. Show and focus the main window in fullscreen
     if let Some(main_win) = app.get_webview_window("main") {
+        let _ = main_win.set_fullscreen(true);
         let _ = main_win.show();
         let _ = main_win.set_focus();
+        let _ = main_win.emit("launcher:game-launched", ());
     }
     // 2. Close the launcher window
     if let Some(launcher_win) = app.get_webview_window("launcher") {
