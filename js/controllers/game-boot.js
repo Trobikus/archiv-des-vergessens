@@ -708,7 +708,9 @@ export async function bootGame() {
 
 
 
-    const stopParticles = _startIntroParticles();
+    let stopParticles = null;
+    let introTimeoutId = null;
+    let introStarted = false;
 
     const finishIntro = () => {
       if (introFinished) return;
@@ -747,8 +749,16 @@ export async function bootGame() {
       }, 800);
     };
 
-    // Timer für das automatische Beenden des Intros
-    let introTimeoutId = setTimeout(finishIntro, 7000);
+    const startIntroSequence = () => {
+      if (introFinished || introStarted) return;
+      introStarted = true;
+
+      logger.info('[GameBoot] Starte Intro-Sequenz nach Vollbild-Fensteröffnung...');
+      stopParticles = _startIntroParticles();
+
+      // Timer für das automatische Beenden des Intros (7 Sekunden)
+      introTimeoutId = setTimeout(finishIntro, 7000);
+    };
 
     // Wenn ein Spielstand existiert, kann das Intro per Klick übersprungen werden
     if (savedState) {
@@ -773,6 +783,29 @@ export async function bootGame() {
       };
 
       introContainer.addEventListener('click', handleIntroClick);
+    }
+
+    // --- LAUNCHER INTEGRATION: Intro erst starten, wenn das Vollbild-Fenster vollständig geöffnet ist ---
+    if (window.electronAPI && typeof window.electronAPI.onGameLaunched === 'function') {
+      window.electronAPI.onGameLaunched(() => {
+        logger.info('[GameBoot] Event launcher:game-launched empfangen. Starte Intro...');
+        setTimeout(startIntroSequence, 150);
+      });
+    }
+
+    // Fallback: Bei Fokus / Sichtbarkeitswechsel
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden && !introStarted && !introFinished) {
+        setTimeout(startIntroSequence, 150);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    // Falls direkt im Browser ohne Tauri/Launcher geladen
+    if (!document.hidden && !window.__TAURI__) {
+      startIntroSequence();
     }
 
     // ============================================================
