@@ -33,6 +33,8 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const [pactSelectionActive, setPactSelectionActive] = useState(false);
   const [pactChoices, setPactChoices] = useState([]);
   const [isSkillTreeOpen, setIsSkillTreeOpen] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState([]);
 
   // i18n Reaktivität
   const [lang, setLang] = useState(i18nService.getLanguage());
@@ -539,6 +541,77 @@ export function HeroUI({ stateManager, eventBus, services }) {
   const switchTab = (tab) => {
     setActiveTab(tab);
     setPreviewItem(null);
+    setIsSelectMode(false);
+    setSelectedIndices([]);
+  };
+
+  // Mehrfachauswahl Handlers
+  const toggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    setSelectedIndices([]);
+  };
+
+  const toggleSelectItem = (idx) => {
+    setSelectedIndices(prev => 
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  };
+
+  const handleSelectAll = (totalCount) => {
+    if (selectedIndices.length === totalCount) {
+      setSelectedIndices([]);
+    } else {
+      const all = [];
+      for (let i = 0; i < totalCount; i++) all.push(i);
+      setSelectedIndices(all);
+    }
+  };
+
+  const handleBulkDestroySelected = async (isLoot = false) => {
+    if (selectedIndices.length === 0) return;
+
+    const count = selectedIndices.length;
+    const confirmMsg = lang === 'de'
+      ? `Möchtest du die ${count} ausgewählten Gegenstände wirklich zerlegen / zerstören?`
+      : `Do you really want to salvage / destroy the ${count} selected items?`;
+    const confirmTitle = lang === 'de' ? 'MEHRFACHAUSWAHL ZERLEGEN' : 'SALVAGE SELECTED';
+
+    if (window.gameConfirm ? !(await window.gameConfirm(confirmMsg, confirmTitle)) : !confirm(confirmMsg)) {
+      return;
+    }
+
+    // Absteigend sortieren, damit sich beim Entfernen die Indizes der restlichen Elemente nicht verfälschen
+    const sortedDesc = [...selectedIndices].sort((a, b) => b - a);
+    let totalDustGained = 0;
+
+    for (const idx of sortedDesc) {
+      if (isLoot) {
+        handleSellLoot(hero?.inventory?.loot?.[idx], idx);
+      } else {
+        const itemData = hero?.inventory?.equipment?.[idx];
+        if (itemData && forgeService?.salvageItem) {
+          const res = forgeService.salvageItem(idx, false);
+          if (res && res.success) {
+            const dustAmounts = { common: 1, uncommon: 3, rare: 10, epic: 25, legendary: 100 };
+            totalDustGained += (dustAmounts[itemData.rarity] || 1) * (itemData.level || 1);
+          }
+        }
+      }
+    }
+
+    const toastMsg = isLoot
+      ? (lang === 'de' ? `${count} Loot-Gegenstände verkauft.` : `${count} loot items sold.`)
+      : (lang === 'de' ? `🔥 ${count} Gegenstände zerlegt. Erhalten: +${totalDustGained} Erinnerungsstaub.` : `🔥 ${count} items salvaged. Received: +${totalDustGained} Memory Dust.`);
+
+    eventBus.publish('ui:showToast', {
+      message: toastMsg,
+      type: 'success',
+      duration: 3000
+    });
+
+    setSelectedIndices([]);
+    setIsSelectMode(false);
+    eventBus.publish(EVENTS.HERO_UPDATED);
   };
 
   // Rendering: Equipment-Slots
@@ -695,47 +768,121 @@ export function HeroUI({ stateManager, eventBus, services }) {
       if (items.length === 0) {
         return html`<div class="text-disabled text-italic pt-1 text-center">${lang === 'de' ? 'Keine Ausrüstungsteile im Inventar.' : 'No equipment items in inventory.'}</div>`;
       }
-      return items.map((item, idx) => html`
-        <div 
-          class="inventory-item-card" 
-          style="border-left: 3px solid ${rarityColors[item.rarity] || '#aaa'}; display: flex; align-items: center; justify-content: space-between;"
-          onMouseEnter=${(e) => {
-            setPreviewItem(item);
-            setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 });
-          }}
-          onMouseMove=${(e) => setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 })}
-          onMouseLeave=${() => setPreviewItem(null)}
-        >
-          <div style="display: flex; align-items: center; gap: 8px;">
-            ${getItemIcon(item) ? html`<img src="${getItemIcon(item)}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1);" alt="${translateItemName(item.name)}" />` : ''}
-            <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <span>${translateItemName(item.name)}</span>
-                <span class="text-muted text-sm">Lv.${item.level}</span>
-              </div>
-              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-bottom: 2px;">
-                ${getRarityLabel(item.rarity)}
-              </div>
-              ${item.sockets && item.sockets.length > 0 ? html`
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  ${item.sockets.map(sock => html`
-                    <span style="font-size: 0.62rem; padding: 1px 4px; border-radius: 3px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; display: inline-flex; align-items: center; gap: 2px;">
-                      ${sock ? '💎 ' + (lang === 'de' ? sock.title : sock.title_en || sock.title) : (lang === 'de' ? '⚪ Sockel leer' : '⚪ Socket empty')}
-                    </span>
-                  `)}
+
+      return html`
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Select Mode Toolbar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.8rem; background: rgba(0,0,0,0.35); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+            ${!isSelectMode ? html`
+              <span class="text-muted text-sm">${items.length} ${lang === 'de' ? 'Gegenstände im Inventar' : 'Items in Inventory'}</span>
+              <button 
+                class="glass-btn btn-small cinzel" 
+                style="border-color: var(--color-gold); color: var(--color-gold); font-size: 0.75rem; padding: 0.3rem 0.8rem;"
+                onClick=${toggleSelectMode}
+              >
+                ☑️ ${lang === 'de' ? 'Mehrfachauswahl' : 'Select Items'}
+              </button>
+            ` : html`
+              <div style="display: flex; align-items: center; gap: 8px; width: 100%; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <button 
+                    class="glass-btn btn-small" 
+                    style="font-size: 0.75rem; padding: 0.25rem 0.6rem;"
+                    onClick=${() => handleSelectAll(items.length)}
+                  >
+                    ${selectedIndices.length === items.length ? (lang === 'de' ? 'Keine' : 'Deselect All') : (lang === 'de' ? 'Alle wählen' : 'Select All')}
+                  </button>
+                  <span class="text-gold text-bold text-sm">
+                    ${selectedIndices.length} / ${items.length} ${lang === 'de' ? 'ausgewählt' : 'selected'}
+                  </span>
                 </div>
-              ` : ''}
-            </div>
+                <div style="display: flex; gap: 6px;">
+                  <button 
+                    class="glass-btn btn-danger btn-small" 
+                    style="font-size: 0.75rem; padding: 0.25rem 0.8rem; font-weight: bold;"
+                    disabled=${selectedIndices.length === 0}
+                    onClick=${() => handleBulkDestroySelected(false)}
+                  >
+                    🔥 ${lang === 'de' ? 'Ausgewählte zerlegen' : 'Salvage Selected'} (${selectedIndices.length})
+                  </button>
+                  <button 
+                    class="glass-btn btn-small" 
+                    style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: #aaa;"
+                    onClick=${toggleSelectMode}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            `}
           </div>
-          <div class="item-actions" style="display: flex; gap: 4px; align-items: center;">
-            <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>${lang === 'de' ? 'Anlegen' : 'Equip'}</button>
-            ${item.sockets && item.sockets.some(s => s === null) && BigInt(resources.catalyst || '0') >= BigInt(1) ? html`
-              <button class="glass-btn btn-small" style="border-color: var(--color-gold); color: var(--color-gold); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); setSocketingItem({ item, idx, isEquipped: false }); }}>💎 ${lang === 'de' ? 'Sockeln' : 'Socket'}</button>
-            ` : ''}
-            <button class="glass-btn btn-danger btn-small" style="padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>${lang === 'de' ? 'Zerlegen' : 'Salvage'}</button>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${items.map((item, idx) => {
+              const isSelected = selectedIndices.includes(idx);
+              return html`
+                <div 
+                  class="inventory-item-card" 
+                  style="border-left: 3px solid ${rarityColors[item.rarity] || '#aaa'}; display: flex; align-items: center; justify-content: space-between; ${isSelected ? 'border-color: var(--color-gold); background: rgba(212, 175, 55, 0.12);' : ''} cursor: ${isSelectMode ? 'pointer' : 'default'};"
+                  onClick=${isSelectMode ? () => toggleSelectItem(idx) : null}
+                  onMouseEnter=${(e) => {
+                    if (!isSelectMode) {
+                      setPreviewItem(item);
+                      setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 });
+                    }
+                  }}
+                  onMouseMove=${(e) => { if (!isSelectMode) setTooltipPos({ x: e.clientX + 15, y: e.clientY + 15 }); }}
+                  onMouseLeave=${() => setPreviewItem(null)}
+                >
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    ${isSelectMode ? html`
+                      <input 
+                        type="checkbox" 
+                        checked=${isSelected} 
+                        onChange=${(e) => { e.stopPropagation(); toggleSelectItem(idx); }}
+                        style="transform: scale(1.2); cursor: pointer; accent-color: var(--color-gold);"
+                      />
+                    ` : null}
+                    ${getItemIcon(item) ? html`<img src="${getItemIcon(item)}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1);" alt="${translateItemName(item.name)}" />` : ''}
+                    <div class="item-name" style="color: ${rarityColors[item.rarity] || '#aaa'};">
+                      <div style="display: flex; align-items: center; gap: 4px;">
+                        <span>${translateItemName(item.name)}</span>
+                        <span class="text-muted text-sm">Lv.${item.level}</span>
+                      </div>
+                      <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-bottom: 2px;">
+                        ${getRarityLabel(item.rarity)}
+                      </div>
+                      ${item.sockets && item.sockets.length > 0 ? html`
+                        <div style="display: flex; gap: 4px; margin-top: 2px;">
+                          ${item.sockets.map(sock => html`
+                            <span style="font-size: 0.62rem; padding: 1px 4px; border-radius: 3px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; display: inline-flex; align-items: center; gap: 2px;">
+                              ${sock ? '💎 ' + (lang === 'de' ? sock.title : sock.title_en || sock.title) : (lang === 'de' ? '⚪ Sockel leer' : '⚪ Socket empty')}
+                            </span>
+                          `)}
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+
+                  ${!isSelectMode ? html`
+                    <div class="item-actions" style="display: flex; gap: 4px; align-items: center;">
+                      <button class="glass-btn btn-small" style="border-color: var(--color-blue); color: var(--color-blue); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleEquipItem(item, idx); }}>${lang === 'de' ? 'Anlegen' : 'Equip'}</button>
+                      ${item.sockets && item.sockets.some(s => s === null) && BigInt(resources.catalyst || '0') >= BigInt(1) ? html`
+                        <button class="glass-btn btn-small" style="border-color: var(--color-gold); color: var(--color-gold); padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); setSocketingItem({ item, idx, isEquipped: false }); }}>💎 ${lang === 'de' ? 'Sockeln' : 'Socket'}</button>
+                      ` : ''}
+                      <button class="glass-btn btn-danger btn-small" style="padding: 0.2rem 0.5rem;" onClick=${(e) => { e.stopPropagation(); handleSalvageItem(item, idx, false); }}>${lang === 'de' ? 'Zerlegen' : 'Salvage'}</button>
+                    </div>
+                  ` : html`
+                    <div style="font-size: 0.75rem; color: var(--color-gold); font-weight: bold;">
+                      ${isSelected ? '✓ ' + (lang === 'de' ? 'Ausgewählt' : 'Selected') : ''}
+                    </div>
+                  `}
+                </div>
+              `;
+            })}
           </div>
         </div>
-      `);
+      `;
     }
 
     if (activeTab === 'loot') {
