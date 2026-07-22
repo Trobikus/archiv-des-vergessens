@@ -22,7 +22,7 @@ export function HubView({ stateManager, eventBus, services }) {
       const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
         setLang(data.language);
       });
-      return unsub;
+      return () => eventBus.unsubscribe(unsub);
     }
   }, [eventBus]);
 

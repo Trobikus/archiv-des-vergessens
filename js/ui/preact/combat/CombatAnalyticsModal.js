@@ -12,7 +12,7 @@ export function CombatAnalyticsModal({ analyticsService, eventBus, services, onC
       const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
         setLang(data.language);
       });
-      return unsub;
+      return () => eventBus.unsubscribe(unsub);
     }
   }, [eventBus]);
 

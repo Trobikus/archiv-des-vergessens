@@ -9,7 +9,7 @@ export function FloatingDamageOverlay({ eventBus }) {
   useEffect(() => {
     if (!eventBus) return;
 
-    const unsubscribe = eventBus.subscribe('combat:floating-text', (data) => {
+    const subId = eventBus.subscribe('combat:floating-text', (data) => {
       if (!data) return;
 
       const id = Date.now() + Math.random();
@@ -33,7 +33,7 @@ export function FloatingDamageOverlay({ eventBus }) {
       }, 950);
     });
 
-    return () => unsubscribe();
+    return () => eventBus.unsubscribe(subId);
   }, [eventBus]);
 
   return html`
