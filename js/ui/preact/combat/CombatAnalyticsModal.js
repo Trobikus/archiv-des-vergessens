@@ -21,7 +21,7 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(5,8,15,0.85); backdrop-filter: blur(8px); z-index: 9999; display: flex; align-items: center; justify-content: center;" onClick=${onClose}>
       <div style="width: 540px; background-color: #0b101d; border-radius: 16px; border: 1px solid rgba(255,215,0,0.3); box-shadow: 0 0 40px rgba(0,0,0,0.9); overflow: hidden;" onClick=${e => e.stopPropagation()}>
         
-        {/* Header */}
+        <!-- Header -->
         <div style="padding: 16px 24px; background-color: #101728; border-bottom: 1px solid rgba(255,215,0,0.2); display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 1.6rem;">⚔️</span>
@@ -33,10 +33,10 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
           <button style="background-color: transparent; border: none; color: #8a9bb0; font-size: 1.4rem; cursor: pointer;" onClick=${onClose}>✕</button>
         </div>
 
-        {/* Content */}
+        <!-- Content -->
         <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
           
-          {/* Main DPS Card */}
+          <!-- Main DPS Card -->
           <div style="background-color: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2); border-radius: 12px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center;">
             <span style="color: #8a9bb0; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Current DPS</span>
             <strong style="color: #00e5ff; font-size: 2.8rem; text-shadow: 0 0 15px rgba(0,229,255,0.5); margin: 4px 0;">
@@ -45,7 +45,7 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
             <span style="color: #a0b0c0; font-size: 0.85rem;">Kampfdauer: ${stats.durationSeconds}s</span>
           </div>
 
-          {/* Stats Grid */}
+          <!-- Stats Grid -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div style="background-color: #0f1626; border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 4px;">
               <span style="color: #8a9bb0; font-size: 0.8rem; text-transform: uppercase;">Gesamtschaden</span>
@@ -80,7 +80,7 @@ export function CombatAnalyticsModal({ analyticsService, onClose }) {
             </div>
           </div>
 
-          {/* Action Footer */}
+          <!-- Action Footer -->
           <div style="display: flex; justify-content: flex-end; gap: 12px;">
             <button
               style="background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #c0d0e0; padding: 10px 18px; border-radius: 8px; cursor: pointer;"
