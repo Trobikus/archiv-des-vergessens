@@ -41,20 +41,4 @@ export function sanitizeArray(value, fallback = []) {
  */
 export function sanitizeObject(value, fallback = {}) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
-}
-
-/**
- * Prüft, ob ein Wert eine gültige Zahl ist (mit optionalen Grenzen).
- */
-export function isValidNumber(value, min = -Infinity, max = Infinity) {
-  const num = Number(value);
-  return !isNaN(num) && num >= min && num <= max;
-}
-
-/**
- * Prüft, ob ein Wert eine positive ganze Zahl ist.
- */
-export function isPositiveInteger(value) {
-  const num = Number(value);
-  return Number.isInteger(num) && num > 0;
-}
+}

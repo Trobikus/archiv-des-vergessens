@@ -69,21 +69,4 @@ export function getNestedValue(obj, path) {
     current = current[part];
   }
   return current;
-}
-
-/**
- * Setzt einen verschachtelten Wert in einem Objekt (Punkt-Notation).
- */
-export function setNestedValue(obj, path, value) {
-  const parts = path.split('.');
-  const last = parts.pop();
-  let current = obj;
-  for (const part of parts) {
-    if (!current[part] || typeof current[part] !== 'object') {
-      current[part] = {};
-    }
-    current = current[part];
-  }
-  current[last] = value;
-  return obj;
-}
+}
