@@ -42,11 +42,20 @@
         </div>
       </div>
 
+      <!-- UI State 3: Error State (Hidden by default) -->
+      <div id="error-container" class="error-container" style="display: none;">
+        <div id="error-message" class="error-message">Update-Prüfung fehlgeschlagen</div>
+        <div class="error-buttons">
+          <button id="retry-btn" class="action-btn retry-btn">RETRY UPDATE</button>
+          <button id="offline-btn" class="action-btn offline-btn">PLAY OFFLINE</button>
+        </div>
+      </div>
+
       <!-- Subtle Update Notification Toast -->
       <div id="update-toast" class="update-toast">✨ Neues Update erfolgreich heruntergeladen! Klicke auf "INSTALL UPDATE" zum Installieren.</div>
 
       <!-- Subtle Version Indicator -->
-      <div id="version-indicator" class="version-indicator">aktuellste Version v1.6.1</div>
+      <div id="version-indicator" class="version-indicator"></div>
     </main>
 
   </div>

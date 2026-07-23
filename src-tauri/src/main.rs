@@ -13,10 +13,13 @@ fn launch_game(app: AppHandle) {
         let _ = main_win.set_focus();
         let _ = main_win.emit("launcher:game-launched", ());
     }
-    // 2. Close the launcher window
-    if let Some(launcher_win) = app.get_webview_window("launcher") {
-        let _ = launcher_win.close();
-    }
+    // 2. Close the launcher window slightly delayed (200ms) so main window is fully rendered & painted
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        if let Some(launcher_win) = app.get_webview_window("launcher") {
+            let _ = launcher_win.close();
+        }
+    });
 }
 
 // Command to force-quit the application (called when savegame is fully written)

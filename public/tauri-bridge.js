@@ -87,14 +87,28 @@
         try {
           let downloaded = 0;
           let contentLength = 0;
+          let startTime = performance.now();
+
           await activeUpdate.downloadAndInstall((event) => {
             if (event.event === 'Started') {
               contentLength = event.data.contentLength || 0;
+              downloaded = 0;
+              startTime = performance.now();
             } else if (event.event === 'Progress') {
               downloaded += event.data.chunkLength;
+              const now = performance.now();
+              const elapsedSec = (now - startTime) / 1000;
+              const speed = elapsedSec > 0 ? downloaded / elapsedSec : 0;
               const percent = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
               if (typeof updateListeners['update:progress'] === 'function') {
-                updateListeners['update:progress']({ percent });
+                updateListeners['update:progress']({
+                  percent,
+                  downloaded,
+                  total: contentLength,
+                  downloadedBytes: downloaded,
+                  totalBytes: contentLength,
+                  speed
+                });
               }
             }
           });
@@ -103,6 +117,9 @@
           }
         } catch (e) {
           console.error('[Tauri Bridge] Fehler beim Herunterladen/Installieren des Updates:', e);
+          if (typeof updateListeners['update:error'] === 'function') {
+            updateListeners['update:error'](e);
+          }
         }
       } else {
         console.log('[Tauri Bridge] startDownload aufgerufen ohne aktives Update');

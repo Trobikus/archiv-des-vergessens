@@ -331,6 +331,53 @@ html, body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* D. UI State 3: Error Container & Fallback/Retry Controls */
+.error-container {
+  display: none; /* Sichtbarkeit gesteuert über JS: flex */
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+.error-message {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: #f87171; /* Soft Red für Fehler */
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  text-align: center;
+  max-width: 450px;
+  line-height: 1.4;
+}
+
+.error-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-btn.retry-btn {
+  background-image: 
+    linear-gradient(var(--color-surface), var(--color-surface)), 
+    linear-gradient(135deg, var(--color-gold), var(--color-gold-hover), var(--color-gold));
+}
+
+.action-btn.offline-btn {
+  color: #9ca3af;
+  background-image: 
+    linear-gradient(var(--color-surface), var(--color-surface)), 
+    linear-gradient(135deg, #4b5563, #9ca3af, #4b5563);
+}
+
+.action-btn.offline-btn:hover {
+  color: #ffffff;
+  box-shadow: 
+    0 0 15px rgba(156, 163, 175, 0.4),
+    inset 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
 /* E. Subtle Update Toast (dezent unter dem Button) */
 .update-toast {
   font-family: var(--font-sans);

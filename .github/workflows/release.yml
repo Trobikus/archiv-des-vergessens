@@ -52,8 +52,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY || env.TAURI_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
-          tagName: app-v__VERSION__
+          tagName: v__VERSION__
           releaseName: 'Archiv des Vergessens v__VERSION__'
           releaseBody: 'Neues Update für Archiv des Vergessens.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false

@@ -1,6 +1,9 @@
 import { h, html } from '../setup.js';
 
 export function IntroView() {
+  if (typeof document !== 'undefined' && document.getElementById('intro-container')) {
+    return null;
+  }
   return html`
     <section id="intro-container" class="center-layout" role="region" aria-label="Studio Intro" style="display: flex;">
       <canvas id="intro-particle-canvas" aria-hidden="true"></canvas>
