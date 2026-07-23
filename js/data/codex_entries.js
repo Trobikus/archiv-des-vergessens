@@ -148,14 +148,4 @@ export const CODEX_ENTRIES = {
         unlocked: false,
         description: 'Das tragische Ende. Du opferst dich für das Archiv – und wirst zur Legende.'
     }
-};
-
-// Hilfsfunktion: Eintrag nach ID suchen
-export function getCodexEntry(id) {
-    return CODEX_ENTRIES[id] || null;
-}
-
-// Hilfsfunktion: Alle Einträge einer Kategorie
-export function getCodexEntriesByCategory(category) {
-    return Object.values(CODEX_ENTRIES).filter(e => e.category === category);
-}
+};

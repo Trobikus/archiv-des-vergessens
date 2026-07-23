@@ -1,6 +1,6 @@
 [package]
 name = "archiv-des-vergessens"
-version = "1.8.6"
+version = "1.8.7"
 description = "Archiv des Vergessens – Ein episches Idle-RPG über Erinnerung, Vergessen und die Macht der Mneme."
 authors = ["Grimoire Interactive"]
 edition = "2021"

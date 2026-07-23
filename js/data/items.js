@@ -161,10 +161,3 @@ export const ITEM_TEMPLATES = {
     'Ring der Unendlichkeit': { slot: 'ring', rarity: 'legendary', stats: { agility: 18, stamina: 12, attack: 10 } },
     'Ring der Götter': { slot: 'ring', rarity: 'legendary', stats: { attack: 16, defense: 16, stamina: 12, agility: 12 } }
 };
-
-export const PRESTIGE_ITEMS = [
-    { level: 1, name: 'Ewige Mneme-Klinge', slot: 'weapon', rarity: 'legendary', stats: { attack: 16, agility: 6 }, desc: 'Exklusives Prestige-Item.' },
-    { level: 1, name: 'Ur-Archiv-Rüstung', slot: 'armor', rarity: 'legendary', stats: { defense: 14, stamina: 7 }, desc: 'Exklusives Prestige-Item.' },
-    { level: 2, name: 'Mneme-Krone der Wiederkehr', slot: 'amulet', rarity: 'legendary', stats: { attack: 10, defense: 8, stamina: 8, agility: 6 }, desc: 'Exklusives Prestige-Item.' },
-    { level: 2, name: 'Ring der Wiedergeburt', slot: 'ring', rarity: 'legendary', stats: { agility: 8, stamina: 6, attack: 4 }, desc: 'Exklusives Prestige-Item.' }
-];

@@ -57,3 +57,4 @@ jobs:
           releaseBody: 'Neues Update für Archiv des Vergessens.'
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
