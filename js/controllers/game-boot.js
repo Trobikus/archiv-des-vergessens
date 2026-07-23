@@ -36,9 +36,24 @@ import { CONFIG } from '../data/config.js';
 export async function bootGame() {
   console.log('[GameBoot] Initialisiere Spiel (AAA-Architektur v2.0)...');
 
+  const updateBootProgress = async (percent, statusText) => {
+    const bar = document.getElementById('intro-loading-bar') || document.querySelector('.intro-loading-bar');
+    const text = document.getElementById('intro-loading-text');
+    if (bar) {
+      bar.classList.add('manual-progress');
+      bar.style.width = `${percent}%`;
+    }
+    if (text) {
+      text.style.opacity = '1';
+      text.innerText = statusText;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 40));
+  };
+
   // ============================================================
-  // 1. CORE: Logger + EventBus
+  // Step 1 (10%): "Lade Konfiguration & EventBus..."
   // ============================================================
+  await updateBootProgress(10, 'Lade Konfiguration & EventBus...');
 
   const logger = new Logger();
   logger.level = 'info';
@@ -91,8 +106,9 @@ export async function bootGame() {
   });
 
   // ============================================================
-  // 2. DI-CONTAINER
+  // Step 2 (35%): "Registriere Services & StateManager..."
   // ============================================================
+  await updateBootProgress(35, 'Registriere Services & StateManager...');
 
   const container = new DIContainer();
   container.register('eventBus', () => eventBus);
@@ -163,8 +179,9 @@ export async function bootGame() {
   await accountVaultService.init();
 
   // ============================================================
-  // 5. STATE INITIALISIEREN
+  // Step 3 (60%): "Lade und hydriere Spielstand..."
   // ============================================================
+  await updateBootProgress(60, 'Lade und hydriere Spielstand...');
 
   // State mit Default-Werten initialisieren
   stateManager.init(null, null, null);
@@ -237,8 +254,9 @@ export async function bootGame() {
   container.register('navigation', () => navigation);
 
   // ============================================================
-  // 8. UI INITIALISIEREN
+  // Step 4 (80%): "Initialisiere UI & Preact-Komponenten..."
   // ============================================================
+  await updateBootProgress(80, 'Initialisiere UI & Preact-Komponenten...');
 
   // Preact-UI (alle Komponenten)
   const preactContainer = document.getElementById('preact-root');
@@ -418,6 +436,9 @@ export async function bootGame() {
   // ============================================================
   // 12. START (Studio-Intro abspielen, danach Hauptmenü laden)
   // ============================================================
+
+  // Step 5 (100%): "Starte Game Loop & Partikel-System..."
+  await updateBootProgress(100, 'Starte Game Loop & Partikel-System...');
 
   const introContainer = document.getElementById('intro-container');
   if (introContainer) {
@@ -804,7 +825,7 @@ export async function bootGame() {
     window.addEventListener('focus', handleVisibilityOrFocus);
 
     // Falls direkt im Browser ohne Tauri/Launcher geladen
-    if (!document.hidden && !window.__TAURI__) {
+    if (!document.hidden && !window['__TAURI__']) {
       startIntroSequence();
     }
 

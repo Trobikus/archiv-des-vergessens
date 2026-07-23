@@ -8,6 +8,32 @@ import { relaunch } from '@tauri-apps/plugin-process';
    LAUNCHER.JS - AAA Native Tauri Launcher
    ============================================================ */
 
+/**
+ * Format bytes into human-readable string (e.g., "14.2 MB", "28.5 MB", "500 KB").
+ */
+function formatBytes(bytes, decimals = 1) {
+  if (!bytes || isNaN(bytes) || bytes <= 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+/**
+ * Format speed in bytes per second into human-readable string (e.g., "2.4 MB/s").
+ */
+function formatSpeed(bytesPerSec) {
+  if (!bytesPerSec || isNaN(bytesPerSec) || bytesPerSec <= 0) return '0 KB/s';
+  if (bytesPerSec >= 1024 * 1024) {
+    return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+  }
+  if (bytesPerSec >= 1024) {
+    return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  }
+  return `${Math.round(bytesPerSec)} B/s`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Launcher] Initialisiere native Tauri-Interaktionslogik...');
 
@@ -21,6 +47,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const launcherContainer = document.querySelector('.launcher-container');
   const updateToast = document.getElementById('update-toast');
   const versionIndicator = document.getElementById('version-indicator');
+  const errorContainer = document.getElementById('error-container');
+  const errorMessage = document.getElementById('error-message');
+  const retryBtn = document.getElementById('retry-btn');
+  const offlineBtn = document.getElementById('offline-btn');
 
   let updateState = 'checking'; 
   let tauriUpdate = null; // Store update object if available
@@ -108,16 +138,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (state === 'downloading' || state === 'validating') {
       actionBtn.style.display = 'none';
+      if (errorContainer) errorContainer.style.display = 'none';
       progressContainer.style.display = 'flex';
-      if (text) progressLabel.innerText = text;
+      if (text && progressLabel) progressLabel.innerText = text;
       
       if (state === 'validating') {
         progressFill.classList.add('pulse');
       } else {
         progressFill.classList.remove('pulse');
       }
+    } else if (state === 'error') {
+      actionBtn.style.display = 'none';
+      progressContainer.style.display = 'none';
+      progressFill.classList.remove('pulse');
+      if (errorContainer) {
+        errorContainer.style.display = 'flex';
+        if (errorMessage) {
+          errorMessage.innerText = text || 'Update fehlgeschlagen oder keine Netzverbindung.';
+        }
+      }
     } else {
       progressContainer.style.display = 'none';
+      if (errorContainer) errorContainer.style.display = 'none';
       actionBtn.style.display = 'inline-block';
       actionBtn.disabled = false;
       progressFill.classList.remove('pulse');
@@ -156,6 +198,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Error recovery button handlers
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      console.log('[Launcher] Erneuter Update-Versuch...');
+      performUpdateCheck();
+    });
+  }
+
+  if (offlineBtn) {
+    offlineBtn.addEventListener('click', async () => {
+      console.log('[Launcher] Offline-Modus gewählt. Starte Hauptspiel...');
+      try {
+        await invoke('launch_game');
+      } catch (e) {
+        console.error('[Launcher] Konnte Spiel nicht starten:', e);
+      }
+    });
+  }
+
   // 4. Action Button Handler
   if (actionBtn) {
     actionBtn.addEventListener('click', async () => {
@@ -166,24 +227,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         let downloaded = 0;
         let contentLength = 0;
+        let startTime = performance.now();
 
         try {
           await tauriUpdate.downloadAndInstall((event) => {
             switch (event.event) {
               case 'Started':
                 contentLength = event.data.contentLength || 0;
+                downloaded = 0;
+                startTime = performance.now();
                 console.log(`[Launcher] Download gestartet. Größe: ${contentLength}`);
                 break;
-              case 'Progress':
+              case 'Progress': {
                 downloaded += event.data.chunkLength;
+                const now = performance.now();
+                const elapsedSec = (now - startTime) / 1000;
+                const speedBytesPerSec = elapsedSec > 0 ? downloaded / elapsedSec : 0;
+                const speedStr = formatSpeed(speedBytesPerSec);
+
                 if (contentLength > 0) {
-                  const percent = Math.round((downloaded / contentLength) * 100);
+                  const percent = Math.min(100, Math.round((downloaded / contentLength) * 100));
                   progressFill.style.width = `${percent}%`;
-                  progressLabel.innerText = `Downloading... ${percent}%`;
+                  const downloadedFormatted = formatBytes(downloaded, 1);
+                  const totalFormatted = formatBytes(contentLength, 1);
+                  progressLabel.innerText = `Downloading... ${downloadedFormatted} / ${totalFormatted} (${percent}%) - ${speedStr}`;
                 } else {
-                  progressLabel.innerText = `Downloading... ${Math.round(downloaded / 1024)} KB`;
+                  const downloadedFormatted = formatBytes(downloaded, 1);
+                  progressLabel.innerText = `Downloading... ${downloadedFormatted} - ${speedStr}`;
                 }
                 break;
+              }
               case 'Finished':
                 console.log('[Launcher] Download beendet.');
                 break;
@@ -202,15 +275,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (e) {
           console.error('[Launcher] Fehler beim Update:', e);
-          setUIState('ready-to-play'); // Fallback auf Spiel starten
+          setUIState('error', 'Download oder Installation fehlgeschlagen. Bitte Verbindung prüfen.');
         }
 
       } else if (updateState === 'ready-to-play') {
         console.log('[Launcher] Starte Hauptspiel...');
+        actionBtn.disabled = true;
+        actionBtn.innerText = 'LAUNCHING...';
         try {
           await invoke('launch_game');
         } catch (e) {
           console.error('[Launcher] Konnte Spiel nicht starten:', e);
+          actionBtn.disabled = false;
+          actionBtn.innerText = 'PLAY ADVENTURE';
         }
       }
     });
@@ -218,6 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 5. Update Prüfung
   async function performUpdateCheck() {
+    setUIState('checking');
     try {
       const update = await check();
       if (update?.available) {
@@ -229,8 +307,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         setUIState('ready-to-play');
       }
     } catch (err) {
-      // Wenn der Server nicht erreichbar ist, erlauben wir trotzdem das Spielen
-      console.warn('[Launcher] Update-Prüfung fehlgeschlagen. Offline/Dev-Modus aktiv.', err);
+      // Wenn noch kein GitHub Release mit latest.json existiert (404) oder offline,
+      // erlauben wir dem Spieler direkt zu spielen ("PLAY ADVENTURE").
+      console.warn('[Launcher] Update-Prüfung fehlgeschlagen / kein GitHub-Release online. Spiel freigegeben:', err);
       setUIState('ready-to-play');
     }
   }
@@ -238,6 +317,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Verzögerter Start für besseres Gefühl
   setTimeout(() => {
     performUpdateCheck();
-  }, 1500);
+  }, 1000);
 
 });

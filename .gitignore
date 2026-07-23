@@ -37,7 +37,9 @@ release/
 src-tauri/target/
 src-tauri/bin/
 
-# SQLite local database files
+# Security / Private Keys
+*.key
+updater.key
 server/data/*.db
 server/data/*.db-wal
 server/data/*.db-shm

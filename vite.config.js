@@ -11,14 +11,18 @@ export default defineConfig({
   define: {
     '__APP_VERSION__': JSON.stringify(pkg.version)
   },
-  // Setzt den korrekten Pfad für das GitHub-Pages-Unterverzeichnis oder relativ für Tauri
-  base: process.env.TAURI_ENV_PLATFORM ? '' : '/archiv-des-vergessens/',
+  // Setzt relative Pfade für maximale Kompatibilität mit Tauri und GitHub Pages
+  base: './',
 
   // Server-Konfiguration für die lokale Entwicklung
   server: {
     port: 3000,
-    open: 'chrome',
-    host: true
+    strictPort: true,
+    host: true,
+    watch: {
+      // Ignoriere Rust Build-Dateien, um EBUSY-Locks auf Windows-Systemen zu verhindern
+      ignored: ['**/src-tauri/target/**', '**/src-tauri/**']
+    }
   },
 
   // Build-Konfiguration für die Produktion
