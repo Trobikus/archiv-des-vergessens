@@ -14,6 +14,7 @@
 import { EVENTS } from '../core/events/definitions.js';
 import { setCurrentView } from '../core/state/actions.js';
 import { CONFIG } from '../data/config.js';
+import IdleService from '../core/services/idle-service.js';
 
 /** @typedef {import('../core/events/bus.js').default} EventBus */
 /** @typedef {import('../core/state/manager.js').default} StateManager */
@@ -363,6 +364,18 @@ export class NavigationController {
           });
         }
         
+        // Idle Generator Offline Progress (Mneme-Fragmente)
+        let offlineMneme = 0;
+        const gen = state.idleGenerators?.gedankenArchiv;
+        if (gen && gen.level > 0) {
+          const ewigeMneme = Number(state.resources?.ewigeMneme || '0');
+          const prestigeMult = 1.0 + (ewigeMneme * 0.10);
+          const upgradeBonus = gen.upgrades?.focusBonus || 0;
+          const yieldPerSec = IdleService.calculateYieldPerSecond(gen.baseYield, gen.level, upgradeBonus, prestigeMult);
+          const idleOffline = IdleService.calculateOfflineProgress(lastSave, now, yieldPerSec, 12 * 3600);
+          offlineMneme = idleOffline.totalYield;
+        }
+
         // Ressourcen und Clan-Mitglieder im State aktualisieren
         this._stateManager.dispatch((state) => {
           const currentParticles = BigInt(state.resources.particles || '0');
@@ -370,6 +383,8 @@ export class NavigationController {
           const currentRelics = BigInt(state.resources.relics || '0');
           const totalRelicsAcc = BigInt(state.resources.totalRelics || '0');
           const currentArtifacts = BigInt(state.resources.artifacts || '0');
+          const currentMneme = BigInt(state.resources.mnemeFragmente || '0');
+          const totalMnemeAcc = BigInt(state.resources.totalMnemeFragmente || '0');
           
           return {
             ...state,
@@ -380,6 +395,8 @@ export class NavigationController {
               relics: String(currentRelics + BigInt(totalRelics)),
               totalRelics: String(totalRelicsAcc + BigInt(totalRelics)),
               artifacts: String(currentArtifacts + BigInt(totalArtifacts)),
+              mnemeFragmente: String(currentMneme + BigInt(offlineMneme)),
+              totalMnemeFragmente: String(totalMnemeAcc + BigInt(offlineMneme)),
               timeBank: 0 // Da wir die Belohnungen sofort gewähren, ist kein zeitbasierter Catchup nötig
             },
             clan: {

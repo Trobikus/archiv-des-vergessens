@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-07-24
+
+### 🧮 Kern-Berechnungen, Delta-Time Game Loop, Kauf-Logik & Offline-Progression (Schritte 2-5)
+- **Schritt 2: Reine Berechnungsbibliothek (`js/core/game/math.js`)**:
+  - Neue Clean-Code-Datei `math.js` erstellt zur vollständigen Entkopplung der Berechnungslogik vom State.
+  - Implementierung aller Formeln: `calculateBuildingCost`, `calculateBulkBuildingCost`, `calculateMaxAffordableLevel`, `calculateYieldPerSecond`, `calculateOfflineProgress` & `calculatePrestigeCurrency`.
+- **Schritt 3: Game Loop Delta-Time Integration (`js/core/game/loop.js`)**:
+  - `GameLoop` mit robuster `requestAnimationFrame` / `cancelAnimationFrame` Unterstützung und sicheren Fallbacks für Headless-/Testumgebungen ausgestattet.
+  - Ticks nutzen präzise Delta-Time (`delta` ms) zur ununterbrochenen Ressourcenproduktion unabhängig von Browser-Tab-Drosselungen.
+- **Schritt 4: Kauf-Logik & Mehrfach-Kauf Support (`IdleService` & `actions.js`)**:
+  - State-Action `buyIdleGeneratorLevel` in `actions.js` um optionalen `count`-Parameter erweitert.
+  - `IdleService` bietet nun `getGedankenArchivBulkCost`, `buyGedankenArchivLevel(count)` sowie `buyGedankenArchivMax()` für Max-Kauf.
+- **Schritt 5: Offline-Progression bei Spielstart (`NavigationController`)**:
+  - `_loadGame()` in `navigation.js` um automatische Berechnung der Offline-Produktion des `gedankenArchivs` (Mneme-Fragmente) erweitert.
+  - Anrechenbare Offline-Zeit wird auf max. 12 Stunden begrenzt und im Offline-Overlay gewährt.
+- **Automatisierte Testabdeckung & Typen**:
+  - Neue Vitest-Testsuite `IdleMathAndProgression.test.js` mit 12 Tests hinzugefügt (16 Testdateien, 106 bestandene Tests).
+  - JSDoc State-Typisierung in `manager.js` für `idleGenerators` aktualisiert (`npm run typecheck` fehlerfrei).
+
+---
+
 ## [1.0.12] - 2026-07-24
 
 ### ♾️ Standard Idle-Game Mathematik & Lore Integration

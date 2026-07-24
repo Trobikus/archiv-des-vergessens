@@ -17,6 +17,14 @@ import { CONFIG } from '../../data/config.js';
 /** @typedef {import('../events/bus.js').default} EventBus */
 /** @typedef {import('../state/manager.js').default} StateManager */
 
+const reqAnimationFrame = typeof requestAnimationFrame !== 'undefined'
+  ? requestAnimationFrame
+  : (cb) => setTimeout(() => cb(performance.now()), 16);
+
+const cancelAnimFrame = typeof cancelAnimationFrame !== 'undefined'
+  ? cancelAnimationFrame
+  : (id) => clearTimeout(id);
+
 export class GameLoop {
   /**
    * @param {Object} context
@@ -51,7 +59,7 @@ export class GameLoop {
     this._lastLogicTick = now;
     this._lastSlowTick = now;
     this._catchupActive = this._stateManager.getState().resources.timeBank > 0;
-    this._frameId = requestAnimationFrame(this._boundTick);
+    this._frameId = reqAnimationFrame(this._boundTick);
   }
 
   stop() {
@@ -59,7 +67,7 @@ export class GameLoop {
     this._running = false;
     this._passiveWarpTimer = 0;
     if (this._frameId !== null) {
-      cancelAnimationFrame(this._frameId);
+      cancelAnimFrame(this._frameId);
       this._frameId = null;
     }
   }
@@ -179,7 +187,7 @@ export class GameLoop {
       });
     }
 
-    this._frameId = requestAnimationFrame(this._boundTick);
+    this._frameId = reqAnimationFrame(this._boundTick);
   }
 
   isRunning() {

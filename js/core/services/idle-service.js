@@ -20,6 +20,14 @@ import * as Actions from '../state/actions.js';
 import { selectGedankenArchiv, selectMnemeFragmenteBigInt, selectTotalMnemeFragmenteBigInt, selectEwigeMneme } from '../state/selectors.js';
 import { sanitizeNumber } from '../../utils/sanitizer.js';
 import { EVENTS } from '../events/definitions.js';
+import {
+  calculateBuildingCost,
+  calculateBulkBuildingCost,
+  calculateMaxAffordableLevel,
+  calculateYieldPerSecond,
+  calculateOfflineProgress,
+  calculatePrestigeCurrency
+} from '../game/math.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 /** @typedef {import('./resource-service.js').default} ResourceService */
@@ -55,58 +63,28 @@ export class IdleService {
   // MATH FORMULA HELPERS (PURE STATIC CALCULATIONS)
   // ============================================================
 
-  /**
-   * Berechnet die Kosten für eine Gebäude/Upgrade-Stufe.
-   * Formel: Kosten = floor(BasisKosten * (Multiplikator ^ AktuellesLevel))
-   * @param {number} baseCost - BasisKosten
-   * @param {number} costMultiplier - Industriestandard: 1.15
-   * @param {number} currentLevel - Aktuelle Stufe
-   * @returns {number}
-   */
   static calculateBuildingCost(baseCost, costMultiplier = 1.15, currentLevel = 0) {
-    const safeBase = Math.max(0, baseCost);
-    const safeMult = Math.max(1.0, costMultiplier);
-    const safeLevel = Math.max(0, currentLevel);
-    return Math.floor(safeBase * Math.pow(safeMult, safeLevel));
+    return calculateBuildingCost(baseCost, costMultiplier, currentLevel);
   }
 
-  /**
-   * Berechnet den Ertrag pro Sekunde.
-   * Formel: ErtragProSekunde = BasisErtrag * Level * (1 + Summe(UpgradeBonusse)) * PrestigeMultiplikator
-   * @param {number} baseYield
-   * @param {number} level
-   * @param {number} upgradeBonusesSum
-   * @param {number} prestigeMultiplier
-   * @returns {number}
-   */
+  static calculateBulkBuildingCost(baseCost, costMultiplier = 1.15, currentLevel = 0, count = 1) {
+    return calculateBulkBuildingCost(baseCost, costMultiplier, currentLevel, count);
+  }
+
+  static calculateMaxAffordableLevel(baseCost, costMultiplier = 1.15, currentLevel = 0, availableResources = 0) {
+    return calculateMaxAffordableLevel(baseCost, costMultiplier, currentLevel, availableResources);
+  }
+
   static calculateYieldPerSecond(baseYield, level, upgradeBonusesSum = 0, prestigeMultiplier = 1.0) {
-    const safeBase = Math.max(0, baseYield);
-    const safeLevel = Math.max(0, level);
-    const safeBonus = Math.max(0, upgradeBonusesSum);
-    const safePrestige = Math.max(1.0, prestigeMultiplier);
-    return safeBase * safeLevel * (1 + safeBonus) * safePrestige;
+    return calculateYieldPerSecond(baseYield, level, upgradeBonusesSum, prestigeMultiplier);
   }
 
-  /**
-   * Berechnet die verdiente Prestige-Währung bei einem Reset.
-   * Formel: PrestigeWährung = floor(Wurzel(GesamtRessourcen / Schwellenwert))
-   * @param {number|BigInt} totalResources
-   * @param {number} threshold
-   * @returns {number}
-   */
+  static calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds = 43200) {
+    return calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds);
+  }
+
   static calculatePrestigeCurrency(totalResources, threshold = 1000) {
-    let numResources = 0;
-    if (typeof totalResources === 'bigint') {
-      numResources = Number(totalResources);
-    } else {
-      numResources = sanitizeNumber(totalResources, 0);
-    }
-
-    if (numResources < threshold || threshold <= 0) {
-      return 0;
-    }
-
-    return Math.floor(Math.sqrt(numResources / threshold));
+    return calculatePrestigeCurrency(totalResources, threshold);
   }
 
   // ============================================================
@@ -132,7 +110,25 @@ export class IdleService {
    */
   getGedankenArchivCost() {
     const gen = this.getGedankenArchiv();
-    return IdleService.calculateBuildingCost(gen.baseCost, gen.costMultiplier, gen.level);
+    return calculateBuildingCost(gen.baseCost, gen.costMultiplier, gen.level);
+  }
+
+  /**
+   * Berechnet die Gesamtkosten für mehrere Stufen des GedankenArchivs.
+   * @param {number} count
+   */
+  getGedankenArchivBulkCost(count = 1) {
+    const gen = this.getGedankenArchiv();
+    return calculateBulkBuildingCost(gen.baseCost, gen.costMultiplier, gen.level, count);
+  }
+
+  /**
+   * Berechnet die maximal bezahlbaren Stufen des GedankenArchivs.
+   */
+  getGedankenArchivMaxAffordable() {
+    const gen = this.getGedankenArchiv();
+    const currentMneme = selectMnemeFragmenteBigInt(this._stateManager.getState());
+    return calculateMaxAffordableLevel(gen.baseCost, gen.costMultiplier, gen.level, currentMneme);
   }
 
   /**
@@ -150,19 +146,21 @@ export class IdleService {
     const gen = this.getGedankenArchiv();
     const upgradeBonus = gen.upgrades?.focusBonus || 0;
     const prestigeMult = this.getPrestigeMultiplier();
-    return IdleService.calculateYieldPerSecond(gen.baseYield, gen.level, upgradeBonus, prestigeMult);
+    return calculateYieldPerSecond(gen.baseYield, gen.level, upgradeBonus, prestigeMult);
   }
 
   /**
-   * Kauft eine Stufe des GedankenArchivs, sofern genug mnemeFragmente vorhanden sind.
+   * Kauft eine oder mehrere Stufen des GedankenArchivs, sofern genug mnemeFragmente vorhanden sind.
+   * @param {number} [count=1]
    */
-  buyGedankenArchivLevel() {
-    const cost = this.getGedankenArchivCost();
+  buyGedankenArchivLevel(count = 1) {
+    const safeCount = Math.max(1, Math.floor(sanitizeNumber(count, 1)));
+    const totalCost = this.getGedankenArchivBulkCost(safeCount);
     const currentMneme = selectMnemeFragmenteBigInt(this._stateManager.getState());
 
-    if (currentMneme < BigInt(cost)) {
+    if (currentMneme < BigInt(totalCost) || totalCost <= 0) {
       this._eventBus.publish('ui:showToast', {
-        message: `❌ Nicht genug Mneme-Fragmente (${cost} benötigt)`,
+        message: `❌ Nicht genug Mneme-Fragmente (${totalCost} benötigt)`,
         type: 'warning',
         duration: 2000
       });
@@ -170,7 +168,7 @@ export class IdleService {
     }
 
     this._stateManager.dispatch(
-      Actions.buyIdleGeneratorLevel('gedankenArchiv', cost),
+      Actions.buyIdleGeneratorLevel('gedankenArchiv', totalCost, safeCount),
       'idle/buyGedankenArchiv'
     );
 
@@ -178,11 +176,13 @@ export class IdleService {
     this._eventBus.publish('idle:generatorUpgraded', {
       generatorId: 'gedankenArchiv',
       newLevel: newGen.level,
+      boughtCount: safeCount,
+      totalCost,
       newYield: this.getGedankenArchivYieldPerSecond()
     });
 
     this._eventBus.publish('ui:showToast', {
-      message: `🏛️ GedankenArchiv auf Stufe ${newGen.level} ausgebaut!`,
+      message: `🏛️ GedankenArchiv um +${safeCount} Stufe(n) ausgebaut! (Stufe ${newGen.level})`,
       type: 'success',
       duration: 2500
     });
@@ -191,11 +191,28 @@ export class IdleService {
   }
 
   /**
+   * Kauft maximal bezahlbare Stufen des GedankenArchivs.
+   */
+  buyGedankenArchivMax() {
+    const maxInfo = this.getGedankenArchivMaxAffordable();
+    if (maxInfo.count <= 0) {
+      this._eventBus.publish('ui:showToast', {
+        message: '❌ Nicht genug Mneme-Fragmente für einen Ausbau.',
+        type: 'warning',
+        duration: 2000
+      });
+      return false;
+    }
+
+    return this.buyGedankenArchivLevel(maxInfo.count);
+  }
+
+  /**
    * Berechnet die anhängige Ewige Mneme für das nächste Prestige.
    */
   getPendingEwigeMneme() {
     const totalMneme = selectTotalMnemeFragmenteBigInt(this._stateManager.getState());
-    return IdleService.calculatePrestigeCurrency(totalMneme, this._prestigeThreshold);
+    return calculatePrestigeCurrency(totalMneme, this._prestigeThreshold);
   }
 
   /**
@@ -229,6 +246,16 @@ export class IdleService {
     });
 
     return { success: true, reward };
+  }
+
+  /**
+   * Berechnet den Offline-Fortschritt für das GedankenArchiv.
+   * @param {number} lastTimestamp
+   * @param {number} currentTimestamp
+   */
+  calculateOfflineProgress(lastTimestamp, currentTimestamp) {
+    const yieldPerSec = this.getGedankenArchivYieldPerSecond();
+    return calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSec);
   }
 
   /**
