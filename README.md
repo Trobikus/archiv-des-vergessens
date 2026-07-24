@@ -16,11 +16,14 @@
   <a href="https://github.com/Trobikus/archiv-des-vergessens/stargazers">
     <img src="https://img.shields.io/github/stars/Trobikus/archiv-des-vergessens?color=FFD700&style=for-the-badge" alt="Stars" />
   </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-41B883?style=for-the-badge" alt="License" />
+  </a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4A90E2?style=for-the-badge" alt="Platforms" />
   <img src="https://img.shields.io/badge/Engine-Tauri%202-FF6B6B?style=for-the-badge" alt="Tauri" />
 </p>
 
-**Archiv des Vergessens** ist ein atmosphärisches **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer und einer einzigartigen Welt rund um Erinnerung, Vergessen und die mystische Kraft der Mneme.
+**Archiv des Vergessens** ist ein atmosphärisches **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer, modernem AAA-Design und einer einzigartigen Welt rund um Erinnerung, Vergessen und die mystische Kraft der Mneme.
 
 ## 📖 Die Geschichte
 
@@ -30,13 +33,14 @@ Jede Partikel, die du sammelst, birgt eine Geschichte. Jeder Boss verkörpert ei
 
 ## ✨ Highlights
 
-- **Tiefes Idle-Progression-System** mit Prestige, Artefakten und Mneme-Relikten
-- **Echtzeit-Multiplayer**: Globaler Chat, Gilden-Chat und persistente Leaderboards
-- **Cloud-Saves** mit automatischer Synchronisation
-- **Atemberaubende visuelle Effekte** (Canvas-basierte Partikel, Vignetten, dynamische Hintergründe)
-- **Offline-Progression** mit großzügigen Belohnungen
-- **Professionelle Desktop-App** dank Tauri – leicht, sicher und performant
-- **Deutsche & englische Lokalisierung** (in Planung)
+- **Tiefes Idle-Progression-System**: Prestige, Mneme-Skillbaum, Artefakte, Meister-Schmiede & Sockelsystem
+- **Server-Account-System**: Sichere Registrierung, Login, Gast-Zugang & SQLite-basierte Cloud-Speicherung
+- **Echtzeit-Multiplayer**: Globaler Chat, Gilden-System & globale Bestenlisten
+- **Vollständige Mehrsprachigkeit**: Dynamische Lokalisierung in **Deutsch (DE)** und **Englisch (EN)**
+- **Atemberaubende visuelle Effekte**: AAA Glassmorphic Design, Canvas-Partikel, Vignetten, Custom Cursor Glow & Click-Bursts
+- **Kampfanalyse & DPS Meter**: Detaillierte Statistiken und Echtzeit-Schadensanalyse
+- **Live Auto-Updater**: Automatische In-App-Updates dank Tauri 2
+- **Offline-Progression**: Exponentielles Wachstum mit großzügigen Belohnungen bei Abwesenheit
 
 ## 🖥️ Systemanforderungen
 
@@ -47,82 +51,77 @@ Jede Partikel, die du sammelst, birgt eine Geschichte. Jeder Boss verkörpert ei
 | **Linux**    | Kernel 5.4+, glibc 2.28+ | Aktuelle Distribution |
 | **Speicher** | 300 MB Festplatte        | 1 GB                  |
 
-**Hinweis**: Das Spiel läuft extrem ressourcenschonend und ist auch auf älterer Hardware gut spielbar.
+**Hinweis**: Das Spiel läuft extrem ressourcenschonend und ist auch auf älterer Hardware flüssig spielbar.
 
 ## 🚀 Schnellstart
 
 1. Lade die neueste Version von der [Releases-Seite](https://github.com/Trobikus/archiv-des-vergessens/releases/latest) herunter.
-2. Entpacke die Datei und starte `Archiv des Vergessens.exe` (bzw. die entsprechende Datei für dein Betriebssystem).
-3. Verbinde dich mit dem **öffentlichen Multiplayer-Server** (automatisch bei der ersten Verbindung).
-4. Tauche ein in das Archiv.
+2. Starte das Setup oder führe `Archiv des Vergessens.exe` aus.
+3. Erstelle einen Account oder starte direkt als Gast.
+4. Der Client verbindet sich automatisch mit dem **öffentlichen Multiplayer-Server**.
 
-**Server-IP**: `ws://35.209.11.134:8080` (öffentlich, stabil)
+**Öffentlicher Server**: `ws://35.209.11.134:8080` (öffentlich, stabil)
 
 ## 🎮 Features im Detail
 
-### Kern-Gameplay
+### ⚔️ Kern-Gameplay & Progression
+- **Mneme-Skillbaum**: Verzweigte Talentbäume zur Spezialisierung deines Charakters
+- **Meister-Schmiede (Master Forge)**: Sockel- & Runensystem, Aufwertungen sowie Mehrfachauswahl (*Bulk Salvaging*) im Inventar
+- **Kontoweite Truhe (Shared Vault)**: Sicherer Gegenstandstransfer zwischen verschiedenen Charakteren
+- **Epische Boss-Kämpfe**: Einzigartige Phasen, Mechaniken und Boss-Drop-Tabellen
 
-- Idle-Progression mit exponentiellem Wachstum
-- Vielfältige Mneme-Partikel, Relikte und Artefakte
-- Epische Boss-Kämpfe mit einzigartigen Mechaniken
-- Tiefes Crafting- und Aufwertungssystem
+### 🌐 Multiplayer & Community
+- **Globaler Chat & Gilden-Chat**: Persistent mit Nachrichten-History
+- **Gilden-System**: Gemeinsames Leveln, Gilden-Boni und Kooperation
+- **Globale Bestenliste**: Rankings nach Prestige, besiegten Bossen und Level
+- **Sichere Cloud-Speicherung**: Automatische Synchronisation deiner Fortschritte via SQLite-Backend
 
-### Multiplayer
-
-- **Globaler Chat** mit Nachrichten-History
-- **Gilden-System** mit eigenen Chats und Boni
-- **Globale Bestenliste** (Prestige, Bosses, Level)
-- Cloud-Speicherung deiner Fortschritte
-
-### Technische Exzellenz
-
-- **Tauri 2** + Rust für native Performance
-- **Preact + Vite** für ein flüssiges, modernes UI
-- **Node.js + SQLite** Backend – optimiert für minimalen Ressourcenverbrauch (läuft stabil auf günstigen Cloud-Instanzen)
+### 🎨 Technische & Visuelle Exzellenz
+- **Tauri 2 + Rust**: Leichtgewichtig, sicher, native Desktop-Performance
+- **Preact + Vite + HTM**: Schnelles, reaktives UI ohne schweren Overhead
+- **Vitest**: Automatisierte Frontend- & Service-Tests
+- **Node.js + WebSockets + SQLite**: Skalierbares, ressourcenschonendes Multiplayer-Backend
 
 ## 🛠️ Technologie-Stack
 
-- **Frontend**: Preact, HTM, Vite, Canvas API
-- **Backend (Desktop)**: Tauri 2 + Rust + Serde
-- **Multiplayer-Server**: Node.js, WebSockets (`ws`), better-sqlite3
-- **Build & CI**: GitHub Actions
+- **Frontend**: Preact, HTM, Vite, Canvas API, CSS Glassmorphism
+- **Desktop Engine**: Tauri 2 + Rust Core
+- **Multiplayer Server**: Node.js, WebSockets (`ws`), `better-sqlite3`
+- **Testing & Quality**: Vitest, TypeScript Typechecking
+- **CI / CD**: GitHub Actions (Multi-Platform Builds & Auto-Release)
 
-## 📌 Roadmap (Priorisiert)
+## 📌 Roadmap
 
-### Phase 1 – Launch Readiness (Aktuell)
+### Phase 1 – Core Launch & Polishing (Aktuell)
+- [x] Produktives Server-Account System (SQLite Persistence)
+- [x] Live Auto-Updater Integration (Tauri 2)
+- [x] Vollständige DE / EN Lokalisierung
+- [x] AAA Glassmorphic Redesign & Performance-Optimierung
 
-- Professionelle Präsentation (Screenshots, Trailer, Dokumentation)
-- Stabilitäts- und Performance-Optimierungen
-- Erweitertes Tutorial & Onboarding
+### Phase 2 – Erweiterte Inhalte
+- [ ] Weitere Story-Kapitel & Boss-Encounter
+- [ ] Erweitertes Gilden-System mit Gilden-Kriegen
+- [ ] Erfolge (Achievements), Saisons & Community-Events
+- [ ] Balancing-Updates basierend auf Community-Feedback
 
-### Phase 2 – Content & Tiefe
-
-- Weitere Story-Chapter & Bosses
-- Erweitertes Guild-System
-- Achievements, Seasons & Events
-- Balancing-Patches basierend auf Community-Feedback
-
-### Phase 3 – Wachstum
-
-- Englische Lokalisierung
-- itch.io & GameJolt Veröffentlichung
-- Mod-Support
-- Mobile Companion App / PWA
+### Phase 3 – Plattformen & Modding
+- [ ] itch.io & GameJolt Veröffentlichungen
+- [ ] Modding-Support & Custom Relikte
+- [ ] Mobile Companion App / PWA Support
 
 ## 🤝 Mitmachen & Community
 
-Wir freuen uns über:
+Wir freuen uns über deinen Beitrag!
+- **Issues**: Melde Bugs oder schlage neue Features vor.
+- **Pull Requests**: Beachte bitte unsere [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Changelog**: Verfolge die Entwicklung in unserem [CHANGELOG.md](CHANGELOG.md).
 
-- Bug-Reports und Feature-Vorschläge (Issues)
-- Pull Requests
-- Feedback auf Discord (Link folgt bei Launch)
-
-**Entwickelt von Grimoire Interactive** – einem kleinen, leidenschaftlichen Indie-Studio.
+**Entwickelt von Grimoire Interactive** – einem leidenschaftlichen Indie-Studio.
 
 ---
 
 **Copyright © 2026 Grimoire Interactive**  
-Alle Rechte vorbehalten. Dies ist ein Indie-Projekt – jede Unterstützung (Star, Feedback, Teilen) hilft enorm!
+Lizenziert unter der [MIT-Lizenz](LICENSE). Eine vollständige Versionshistorie findest du im [Changelog](CHANGELOG.md).
 
 ---
 
