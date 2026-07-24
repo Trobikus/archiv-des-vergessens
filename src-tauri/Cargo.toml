@@ -1,6 +1,6 @@
 [package]
 name = "archiv-des-vergessens"
-version = "1.0.24"
+version = "1.0.25"
 description = "Archiv des Vergessens – Ein episches Idle-RPG über Erinnerung, Vergessen und die Macht der Mneme."
 authors = ["Grimoire Interactive"]
 edition = "2021"
@@ -45,6 +45,11 @@ sha2 = "0.10"
 thiserror = "1.0"
 rand = "0.8"
 tempfile = "3.10"
+toml = "0.8"
+aes-gcm = "0.10"
+argon2 = "0.5"
+jsonwebtoken = "9.3"
+base64 = "0.22"
 
 [dev-dependencies]
 mockall = "0.13"

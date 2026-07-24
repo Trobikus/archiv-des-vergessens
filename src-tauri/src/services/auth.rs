@@ -1,5 +1,8 @@
+use crate::services::crypto::CryptoService;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
+use serde::{Deserialize, Serialize};
 use sha2::Sha512;
 use thiserror::Error;
 
@@ -7,13 +10,13 @@ const PBKDF2_ITERATIONS: u32 = 100_000;
 const SALT_LEN: usize = 32;
 const KEY_LEN: usize = 64;
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum AuthError {
-    #[error("Invalid password or hash mismatch")]
+    #[error("Invalid password or credentials mismatch")]
     InvalidCredentials,
     #[error("Password missing required length")]
     PasswordTooShort,
-    #[error("Internal hashing error")]
+    #[error("Internal hashing or cryptographic error")]
     HashError,
 }
 
@@ -23,7 +26,14 @@ pub struct PasswordHash {
     pub salt_hex: String,
 }
 
-/// Service for handling secure authentication with PBKDF2 (HMAC-SHA512, 100,000 iterations).
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Claims {
+    pub sub: String,
+    pub exp: u64,
+    pub iat: u64,
+}
+
+/// Service for handling secure authentication with PBKDF2, Argon2id, and JWT tokens.
 pub struct AuthService;
 
 impl AuthService {
@@ -32,6 +42,20 @@ impl AuthService {
         let mut salt = [0u8; SALT_LEN];
         rand::thread_rng().fill_bytes(&mut salt);
         salt
+    }
+
+    /// Hashes a password using Argon2id.
+    pub fn hash_password_argon2(password: &str) -> Result<String, AuthError> {
+        if password.len() < 8 {
+            return Err(AuthError::PasswordTooShort);
+        }
+        CryptoService::hash_password_argon2(password).map_err(|_| AuthError::HashError)
+    }
+
+    /// Verifies a password against an Argon2id hash string.
+    pub fn verify_password_argon2(password: &str, password_hash: &str) -> Result<bool, AuthError> {
+        CryptoService::verify_password_argon2(password, password_hash)
+            .map_err(|_| AuthError::HashError)
     }
 
     /// Hashes a password using PBKDF2 with HMAC-SHA512 and 100,000 iterations.
@@ -74,6 +98,44 @@ impl AuthService {
         let matches =
             subtle::ConstantTimeEq::ct_eq(computed_key.as_slice(), expected_hash.as_slice());
         Ok(matches)
+    }
+
+    /// Generates a signed JWT token with configurable expiration hours.
+    pub fn generate_jwt_token(
+        user_id: &str,
+        jwt_secret: &str,
+        token_expiry_hours: u64,
+    ) -> Result<String, AuthError> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|_| AuthError::HashError)?
+            .as_secs();
+
+        let exp = now + (token_expiry_hours * 3600);
+        let claims = Claims {
+            sub: user_id.to_string(),
+            exp,
+            iat: now,
+        };
+
+        encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(jwt_secret.as_bytes()),
+        )
+        .map_err(|_| AuthError::HashError)
+    }
+
+    /// Verifies a signed JWT token and returns the claims.
+    pub fn verify_jwt_token(token: &str, jwt_secret: &str) -> Result<Claims, AuthError> {
+        let token_data = decode::<Claims>(
+            token,
+            &DecodingKey::from_secret(jwt_secret.as_bytes()),
+            &Validation::default(),
+        )
+        .map_err(|_| AuthError::InvalidCredentials)?;
+
+        Ok(token_data.claims)
     }
 }
 
@@ -124,22 +186,50 @@ mod tests {
         let hashed = AuthService::hash_password(password, &salt).expect("Hashing should succeed");
 
         assert_eq!(hashed.salt_hex, hex::encode(&salt));
-        assert_eq!(hashed.hash_hex.len(), KEY_LEN * 2); // Hex encoded 64 bytes = 128 chars
+        assert_eq!(hashed.hash_hex.len(), KEY_LEN * 2);
 
         let is_valid = AuthService::verify_password(password, &hashed.hash_hex, &hashed.salt_hex)
             .expect("Verification should complete");
-        assert!(is_valid, "Correct password should match");
+        assert!(is_valid);
 
         let is_invalid =
             AuthService::verify_password("WrongPassword123!", &hashed.hash_hex, &hashed.salt_hex)
                 .expect("Verification should complete");
-        assert!(!is_invalid, "Incorrect password must be rejected");
+        assert!(!is_invalid);
     }
 
     #[test]
-    fn test_short_password_rejection() {
-        let salt = AuthService::generate_salt();
-        let result = AuthService::hash_password("short", &salt);
-        assert_eq!(result.unwrap_err(), AuthError::PasswordTooShort);
+    fn test_argon2_hashing_in_auth_service() {
+        let password = "SuperSecretArgon2Password!";
+        let hash = AuthService::hash_password_argon2(password).unwrap();
+        assert!(AuthService::verify_password_argon2(password, &hash).unwrap());
+        assert!(!AuthService::verify_password_argon2("WrongPassword!", &hash).unwrap());
+    }
+
+    #[test]
+    fn test_jwt_token_generation_and_verification() {
+        let secret = "super_secret_jwt_key_2026_archiv_des_vergessens";
+        let user_id = "user_42";
+
+        let token = AuthService::generate_jwt_token(user_id, secret, 24)
+            .expect("JWT creation should succeed");
+
+        let claims =
+            AuthService::verify_jwt_token(&token, secret).expect("JWT verification should succeed");
+
+        assert_eq!(claims.sub, user_id);
+        assert!(claims.exp > claims.iat);
+    }
+
+    #[test]
+    fn test_jwt_token_invalid_secret_rejection() {
+        let secret = "super_secret_jwt_key_2026_archiv_des_vergessens";
+        let wrong_secret = "wrong_jwt_secret_key_12345";
+        let user_id = "user_42";
+
+        let token = AuthService::generate_jwt_token(user_id, secret, 24).unwrap();
+
+        let result = AuthService::verify_jwt_token(&token, wrong_secret);
+        assert_eq!(result.unwrap_err(), AuthError::InvalidCredentials);
     }
 }
