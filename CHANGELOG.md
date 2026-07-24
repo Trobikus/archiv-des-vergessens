@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.24] - 2026-07-24
+
+### 📋 GitHub Issue Templates & Community Support
+- **Strukturierte GitHub Issue Vorlagen (`.github/ISSUE_TEMPLATE/`)**:
+  - `bug_report.md`: Detaillierte Fehlerberichts-Vorlage mit Schritten zur Reproduktion, Systeminformationen und betroffenen Komponenten (Frontend, Desktop Engine, Server, SQLite, CI/CD).
+  - `feature_request.md`: Vorlage für Community-Vorschläge, neue Spielmechaniken, UI/UX-Ideen und Multiplayer-Features.
+- **Erfolgreiche Verifikation & Build-Pipeline**:
+  - Vollständige Ausführung aller 115 Frontend Unit-Tests und 18 Rust Backend Integration- & E2E-Tests.
+  - Generierung der Produktions-Builds und Vorbereitung des automatisierten GitHub Actions Release-Workflows.
+
+---
+
 ## [1.0.23] - 2026-07-24
 
 ### 🌐 Secure WSS Production Endpoint, Reverse Proxy Infrastructure & Monorepo-Dokumentation
