@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.3.1] - 2026-07-24
+## [1.0.4] - 2026-07-24
 
 ### 🐛 Behoben & Optimiert
 - **Produktiv-Build Server-Anbindung**:
