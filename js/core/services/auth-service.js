@@ -281,9 +281,7 @@ export class AuthService {
 
             return { success: true, user: this._currentUser };
           } else if (res.error) {
-            if (res.error === 'auth.error.username_taken' || res.error === 'auth.error.email_taken') {
-              return { success: false, error: res.error };
-            }
+            return { success: false, error: res.error };
           }
         }
       }
@@ -374,7 +372,53 @@ export class AuthService {
             }
 
             return { success: true, user: this._currentUser };
-          } else if (res.error === 'auth.error.wrong_password') {
+          } else if (res.error) {
+            // Check if account exists locally before giving up or returning server error
+            const accounts = this._getAccounts();
+            let targetAcc = null;
+            for (const key in accounts) {
+              const acc = accounts[key];
+              if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
+                targetAcc = acc;
+                break;
+              }
+            }
+            if (targetAcc && targetAcc.passwordHash && targetAcc.salt) {
+              const hash = await this._hashPassword(password, targetAcc.salt);
+              if (hash === targetAcc.passwordHash) {
+                targetAcc.lastLogin = new Date().toISOString();
+                accounts[targetAcc.id] = targetAcc;
+                this._saveAccounts(accounts);
+
+                this._currentUser = {
+                  id: targetAcc.id,
+                  username: targetAcc.username,
+                  email: targetAcc.email,
+                  isGuest: false,
+                  avatar: targetAcc.avatar || '🛡️',
+                  createdAt: targetAcc.createdAt,
+                  lastLogin: targetAcc.lastLogin
+                };
+
+                this._sessionToken = targetAcc.sessionToken || this._generateToken();
+                this._persistSession();
+
+                this._networkService.send('auth:register', {
+                  username: targetAcc.username,
+                  email: targetAcc.email || `${targetAcc.username}@local.archiv`,
+                  password: password
+                });
+
+                if (this._eventBus) {
+                  this._eventBus.publish('auth:login', { user: this._currentUser });
+                  this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+                }
+
+                return { success: true, user: this._currentUser };
+              } else {
+                return { success: false, error: 'auth.error.wrong_password' };
+              }
+            }
             return { success: false, error: res.error };
           }
         }

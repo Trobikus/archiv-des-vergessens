@@ -49,6 +49,29 @@ export class SaveManager {
     return this._activeSlotId;
   }
 
+  static _isRegisteredUser(userId = null) {
+    if (userId) return true;
+    if (this._services?.authService) {
+      const u = this._services.authService.getCurrentUser();
+      return !!(u && !u.isGuest);
+    }
+    return true;
+  }
+
+  static async clearGuestSaves() {
+    try {
+      const db = await this._getDB();
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      for (let i = 1; i <= 5; i++) {
+        store.delete(`slot_guest_${i}`);
+      }
+      store.delete('vault_guest');
+    } catch (e) {
+      console.warn('[SaveManager] Fehler beim Bereinigen der Gast-Sicherungen:', e);
+    }
+  }
+
   static _getSlotKey(slotId = this._activeSlotId, userId = null) {
     let uId = userId;
     if (!uId && this._services?.authService) {
@@ -92,6 +115,13 @@ export class SaveManager {
    * Listet alle 5 Slots mit Meta-Informationen auf.
    */
   static async listSlots(userId = null) {
+    if (!this._isRegisteredUser(userId)) {
+      return Array.from({ length: 5 }, (_, i) => ({
+        slotId: i + 1,
+        hasSave: false
+      }));
+    }
+
     const db = await this._getDB();
     const slots = [];
 
@@ -143,6 +173,11 @@ export class SaveManager {
    * Speichert den State in den aktiven Slot.
    */
   static async save(state, slotId = this._activeSlotId) {
+    if (!this._isRegisteredUser()) {
+      console.log('[SaveManager] Speichern übersprungen: Gast-Accounts sind nur temporär für die aktuelle Sitzung.');
+      return false;
+    }
+
     if (this._saveLock) {
       return new Promise((resolve) => this._saveQueue.push(resolve));
     }
@@ -228,6 +263,11 @@ export class SaveManager {
    * Lädt den State aus einem Slot.
    */
   static async load(slotId = this._activeSlotId) {
+    if (!this._isRegisteredUser()) {
+      console.log('[SaveManager] Laden übersprungen: Gast-Accounts besitzen keine dauerhaften Speicherstände.');
+      return null;
+    }
+
     if (this._loadLock) {
       return new Promise((resolve) => this._loadQueue.push(resolve));
     }
@@ -312,6 +352,10 @@ export class SaveManager {
    * Prüft, ob ein Save im aktiven Slot existiert.
    */
   static async hasSave(slotId = this._activeSlotId) {
+    if (!this._isRegisteredUser()) {
+      return false;
+    }
+
     try {
       const db = await this._getDB();
       const slotKey = this._getSlotKey(slotId);
@@ -331,6 +375,10 @@ export class SaveManager {
    * Löscht einen bestimmten Slot.
    */
   static async deleteSlot(slotId) {
+    if (!this._isRegisteredUser()) {
+      return false;
+    }
+
     while (this._saveLock || this._loadLock) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
@@ -373,6 +421,10 @@ export class SaveManager {
   }
 
   static async saveAccountVault(vaultData, userId = null) {
+    if (!this._isRegisteredUser(userId)) {
+      return false;
+    }
+
     try {
       const db = await this._getDB();
       const vaultKey = this._getVaultKey(userId);
@@ -391,6 +443,10 @@ export class SaveManager {
   }
 
   static async loadAccountVault(userId = null) {
+    if (!this._isRegisteredUser(userId)) {
+      return null;
+    }
+
     try {
       const db = await this._getDB();
       const vaultKey = this._getVaultKey(userId);

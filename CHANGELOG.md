@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-07-24
+
+### 🐛 Behoben
+- **Login- & Registrierungs-Button Reaktivität**:
+  - `authService` in das `services`-Objekt in `game-boot.js` aufgenommen, sodass Preact UI-Komponenten ([LoginView](file:///f:/Max_Projekte/archiv-des-vergessens/js/ui/preact/views/LoginView.js) und [AccountModal](file:///f:/Max_Projekte/archiv-des-vergessens/js/ui/preact/account/AccountModal.js)) wieder ordnungsgemäß auf Anmelde- und Registrierungsversuche reagieren.
+  - Vollständige Weiterleitung und Rückmeldung aller Server-Fehlermeldungen bei Login und Registrierung in `auth-service.js` repariert.
+
+---
+
 ## [1.0.6] - 2026-07-24
 
 ### 🐛 Behoben & Tiefgehendes Audit
