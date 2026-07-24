@@ -99,4 +99,30 @@ describe('SaveManager', () => {
     const results = await Promise.all(promises);
     expect(results.every(r => r === true)).toBe(true);
   });
+
+  test('prevents saving and loading for guest accounts', async () => {
+    const mockAuthService = {
+      getCurrentUser: () => ({ id: 'guest_123', username: 'Gast-Hüter', isGuest: true })
+    };
+
+    SaveManager.setServices({
+      stateManager,
+      heroService,
+      resourceService,
+      authService: mockAuthService
+    });
+
+    const state = stateManager.getState();
+    const saveResult = await SaveManager.save(state);
+    expect(saveResult).toBe(false);
+
+    const hasSaveResult = await SaveManager.hasSave();
+    expect(hasSaveResult).toBe(false);
+
+    const loadedState = await SaveManager.load();
+    expect(loadedState).toBeNull();
+
+    const slots = await SaveManager.listSlots();
+    expect(slots.every(s => s.hasSave === false)).toBe(true);
+  });
 });

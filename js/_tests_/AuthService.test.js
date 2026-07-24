@@ -159,4 +159,36 @@ describe('AuthService', () => {
       username: 'OfflineHero'
     }));
   });
+
+  it('should return server error response when login or register fails on server without local account', async () => {
+    const mockNetworkService = {
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn((type) => {
+        if (type === 'auth:register') {
+          setTimeout(() => {
+            authService.handleServerAuthResponse('auth:register:error', {
+              error: 'auth.error.banned_word'
+            });
+          }, 10);
+        } else if (type === 'auth:login') {
+          setTimeout(() => {
+            authService.handleServerAuthResponse('auth:login:error', {
+              error: 'auth.error.account_locked'
+            });
+          }, 10);
+        }
+        return true;
+      })
+    };
+
+    authService.setNetworkService(mockNetworkService);
+
+    const regRes = await authService.register('BadWordHero', 'bad@archiv.de', 'geheim123');
+    expect(regRes.success).toBe(false);
+    expect(regRes.error).toBe('auth.error.banned_word');
+
+    const loginRes = await authService.login('UnknownHero', 'geheim123');
+    expect(loginRes.success).toBe(false);
+    expect(loginRes.error).toBe('auth.error.account_locked');
+  });
 });

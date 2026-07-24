@@ -178,6 +178,42 @@ export async function bootGame() {
   authService.setCloudManager(cloudManager);
   networkService.setServices(chatService, leaderboardService, cloudManager, authService);
 
+  // SaveManager Services setzen (inklusive authService für Gast/Account Prüfungen)
+  SaveManager.setServices({
+    stateManager,
+    authService,
+    heroService,
+    resourceService,
+    clanService,
+    storyService,
+    forgeService,
+    craftingService,
+    questService,
+    achievementService,
+    guildService,
+    friendService,
+    chatService,
+    codexService,
+    relicHuntService,
+    dailyRewardService,
+    leaderboardService,
+    storyBranchService,
+    skillTreeService,
+    challengeService,
+    libraryService,
+    cloudManager
+  });
+
+  // Alte Gast-Speicherstände bereinigen
+  await SaveManager.clearGuestSaves();
+
+  // Bei Login oder Umwandlung direkt speichern
+  eventBus.subscribe('auth:stateChanged', (data) => {
+    if (data && data.user && !data.user.isGuest && data.isLoggedIn) {
+      SaveManager.save(stateManager.getState());
+    }
+  });
+
   // Account-Lager initialisieren
   await accountVaultService.init();
 
@@ -290,7 +326,8 @@ export async function bootGame() {
         libraryService,
         tutorialService,
         i18nService,
-        saveManager: SaveManager
+        saveManager: SaveManager,
+        authService
       }
     });
     container.register('preactUI', () => preactUI);
@@ -307,30 +344,6 @@ export async function bootGame() {
   // ============================================================
   // 9. SAVEGAME SETUP
   // ============================================================
-
-  SaveManager.setServices({
-    stateManager,
-    heroService,
-    resourceService,
-    clanService,
-    storyService,
-    forgeService,
-    craftingService,
-    questService,
-    achievementService,
-    guildService,
-    friendService,
-    chatService,
-    codexService,
-    relicHuntService,
-    dailyRewardService,
-    leaderboardService,
-    storyBranchService,
-    skillTreeService,
-    challengeService,
-    libraryService,
-    cloudManager
-  });
 
   // ============================================================
   // 10. AUTOSAVE
