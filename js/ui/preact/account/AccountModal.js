@@ -3,7 +3,7 @@ import { h, html, useState, useEffect, useCallback } from '../setup.js';
 export function AccountModal({ isOpen, onClose, eventBus, services }) {
   const { authService, i18nService } = services || {};
 
-  const t = (key) => i18nService ? i18nService.t(key) : key;
+  const t = (key, fallback = '') => i18nService ? i18nService.t(key, fallback) : (fallback || key);
 
   const [currentUser, setCurrentUser] = useState(authService ? authService.getCurrentUser() : null);
   const isGuest = currentUser ? currentUser.isGuest : true;
@@ -60,15 +60,15 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
     try {
       const res = await authService.login(username, password);
       if (res.success) {
-        setSuccessMessage(t('auth.success.login'));
+        setSuccessMessage(t('auth.success.login', 'Willkommen zurück!'));
         setTimeout(() => {
           onClose();
         }, 1200);
       } else {
-        setErrorMessage(t(res.error || 'auth.error.missing_fields'));
+        setErrorMessage(t(res.error || 'auth.error.missing_fields', 'Fehler beim Anmelden.'));
       }
     } catch (err) {
-      setErrorMessage(t('common.error'));
+      setErrorMessage(t('common.error', 'Ein Unerwarteter Fehler ist aufgetreten.'));
     } finally {
       setLoading(false);
     }
@@ -91,15 +91,15 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
       }
 
       if (res.success) {
-        setSuccessMessage(t(isGuest ? 'auth.success.guestConverted' : 'auth.success.registered'));
+        setSuccessMessage(t(isGuest ? 'auth.success.guestConverted' : 'auth.success.registered', 'Account erfolgreich erstellt!'));
         setTimeout(() => {
           onClose();
         }, 1200);
       } else {
-        setErrorMessage(t(res.error || 'auth.error.missing_fields'));
+        setErrorMessage(t(res.error || 'auth.error.missing_fields', 'Fehler beim Registrieren.'));
       }
     } catch (err) {
-      setErrorMessage(t('common.error'));
+      setErrorMessage(t('common.error', 'Ein Unerwarteter Fehler ist aufgetreten.'));
     } finally {
       setLoading(false);
     }
@@ -117,12 +117,12 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
 
   return html`
     <div class="modal-overlay active" style="z-index: 12000; display: flex; align-items: center; justify-content: center; background: rgba(5, 5, 12, 0.9); backdrop-filter: blur(10px); pointer-events: auto;" onClick=${onClose}>
-      <div class="modal-card dialog-window glass-panel" style="width: 100%; max-width: 480px; padding: 28px; border: 1px solid rgba(197, 160, 89, 0.3); border-top: 2px solid var(--color-gold); border-radius: var(--border-radius-lg); background: linear-gradient(135deg, rgba(15, 12, 20, 0.96), rgba(5, 5, 8, 0.95)); color: var(--color-text-main); box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 20px rgba(197, 160, 89, 0.1);" onClick=${(e) => e.stopPropagation()}>
+      <div class="modal-card dialog-window glass-panel modal-content-small" style="width: 100%; max-width: 480px; border: 1px solid rgba(197, 160, 89, 0.3); border-top: 2px solid var(--color-gold); background: linear-gradient(135deg, rgba(15, 12, 20, 0.96), rgba(5, 5, 8, 0.95)); color: var(--color-text-main); box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 20px rgba(197, 160, 89, 0.1);" onClick=${(e) => e.stopPropagation()}>
         
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(197,160,89,0.2); padding-bottom: 12px;">
           <h2 class="glow-text text-gold cinzel" style="font-size: 1.35rem; margin: 0; display: flex; align-items: center; gap: 8px;">
-            <span>🛡️</span> ${t('auth.title')}
+            <span>🛡️</span> ${t('auth.title', 'Account-Verwaltung')}
           </h2>
           <button class="modal-close" style="position: static; font-size: 1.5rem;" onClick=${onClose}>✕</button>
         </div>
@@ -135,10 +135,10 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
             </button>
           `}
           <button class=${`form-tab-btn ${activeTab === 'login' ? 'active' : ''}`} onClick=${() => setActiveTab('login')}>
-            🔑 ${t('auth.login')}
+            🔑 ${t('auth.login', 'Anmelden')}
           </button>
           <button class=${`form-tab-btn ${activeTab === 'register' ? 'active' : ''}`} onClick=${() => setActiveTab('register')}>
-            ✨ ${isGuest ? t('auth.upgradeGuest') : t('auth.register')}
+            ✨ ${isGuest ? t('auth.upgradeGuest', 'Gastkonto umwandeln') : t('auth.register', 'Registrieren')}
           </button>
         </div>
 
@@ -158,15 +158,15 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
         ${activeTab === 'login' && html`
           <form onSubmit=${handleLogin} style="display: flex; flex-direction: column; gap: 14px;">
             <div>
-              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username')} / ${t('auth.email')}</label>
-              <input type="text" class="form-input" required value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="z. B. MnemeHüter" />
+              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username', 'Benutzername')} / ${t('auth.email', 'E-Mail')}</label>
+              <input type="text" class="form-input" required autofocus value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="z. B. MnemeHüter" />
             </div>
             <div>
-              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password')}</label>
+              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password', 'Passwort')}</label>
               <input type="password" class="form-input" required value=${password} onInput=${(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </div>
-            <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px;">
-              ${loading ? 'Anmelden...' : t('auth.login')}
+            <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              ${loading ? html`<span class="loading-spinner">⏳</span> Anmelden...` : t('auth.login', 'Anmelden')}
             </button>
           </form>
         `}
@@ -175,19 +175,19 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
         ${activeTab === 'register' && html`
           <form onSubmit=${handleRegister} style="display: flex; flex-direction: column; gap: 14px;">
             <div>
-              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username')}</label>
-              <input type="text" class="form-input" required minlength="3" value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="Dein Spielername" />
+              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username', 'Benutzername')}</label>
+              <input type="text" class="form-input" required autofocus minlength="3" value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="Dein Spielername" />
             </div>
             <div>
-              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.email')}</label>
+              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.email', 'E-Mail-Adresse')}</label>
               <input type="email" class="form-input" required value=${email} onInput=${(e) => setEmail(e.target.value)} placeholder="name@beispiel.de" />
             </div>
             <div>
-              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password')}</label>
+              <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password', 'Passwort')}</label>
               <input type="password" class="form-input" required minlength="6" value=${password} onInput=${(e) => setPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
             </div>
-            <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px;">
-              ${loading ? 'Speichern...' : (isGuest ? t('auth.upgradeGuest') : t('auth.register'))}
+            <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              ${loading ? html`<span class="loading-spinner">⏳</span> Speichern...` : (isGuest ? t('auth.upgradeGuest', 'Gastkonto umwandeln') : t('auth.register', 'Registrieren'))}
             </button>
           </form>
         `}
@@ -203,13 +203,13 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
                 <div class="cinzel text-gold" style="font-size: 1.1rem; font-weight: 700;">${currentUser.username}</div>
                 <div class="text-muted" style="font-size: 0.82rem;">${currentUser.email || 'Keine E-Mail hinterlegt'}</div>
                 <div class="text-muted" style="font-size: 0.75rem; margin-top: 2px;">
-                  ${t('auth.created')}: ${new Date(currentUser.createdAt).toLocaleDateString()}
+                  ${t('auth.created', 'Registriert am')}: ${new Date(currentUser.createdAt).toLocaleDateString()}
                 </div>
               </div>
             </div>
 
             <button class="glass-btn btn-danger w-100" onClick=${handleLogout} style="padding: 10px; font-size: 0.9rem;">
-              🚪 ${t('auth.logout')}
+              🚪 ${t('auth.logout', 'Abmelden')}
             </button>
           </div>
         `}

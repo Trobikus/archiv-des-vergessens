@@ -48,8 +48,8 @@ async function initStorage() {
     db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE COLLATE NOCASE NOT NULL,
+        email TEXT UNIQUE COLLATE NOCASE NOT NULL,
         passwordHash TEXT NOT NULL,
         salt TEXT NOT NULL,
         avatar TEXT,
@@ -58,6 +58,9 @@ async function initStorage() {
         sessionToken TEXT
       )
     `).run();
+
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users(username COLLATE NOCASE)`).run();
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(email COLLATE NOCASE)`).run();
 
     db.prepare(`
       CREATE TABLE IF NOT EXISTS saves (
@@ -109,7 +112,16 @@ function generateSalt() {
 }
 
 function hashPassword(password, salt) {
-  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  const safePassword = typeof password === 'string' ? password.substring(0, 128) : '';
+  return crypto.pbkdf2Sync(safePassword, salt, 100000, 64, 'sha512').toString('hex');
+}
+
+function verifyPassword(password, salt, storedHash) {
+  const computedHash = hashPassword(password, salt);
+  const bufA = Buffer.from(computedHash, 'hex');
+  const bufB = Buffer.from(storedHash, 'hex');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 function generateToken() {
@@ -387,9 +399,10 @@ wss.on('connection', (ws) => {
         // Real Server Registration
         case 'auth:register': {
           try {
-            const cleanUsername = sanitize(payload.username, 25);
-            const cleanEmail = sanitize(payload.email, 100).toLowerCase();
-            const password = payload.password || '';
+            const safePayload = payload || {};
+            const cleanUsername = sanitize(safePayload.username, 25);
+            const cleanEmail = sanitize(safePayload.email, 100).toLowerCase();
+            const password = safePayload.password || '';
 
             if (!cleanUsername || cleanUsername.length < 3) {
               send(ws, 'auth:register:error', { error: 'auth.error.username_short' });
@@ -399,20 +412,20 @@ wss.on('connection', (ws) => {
               send(ws, 'auth:register:error', { error: 'auth.error.email_invalid' });
               return;
             }
-            if (!password || password.length < 6) {
+            if (!password || password.length < 6 || password.length > 128) {
               send(ws, 'auth:register:error', { error: 'auth.error.password_short' });
               return;
             }
 
-            // Check for existing username (case-insensitive)
-            const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
+            // Check for existing username (case-insensitive via COLLATE NOCASE)
+            const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUsername);
             if (existingUser) {
               send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
               return;
             }
 
-            // Check for existing email (case-insensitive)
-            const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+            // Check for existing email (case-insensitive via COLLATE NOCASE)
+            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
               return;
@@ -423,7 +436,7 @@ wss.on('connection', (ws) => {
             const passwordHash = hashPassword(password, salt);
             const token = generateToken();
             const now = Date.now();
-            const avatar = payload.avatar || '🛡️';
+            const avatar = safePayload.avatar || '🛡️';
 
             db.prepare(`
               INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
@@ -458,8 +471,9 @@ wss.on('connection', (ws) => {
         // Real Server Login
         case 'auth:login': {
           try {
-            const query = sanitize(payload.usernameOrEmail, 100).toLowerCase();
-            const password = payload.password || '';
+            const safePayload = payload || {};
+            const query = sanitize(safePayload.usernameOrEmail, 100).toLowerCase();
+            const password = safePayload.password || '';
 
             if (!query || !password) {
               send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
@@ -467,7 +481,7 @@ wss.on('connection', (ws) => {
             }
 
             const user = db.prepare(`
-              SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)
+              SELECT * FROM users WHERE username = ? OR email = ?
             `).get(query, query);
 
             if (!user) {
@@ -475,8 +489,7 @@ wss.on('connection', (ws) => {
               return;
             }
 
-            const computedHash = hashPassword(password, user.salt);
-            if (computedHash !== user.passwordHash) {
+            if (!verifyPassword(password, user.salt, user.passwordHash)) {
               send(ws, 'auth:login:error', { error: 'auth.error.wrong_password' });
               return;
             }
