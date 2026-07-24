@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.21] - 2026-07-24
+
+### 🧪 Vollständiges Rust-Test-Framework & Tauri 2.x Backend Refactoring
+- **Tauri 2.x Backend Modul-Architektur (`src-tauri`)**:
+  - Restrukturierung des Rust-Backends in ein sauberes Library-Crate (`archiv_des_vergessens_lib` in `src/lib.rs`) und einen schlanken Binär-Entrypoint (`src/main.rs`).
+  - Entkoppelte Untermodule erstellt: `db/` (SQLite Database Manager), `services/` (PBKDF2 Auth & Idle Game Loop), `commands/` (Tauri IPC Handlers) sowie `test_utils.rs` (shared Mock-Testkontext).
+- **Isolierte Rust Unit-, Integrations- & E2E-Tests**:
+  - **SQLite In-Memory DB (`src/db/mod.rs` & `db_tests.rs`)**: Null-Seiteneffekt Testing mit isolierten In-Memory Datenbanken pro Testinstanz und `tempfile` Persistenz-Prüfung.
+  - **PBKDF2 HMAC-SHA512 Password Security (`services/auth.rs` & `auth_tests.rs`)**: Tests für 100.000 Iterationen, 256-Bit Salt-Generierung, Constant-Time Hash-Vergleiche (`ct_eq`) und parametrisierte Testfälle mit `rstest`.
+  - **Game Loop & Offline-Berechnungen (`services/game_loop.rs`)**: Tests für Präzisions-Ticks und 24-Stunden Offline-Fortschritts-Capping.
+  - **Tauri Async Commands (`command_tests.rs`)**: Async Command Execution mit `#[tokio::test]`.
+  - **End-to-End Testsuite (`app_tests.rs`)**: Gesamter App-Ablauf von Registrierung über Game-Ticks bis SQLite-Persistenz abgedeckt (18 bestandene Rust-Tests).
+- **CI/CD Integration (`.github/workflows/test.yml`)**:
+  - Automatisierte GitHub Actions Pipeline hinzugefügt für `cargo fmt -- --check`, `cargo clippy -- -D warnings`, `cargo test --all-features` und `cargo tarpaulin` Code-Coverage Reporting.
+
+---
+
 ## [1.0.16] - 2026-07-24
 
 ### 🔢 Deutsche Zahlenformatierung & Prestige-Balancing

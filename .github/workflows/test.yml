@@ -1,0 +1,61 @@
+name: Rust Backend CI & Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-rust:
+    name: Rust Unit, Integration & Coverage Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install system dependencies for Tauri & SQLite
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Check Formatting
+        run: |
+          cd src-tauri
+          cargo fmt -- --check
+
+      - name: Run Clippy Linter
+        run: |
+          cd src-tauri
+          cargo clippy -- -D warnings
+
+      - name: Run Rust Tests (Unit & Integration)
+        run: |
+          cd src-tauri
+          cargo test --all-features
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run Code Coverage
+        run: |
+          cd src-tauri
+          cargo tarpaulin --out Xml --output-dir ./coverage
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./src-tauri/coverage/cobertura.xml
+          fail_ci_if_error: false
