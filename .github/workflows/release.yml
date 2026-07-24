@@ -37,14 +37,6 @@ jobs:
       - name: Run TypeCheck
         run: npm run typecheck
 
-      - name: Load Signing Key
-        shell: bash
-        run: |
-          if [ -f updater.key ]; then
-            KEY=$(cat updater.key)
-            echo "TAURI_KEY=$KEY" >> $GITHUB_ENV
-          fi
-
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
