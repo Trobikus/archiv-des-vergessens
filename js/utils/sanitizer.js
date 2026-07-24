@@ -15,6 +15,7 @@ export function clamp(value, min, max) {
  * Sanitisiert einen Number-Wert.
  */
 export function sanitizeNumber(value, fallback = 0) {
+  if (value === null || value === undefined) return fallback;
   const num = Number(value);
   return isNaN(num) ? fallback : num;
 }
@@ -41,4 +42,17 @@ export function sanitizeArray(value, fallback = []) {
  */
 export function sanitizeObject(value, fallback = {}) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
+}
+
+/**
+ * Escapet HTML-Sonderzeichen (<, >, &, ", ') zur XSS-Prävention.
+ */
+export function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
