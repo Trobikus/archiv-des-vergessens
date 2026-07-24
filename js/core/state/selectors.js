@@ -153,7 +153,10 @@ export function selectResources(state) {
     essence: Number(res.essence || '0'),
     timeBank: res.timeBank || 0,
     totalParticles: Number(res.totalParticles || '0'),
-    totalRelics: Number(res.totalRelics || '0')
+    totalRelics: Number(res.totalRelics || '0'),
+    mnemeFragmente: Number(res.mnemeFragmente || '0'),
+    totalMnemeFragmente: Number(res.totalMnemeFragmente || '0'),
+    ewigeMneme: Number(res.ewigeMneme || '0')
   };
 
   cacheResources = res;
@@ -285,6 +288,38 @@ export function selectHubData(state) {
 }
 
 // ============================================================
+// IDLE GAME SELECTOREN
+// ============================================================
+
+export function selectMnemeFragmente(state) {
+  return Number(state.resources?.mnemeFragmente || '0');
+}
+
+export function selectMnemeFragmenteBigInt(state) {
+  return BigInt(state.resources?.mnemeFragmente || '0');
+}
+
+export function selectTotalMnemeFragmenteBigInt(state) {
+  return BigInt(state.resources?.totalMnemeFragmente || '0');
+}
+
+export function selectEwigeMneme(state) {
+  return Number(state.resources?.ewigeMneme || '0');
+}
+
+export function selectEwigeMnemeBigInt(state) {
+  return BigInt(state.resources?.ewigeMneme || '0');
+}
+
+export function selectIdleGenerators(state) {
+  return state.idleGenerators || {};
+}
+
+export function selectGedankenArchiv(state) {
+  return state.idleGenerators?.gedankenArchiv || null;
+}
+
+// ============================================================
 // EXPORT
 // ============================================================
 
@@ -308,5 +343,12 @@ export default {
   selectAchievementProgress,
   selectCurrentView,
   selectIsSaving,
-  selectHubData
+  selectHubData,
+  selectMnemeFragmente,
+  selectMnemeFragmenteBigInt,
+  selectTotalMnemeFragmenteBigInt,
+  selectEwigeMneme,
+  selectEwigeMnemeBigInt,
+  selectIdleGenerators,
+  selectGedankenArchiv
 };

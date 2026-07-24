@@ -130,7 +130,21 @@ export class StateManager {
         essence: '0',
         timeBank: 0,
         totalParticles: '0',
-        totalRelics: '0'
+        totalRelics: '0',
+        mnemeFragmente: '0',
+        totalMnemeFragmente: '0',
+        ewigeMneme: '0'
+      },
+      idleGenerators: {
+        gedankenArchiv: {
+          level: 0,
+          baseCost: 10,
+          costMultiplier: 1.15,
+          baseYield: 1.0,
+          upgrades: {
+            focusBonus: 0
+          }
+        }
       },
       clan: {
         members: [],
@@ -278,6 +292,21 @@ export class StateManager {
           activePact: null
         }
       };
+    }
+
+    if (!migrated.idleGenerators) {
+      migrated.idleGenerators = defaultState.idleGenerators;
+    } else if (!migrated.idleGenerators.gedankenArchiv) {
+      migrated.idleGenerators = {
+        ...migrated.idleGenerators,
+        gedankenArchiv: defaultState.idleGenerators.gedankenArchiv
+      };
+    }
+
+    if (migrated.resources) {
+      if (migrated.resources.mnemeFragmente === undefined) migrated.resources.mnemeFragmente = '0';
+      if (migrated.resources.totalMnemeFragmente === undefined) migrated.resources.totalMnemeFragmente = '0';
+      if (migrated.resources.ewigeMneme === undefined) migrated.resources.ewigeMneme = '0';
     }
 
     return migrated;

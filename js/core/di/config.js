@@ -35,6 +35,7 @@ import TalentService from '../services/talent-service.js';
 import CombatAnalyticsService from '../services/combat-analytics-service.js';
 import AuthService from '../services/auth-service.js';
 import AccountVaultService from '../services/account-vault-service.js';
+import IdleService from '../services/idle-service.js';
 
 /**
  * Registriert ALLE Dienste im DI-Container.
@@ -89,6 +90,7 @@ export function registerServices(container) {
   container.register('challengeService', (c) => new ChallengeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('libraryService', (c) => new LibraryService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService')));
   container.register('tutorialService', (c) => new TutorialService(c.get('stateManager'), c.get('eventBus')));
+  container.register('idleService', (c) => new IdleService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService')));
 
   // ============================================================
   // PERSISTENZ
@@ -117,6 +119,7 @@ export function registerServices(container) {
       skillTreeService: c.get('skillTreeService'),
       challengeService: c.get('challengeService'),
       libraryService: c.get('libraryService'),
+      idleService: c.get('idleService'),
       cloudManager: c.get('cloudManager')
     });
     return SaveManager;
