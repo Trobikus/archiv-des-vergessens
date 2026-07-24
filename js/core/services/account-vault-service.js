@@ -98,7 +98,7 @@ export class AccountVaultService {
   /**
    * Entnimmt einen Gegenstand aus dem gemeinsamen Account-Lager.
    * @param {number} index
-   * @returns {Object|null}
+   * @returns {Promise<Object|null>}
    */
   async withdrawItemFromVault(index) {
     if (!Array.isArray(this._vault.sharedVault) || index < 0 || index >= this._vault.sharedVault.length) {
