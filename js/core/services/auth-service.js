@@ -71,7 +71,7 @@ export class AuthService {
   }
 
   /**
-   * Empfängt Server-Auth-Antworten vom NetworkService
+   * Reagiert auf eingehende Server-Nachrichten bezüglich Auth
    */
   handleServerAuthResponse(type, payload) {
     if (type === 'auth:verifyToken:success') {
@@ -84,25 +84,20 @@ export class AuthService {
         }
       }
     } else if (type === 'auth:verifyToken:error') {
-      console.warn('[AuthService] Token ungültig laut Server. Versuche lokalen Fallback...');
+      console.warn('[AuthService] Token ungültig oder abgelaufen laut Server.');
       const accounts = this._getAccounts();
       if (this._currentUser && !this._currentUser.isGuest && accounts[this._currentUser.id]) {
-        console.log('[AuthService] Lokales Konto vorhanden. Behalte Session bei und registriere im Hintergrund neu...');
-        if (this._networkService && this._networkService.isConnected()) {
-          this._networkService.send('auth:register', {
-            username: this._currentUser.username,
-            email: this._currentUser.email || `${this._currentUser.username}@local.archiv`,
-            password: 'restored_session_' + (this._sessionToken || 'token')
-          });
-        }
+        console.log('[AuthService] Lokales Konto vorhanden, behalte Offline-Session bei.');
       } else {
-        this.logout();
+        this._sessionToken = null;
+        if (this._eventBus) {
+          this._eventBus.publish('auth:sessionExpired', { user: this._currentUser });
+        }
       }
     }
 
     if (this._pendingAuthResolves[type]) {
-      const resolvers = this._pendingAuthResolves[type];
-      delete this._pendingAuthResolves[type];
+      const resolvers = [...this._pendingAuthResolves[type]];
       for (const resolve of resolvers) {
         resolve(payload);
       }
@@ -376,10 +371,6 @@ export class AuthService {
             if (this._eventBus) {
               this._eventBus.publish('auth:login', { user: this._currentUser });
               this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-            }
-
-            if (this._cloudManager) {
-              this._cloudManager.loadFromCloud();
             }
 
             return { success: true, user: this._currentUser };
