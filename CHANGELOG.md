@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ## [1.0.12] - 2026-07-24
 
+### 🧹 Refactoring & Code-Vereinfachung (Phase 5)
+- **Intro-Partikelsystem Vereinfacht**:
+  - Ersetzung des überkomplexen Float32Array "Zero-Alloc Render Loops" (14 TypedArrays, OffscreenCanvas-Stamps & Index-Swapping) in [game-boot.js](file:///f:/Max_Projekte/archiv-des-vergessens/js/controllers/game-boot.js) durch einen sauberen, gut lesbaren Canvas-2D-Render-Loop auf Basis von Standard-JavaScript-Objekten (`createParticle()`).
+  - Massiv gesteigerte Code-Lesbarkeit und Wartbarkeit bei identischer visueller Qualität und flüssiger 60fps Performance (90 Partikel max).
+
 ### 🏗️ Architektur & Dependency Injection
 - **DI-Container Repariert**:
   - Sämtliche manuellen, imperativen `set...Service()`- und `SaveManager.setServices()`-Aufrufe aus `js/controllers/game-boot.js` entfernt.
