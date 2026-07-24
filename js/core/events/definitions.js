@@ -127,6 +127,7 @@ export const EVENTS = {
   UI_OPEN_STORY: 'ui:openStory',
   UI_ENTER_GAME: 'ui:enterGame',
   UI_ENTER_HUB: 'ui:enterHub',
+  UI_CLOSE_ALL_MODALS: 'ui:closeAllModals',
 
   // ==================== SETTINGS ====================
   SETTINGS_UPDATED: 'settings:updated',

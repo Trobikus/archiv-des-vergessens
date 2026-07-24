@@ -23,6 +23,7 @@ export function LibraryUI({ stateManager, eventBus, services }) {
   const resources = useStateSelector(stateManager, (state) => state.resources);
 
   useEventBus(eventBus, EVENTS.UI_OPEN_LIBRARY, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'resources:updated', () => {});
 
   if (!isOpen) return null;

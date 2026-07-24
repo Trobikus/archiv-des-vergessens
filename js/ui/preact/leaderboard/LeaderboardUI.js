@@ -27,6 +27,7 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
       fetchGlobal();
     }
   });
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
 
   useEventBus(eventBus, 'leaderboard:globalUpdated', (entries) => {
     if (entries === null) {

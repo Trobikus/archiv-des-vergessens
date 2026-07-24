@@ -227,15 +227,15 @@ export function LoginView({ eventBus, services }) {
             <form onSubmit=${handleLogin} style="display: flex; flex-direction: column; gap: 14px;">
               <div>
                 <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username', 'Benutzername')} / ${t('auth.email', 'E-Mail')}</label>
-                <input type="text" class="form-input" required autofocus value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="z. B. MnemeHüter" />
+                <input type="text" class="form-input" required autoFocus autofocus value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="z. B. MnemeHüter" />
               </div>
               <div>
                 <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password', 'Passwort')}</label>
                 <input type="password" class="form-input" required value=${password} onInput=${(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </div>
 
-              <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                ${loading ? html`<span class="loading-spinner">⏳</span> Anmelden...` : `🔑 ${t('auth.login', 'Anmelden')}`}
+              <button type="submit" disabled=${loading || (authService && (authService.isAuthenticating || authService._isAuthenticating))} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                ${(loading || (authService && (authService.isAuthenticating || authService._isAuthenticating))) ? html`<span class="loading-spinner" style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> ${t('auth.authenticating', 'Authentifizierung...')}` : `🔑 ${t('auth.login', 'Anmelden')}`}
               </button>
             </form>
           `}
@@ -245,7 +245,7 @@ export function LoginView({ eventBus, services }) {
             <form onSubmit=${handleRegister} style="display: flex; flex-direction: column; gap: 14px;">
               <div>
                 <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username', 'Benutzername')}</label>
-                <input type="text" class="form-input" required autofocus minlength="3" value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="Dein Spielername" />
+                <input type="text" class="form-input" required autoFocus autofocus minlength="3" value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="Dein Spielername" />
               </div>
               <div>
                 <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.email', 'E-Mail-Adresse')}</label>
@@ -256,8 +256,8 @@ export function LoginView({ eventBus, services }) {
                 <input type="password" class="form-input" required minlength="6" value=${password} onInput=${(e) => setPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
               </div>
 
-              <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                ${loading ? html`<span class="loading-spinner">⏳</span> Erstelle Konto...` : `✨ ${t('auth.register', 'Konto erstellen')}`}
+              <button type="submit" disabled=${loading || (authService && (authService.isAuthenticating || authService._isAuthenticating))} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                ${(loading || (authService && (authService.isAuthenticating || authService._isAuthenticating))) ? html`<span class="loading-spinner" style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> ${t('auth.registering', 'Erstelle Konto...')}` : `✨ ${t('auth.register', 'Konto erstellen')}`}
               </button>
             </form>
           `}

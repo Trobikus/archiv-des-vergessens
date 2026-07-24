@@ -17,6 +17,7 @@ export function ChallengeUI({ stateManager, eventBus, services }) {
   const completed = useStateSelector(stateManager, (state) => state.challenges.completed);
 
   useEventBus(eventBus, 'ui:openChallenges', () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'challenge:started', () => {});
   useEventBus(eventBus, 'challenge:completed', () => {});
 

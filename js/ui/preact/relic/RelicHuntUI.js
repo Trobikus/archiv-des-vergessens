@@ -18,6 +18,7 @@ export function RelicHuntUI({ stateManager, eventBus, services }) {
   const hero = useStateSelector(stateManager, (state) => state.hero);
 
   useEventBus(eventBus, EVENTS.UI_OPEN_RELICHUNT, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'relicHunt:result', (data) => {
     setResult(data.message);
     setTimeout(() => setResult(''), 5000);

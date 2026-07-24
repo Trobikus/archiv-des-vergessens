@@ -15,6 +15,7 @@ export function SkillTreeUI({ stateManager, eventBus, services }) {
   const skills = useStateSelector(stateManager, () => skillTreeService.getSkills());
 
   useEventBus(eventBus, 'ui:openSkillTree', () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'hero:updated', () => {});
 
   if (!isOpen) return null;

@@ -35,6 +35,10 @@ export class AuthService {
     this._initSession();
   }
 
+  get isAuthenticating() {
+    return this._isAuthenticating;
+  }
+
   setNetworkService(networkService) {
     this._networkService = networkService;
   }

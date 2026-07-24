@@ -23,6 +23,7 @@ export function StoryUI({ stateManager, eventBus, services }) {
   const logRef = useRef(null);
 
   useEventBus(eventBus, EVENTS.UI_OPEN_STORY, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'story:battleResult', (data) => {
     setFightResult(data.victory ? `🏆 SIEG! ${data.boss.name} besiegt!` : `💀 NIEDERLAGE! Du warst zu schwach.`);
     setTimeout(() => setFightResult(''), 3000);

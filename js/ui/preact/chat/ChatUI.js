@@ -16,6 +16,7 @@ export function ChatUI({ stateManager, eventBus, services }) {
   const globalMessages = useStateSelector(stateManager, (state) => state.chat.global);
 
   useEventBus(eventBus, EVENTS.UI_OPEN_CHAT, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'chat:globalMessage', () => {});
 
   if (!isOpen) return null;
