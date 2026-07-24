@@ -58,7 +58,7 @@ dependencies = [
 
 [[package]]
 name = "archiv-des-vergessens"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "serde",
  "serde_json",
