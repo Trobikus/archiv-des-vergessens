@@ -32,7 +32,7 @@ ws.on('open', () => {
 
 ws.on('message', (data) => {
   const { type, payload } = JSON.parse(data);
-  console.log(`[Empfangen] Typ: '${type}'`, payload);
+  console.log("[Empfangen] Typ: '%s'", type, payload);
 
   if (type === 'auth:success') {
     console.log('[Test] Auth erfolgreich! Sende Test-Chatnachricht...');
