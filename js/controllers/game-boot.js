@@ -805,9 +805,15 @@ export async function bootGame() {
       if (introFinished || introStarted) return;
       introStarted = true;
 
-      // Sicherstellen, dass das Intro-Container sichtbar ist
+      // Smoothly reveal main window after rendering is completed
+      if (window.electronAPI && typeof window.electronAPI.showMainWindow === 'function') {
+        window.electronAPI.showMainWindow();
+      }
+
+      // Sicherstellen, dass der Intro-Container sichtbar ist
       introContainer.style.display = 'flex';
       introContainer.style.opacity = '1';
+
 
       logger.info('[GameBoot] Starte Intro-Sequenz nach Vollbild-Fensteröffnung...');
       stopParticles = _startIntroParticles();

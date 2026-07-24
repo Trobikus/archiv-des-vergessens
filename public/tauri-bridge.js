@@ -148,6 +148,15 @@
       invoke('launch_game');
     },
 
+    showMainWindow: () => {
+      if (invoke) {
+        invoke('show_main_window');
+      } else if (currentWindow) {
+        currentWindow.show();
+      }
+    },
+
+
     onGameLaunched: (callback) => {
       if (tauriEvent && typeof tauriEvent.listen === 'function') {
         let unlistenFn = null;
