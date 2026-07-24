@@ -85,6 +85,11 @@ export const DE = {
     'auth.success.login': 'Willkommen zurück, Hüter!',
     'auth.success.guestConverted': 'Gast-Konto erfolgreich umgewandelt!',
 
+    // ===== UI & ACTION KEYS =====
+    'ui.bulk_salvage': 'Massen-Verwertung',
+    'ui.salvage_all': 'Alle gewöhnlichen verwerten',
+    'ui.confirm_salvage': 'Möchtest du diese Gegenstände wirklich verwerten?',
+
     // ===== COMMON =====
     'common.confirm': 'Bestätigen',
     'common.cancel': 'Abbrechen',
@@ -95,3 +100,4 @@ export const DE = {
     'common.error': 'Fehler!',
     'common.loading': 'Lade Daten...'
 };
+

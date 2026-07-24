@@ -41,6 +41,16 @@ fn close_launcher(app: AppHandle) {
 fn show_launcher(app: AppHandle) {
     if let Some(launcher_win) = app.get_webview_window("launcher") {
         let _ = launcher_win.show();
+        let _ = launcher_win.set_focus();
+    }
+}
+
+// Command to show the main window smoothly once initial rendering is completed
+#[tauri::command]
+fn show_main_window(app: AppHandle) {
+    if let Some(main_win) = app.get_webview_window("main") {
+        let _ = main_win.show();
+        let _ = main_win.set_focus();
     }
 }
 
@@ -85,7 +95,8 @@ fn main() {
                 _ => {}
             }
         })
-        .invoke_handler(tauri::generate_handler![launch_game, quit_app, close_launcher, show_launcher])
+        .invoke_handler(tauri::generate_handler![launch_game, quit_app, close_launcher, show_launcher, show_main_window])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

@@ -85,6 +85,11 @@ export const EN = {
     'auth.success.login': 'Welcome back, Keeper!',
     'auth.success.guestConverted': 'Guest account successfully registered!',
 
+    // ===== UI & ACTION KEYS =====
+    'ui.bulk_salvage': 'Bulk Salvage',
+    'ui.salvage_all': 'Salvage All Common',
+    'ui.confirm_salvage': 'Are you sure you want to salvage these items?',
+
     // ===== COMMON =====
     'common.confirm': 'Confirm',
     'common.cancel': 'Cancel',
@@ -95,3 +100,4 @@ export const EN = {
     'common.error': 'Error!',
     'common.loading': 'Loading data...'
 };
+
