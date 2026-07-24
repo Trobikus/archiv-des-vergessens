@@ -36,6 +36,8 @@ release/
 # Tauri build output
 src-tauri/target/
 src-tauri/bin/
+launcher/src-tauri/target/
+launcher/src-tauri/bin/
 
 # Security / Private Keys
 *.key
