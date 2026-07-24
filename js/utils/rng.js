@@ -51,3 +51,11 @@ export default class RNG {
     return result;
   }
 }
+
+/**
+ * Gibt eine deterministische Pseudozufallszahl zwischen 0 und 1 basierend auf einem Seed zurück.
+ */
+export function seededRandom(seed) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}

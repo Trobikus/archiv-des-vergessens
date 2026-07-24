@@ -1,37 +1,31 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 
 /* ============================================================
    LAUNCHER.JS - AAA Native Tauri Launcher
    ============================================================ */
 
 /**
- * Format bytes into human-readable string (e.g., "14.2 MB", "28.5 MB", "500 KB").
+ * Parse a version string (e.g. "1.0.13" or "v1.0.13") into numerical components.
  */
-function formatBytes(bytes, decimals = 1) {
-  if (!bytes || isNaN(bytes) || bytes <= 0) return '0 B';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+function parseVersion(v) {
+  return (v || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
 }
 
 /**
- * Format speed in bytes per second into human-readable string (e.g., "2.4 MB/s").
+ * Compare two SemVer strings to check if latestVer is newer than currentVer.
  */
-function formatSpeed(bytesPerSec) {
-  if (!bytesPerSec || isNaN(bytesPerSec) || bytesPerSec <= 0) return '0 KB/s';
-  if (bytesPerSec >= 1024 * 1024) {
-    return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+function isNewerVersion(currentVer, latestVer) {
+  const current = parseVersion(currentVer);
+  const latest = parseVersion(latestVer);
+  for (let i = 0; i < Math.max(current.length, latest.length); i++) {
+    const c = current[i] || 0;
+    const l = latest[i] || 0;
+    if (l > c) return true;
+    if (l < c) return false;
   }
-  if (bytesPerSec >= 1024) {
-    return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
-  }
-  return `${Math.round(bytesPerSec)} B/s`;
+  return false;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -41,8 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const actionBtn = document.getElementById('action-btn');
   const closeBtn = document.getElementById('close-btn');
   const progressContainer = document.getElementById('progress-container');
-  const progressFill = document.getElementById('progress-fill');
-  const progressLabel = document.getElementById('progress-label');
   const particlesContainer = document.getElementById('particles-container');
   const launcherContainer = document.querySelector('.launcher-container');
   const updateToast = document.getElementById('update-toast');
@@ -52,8 +44,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const retryBtn = document.getElementById('retry-btn');
   const offlineBtn = document.getElementById('offline-btn');
 
-  let updateState = 'checking'; 
-  let tauriUpdate = null; // Store update object if available
+  let updateState = 'checking';
+  let latestReleaseUrl = 'https://github.com/Trobikus/archiv-des-vergessens/releases/latest';
 
   const appWindow = getCurrentWindow();
 
@@ -79,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const appVersion = await getVersion();
     if (versionIndicator) {
-      versionIndicator.innerText = `aktuellste Version v${appVersion}`;
+      versionIndicator.innerText = `Version v${appVersion}`;
     }
   } catch (e) {
     console.warn('[Launcher] Konnte Version nicht auslesen:', e);
@@ -98,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 2. Partikel-System (Dynamisches Spawnen von goldene Glühwürmchen)
+  // 2. Partikel-System (Dynamisches Spawnen von goldenen Glühwürmchen)
   function createParticle() {
     if (!particlesContainer) return;
 
@@ -136,25 +128,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateState = state;
     if (!actionBtn || !progressContainer) return;
 
-    if (state === 'downloading' || state === 'validating') {
-      actionBtn.style.display = 'none';
-      if (errorContainer) errorContainer.style.display = 'none';
-      progressContainer.style.display = 'flex';
-      if (text && progressLabel) progressLabel.innerText = text;
-      
-      if (state === 'validating') {
-        progressFill.classList.add('pulse');
-      } else {
-        progressFill.classList.remove('pulse');
-      }
-    } else if (state === 'error') {
+    if (state === 'error') {
       actionBtn.style.display = 'none';
       progressContainer.style.display = 'none';
-      progressFill.classList.remove('pulse');
       if (errorContainer) {
         errorContainer.style.display = 'flex';
         if (errorMessage) {
-          errorMessage.innerText = text || 'Update fehlgeschlagen oder keine Netzverbindung.';
+          errorMessage.innerText = text || 'Update-Prüfung fehlgeschlagen.';
         }
       }
     } else {
@@ -162,7 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (errorContainer) errorContainer.style.display = 'none';
       actionBtn.style.display = 'inline-block';
       actionBtn.disabled = false;
-      progressFill.classList.remove('pulse');
 
       switch (state) {
         case 'checking':
@@ -170,10 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           actionBtn.innerText = 'PRÜFE UPDATES...';
           break;
         case 'update-available':
-          actionBtn.innerText = 'UPDATE';
-          break;
-        case 'ready-to-install':
-          actionBtn.innerText = 'INSTALL UPDATE';
+          actionBtn.innerText = 'UPDATE AUF GITHUB';
           break;
         case 'ready-to-play':
           actionBtn.innerText = 'PLAY ADVENTURE';
@@ -181,20 +157,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    if (updateToast) {
-      if (state === 'ready-to-install') {
-        updateToast.classList.add('show');
-      } else {
-        updateToast.classList.remove('show');
-      }
-    }
-
     if (versionIndicator) {
-      if (state === 'ready-to-play') {
-        versionIndicator.classList.add('show');
-      } else {
-        versionIndicator.classList.remove('show');
-      }
+      versionIndicator.classList.add('show');
     }
   }
 
@@ -220,64 +184,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 4. Action Button Handler
   if (actionBtn) {
     actionBtn.addEventListener('click', async () => {
-      if (updateState === 'update-available' && tauriUpdate) {
-        console.log('[Launcher] Starte echten Download...');
-        setUIState('downloading', 'Downloading... 0%');
-        progressFill.style.width = '0%';
-        
-        let downloaded = 0;
-        let contentLength = 0;
-        let startTime = performance.now();
-
+      if (updateState === 'update-available') {
+        console.log('[Launcher] Öffne GitHub Release-Seite:', latestReleaseUrl);
         try {
-          await tauriUpdate.downloadAndInstall((event) => {
-            switch (event.event) {
-              case 'Started':
-                contentLength = event.data.contentLength || 0;
-                downloaded = 0;
-                startTime = performance.now();
-                console.log(`[Launcher] Download gestartet. Größe: ${contentLength}`);
-                break;
-              case 'Progress': {
-                downloaded += event.data.chunkLength;
-                const now = performance.now();
-                const elapsedSec = (now - startTime) / 1000;
-                const speedBytesPerSec = elapsedSec > 0 ? downloaded / elapsedSec : 0;
-                const speedStr = formatSpeed(speedBytesPerSec);
-
-                if (contentLength > 0) {
-                  const percent = Math.min(100, Math.round((downloaded / contentLength) * 100));
-                  progressFill.style.width = `${percent}%`;
-                  const downloadedFormatted = formatBytes(downloaded, 1);
-                  const totalFormatted = formatBytes(contentLength, 1);
-                  progressLabel.innerText = `Downloading... ${downloadedFormatted} / ${totalFormatted} (${percent}%) - ${speedStr}`;
-                } else {
-                  const downloadedFormatted = formatBytes(downloaded, 1);
-                  progressLabel.innerText = `Downloading... ${downloadedFormatted} - ${speedStr}`;
-                }
-                break;
-              }
-              case 'Finished':
-                console.log('[Launcher] Download beendet.');
-                break;
-            }
-          });
-          
-          setUIState('validating', 'VALIDATING FILES...');
-          progressFill.style.width = '100%';
-          
-          // Kurze Pause für Ästhetik
-          setTimeout(async () => {
-            console.log('[Launcher] Installation abgeschlossen. Starte App neu...');
-            // App neu starten
-            await relaunch();
-          }, 1500);
-
+          await invoke('open_release_page', { url: latestReleaseUrl });
         } catch (e) {
-          console.error('[Launcher] Fehler beim Update:', e);
-          setUIState('error', 'Download oder Installation fehlgeschlagen. Bitte Verbindung prüfen.');
+          window.open(latestReleaseUrl, '_blank');
         }
-
       } else if (updateState === 'ready-to-play') {
         console.log('[Launcher] Starte Hauptspiel...');
         actionBtn.disabled = true;
@@ -293,30 +206,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 5. Update Prüfung
+  // 5. Portable Release Update-Prüfung via GitHub API
   async function performUpdateCheck() {
     setUIState('checking');
     try {
-      const update = await check();
-      if (update?.available) {
-        console.log(`[Launcher] Update auf ${update.version} verfügbar!`);
-        tauriUpdate = update;
-        setUIState('update-available');
-      } else {
-        console.log('[Launcher] Spiel ist auf dem neuesten Stand.');
-        setUIState('ready-to-play');
+      const appVersion = await getVersion();
+      const response = await fetch('https://api.github.com/repos/Trobikus/archiv-des-vergessens/releases/latest', {
+        headers: { 'Accept': 'application/vnd.github.v3+json' }
+      });
+      if (response.ok) {
+        const releaseData = await response.json();
+        const latestTag = releaseData.tag_name || releaseData.name;
+        if (releaseData.html_url) {
+          latestReleaseUrl = releaseData.html_url;
+        }
+
+        if (latestTag && isNewerVersion(appVersion, latestTag)) {
+          console.log(`[Launcher] Neue Version ${latestTag} auf GitHub verfügbar! (Aktuell: v${appVersion})`);
+          if (updateToast) {
+            updateToast.innerText = `✨ Neue Version ${latestTag} auf GitHub verfügbar!`;
+            updateToast.classList.add('show');
+          }
+          setUIState('update-available');
+          return;
+        }
       }
+      console.log('[Launcher] Spiel ist auf dem neuesten Stand.');
+      setUIState('ready-to-play');
     } catch (err) {
-      // Wenn noch kein GitHub Release mit latest.json existiert (404) oder offline,
-      // erlauben wir dem Spieler direkt zu spielen ("PLAY ADVENTURE").
-      console.warn('[Launcher] Update-Prüfung fehlgeschlagen / kein GitHub-Release online. Spiel freigegeben:', err);
+      console.warn('[Launcher] Update-Prüfung fehlgeschlagen / offline. Spiel freigegeben:', err);
       setUIState('ready-to-play');
     }
   }
 
-  // Verzögerter Start für besseres Gefühl
+  // Verzögerter Start für ein flüssiges Gefühl beim Öffnen
   setTimeout(() => {
     performUpdateCheck();
-  }, 1000);
+  }, 800);
 
 });

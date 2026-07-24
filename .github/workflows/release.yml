@@ -43,17 +43,19 @@ jobs:
       - name: Run TypeCheck
         run: npm run typecheck
 
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Tauri Executable
+        run: npm run tauri:build
+
+      - name: Create GitHub Release & Upload Executable
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/ArchivDesVergessens.exe
+          name: ArchivDesVergessens ${{ github.ref_name }}
+          body: |
+            Neues Portable-Release für ArchivDesVergessens (${{ github.ref_name }}).
+            Lade einfach die `ArchivDesVergessens.exe` herunter und starte sie direkt!
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-        with:
-          tagName: v__VERSION__
-          releaseName: 'Archiv des Vergessens v__VERSION__'
-          releaseBody: 'Neues Update für Archiv des Vergessens.'
-          releaseDraft: false
-          prerelease: false
-          includeUpdaterJson: true
-          createUpdaterArtifacts: true
+

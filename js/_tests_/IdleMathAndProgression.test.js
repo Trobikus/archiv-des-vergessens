@@ -73,14 +73,14 @@ describe('Idle Math & Progression Systems (Steps 2 - 5)', () => {
     });
 
     it('calculates prestige currency correctly', () => {
-      // < 1000 threshold => 0
-      expect(calculatePrestigeCurrency(999, 1000)).toBe(0);
-      // 1000 => sqrt(1) = 1
-      expect(calculatePrestigeCurrency(1000, 1000)).toBe(1);
-      // 4000 => sqrt(4) = 2
-      expect(calculatePrestigeCurrency(4000, 1000)).toBe(2);
-      // 10000 => sqrt(10) = 3
-      expect(calculatePrestigeCurrency(10000, 1000)).toBe(3);
+      // < 10000 threshold => 0
+      expect(calculatePrestigeCurrency(9999)).toBe(0);
+      // 10000 => sqrt(1) = 1
+      expect(calculatePrestigeCurrency(10000)).toBe(1);
+      // 40000 => sqrt(4) = 2
+      expect(calculatePrestigeCurrency(40000)).toBe(2);
+      // 100000 => sqrt(10) = 3
+      expect(calculatePrestigeCurrency(100000)).toBe(3);
     });
   });
 
