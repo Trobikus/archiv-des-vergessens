@@ -39,9 +39,16 @@ fn get_version_file_path() -> Result<PathBuf, String> {
 }
 
 fn get_executable_path() -> Result<PathBuf, String> {
-    let mut dir = get_game_dir()?;
-    dir.push("ArchivDesVergessens.exe");
-    Ok(dir)
+    let dir = get_game_dir()?;
+    let exe1 = dir.join("archiv-des-vergessens.exe");
+    if exe1.exists() {
+        return Ok(exe1);
+    }
+    let exe2 = dir.join("ArchivDesVergessens.exe");
+    if exe2.exists() {
+        return Ok(exe2);
+    }
+    Ok(exe1)
 }
 
 // 1. Get currently installed game version
