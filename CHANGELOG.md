@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.23] - 2026-07-24
+
+### 🌐 Secure WSS Production Endpoint, Reverse Proxy Infrastructure & Monorepo-Dokumentation
+- **Sicherer Production WebSocket Endpoint (`js/core/services/network-service.js` & `server/test-live.js`)**:
+  - Umstellung der Standard-Server-URL von unverschlüsseltem WS auf gesichertes **`wss://api.archiv-des-vergessens.de`** (WSS mit SSL-Verschlüsselung auf Port 443).
+  - Berücksichtigung von Umgebungsvariablen (`VITE_WS_URL` / `.env`) für flexibles Environment-Handling.
+- **Server Deployment & Reverse Proxy Infrastruktur (`deploy/`, `server/README.md`)**:
+  - `deploy/nginx/nginx.conf` und `deploy/caddy/Caddyfile` Konfigurations-Templates für Produktions-Setups hinzugefügt.
+  - Ausführliche Anleitung für Certbot / Let's Encrypt SSL-Zertifikatseinrichtung in der Server-Dokumentation bereitgestellt.
+- **Aktualisierte Monorepo- & Architektur-Dokumentation (`README.md`)**:
+  - Umfassende Strukturübersicht der Monorepo-Ordner (`/js`, `/src-tauri`, `/server`, `/launcher`, `/css`, `/deploy`) ergänzt.
+  - Systemanforderungen und Schnellstartanleitungen an die WSS-Produktionsumgebung angepasst.
+
+---
+
 ## [1.0.22] - 2026-07-24
 
 ### 🔒 Gast-Account Konvertierungs-Transaktionen, Safe-Quit Optimierungen & Bugfixes

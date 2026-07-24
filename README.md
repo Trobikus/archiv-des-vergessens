@@ -10,18 +10,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Trobikus/archiv-des-vergessens?color=6B46C1&label=Download&style=for-the-badge" alt="Latest Release" />
+  <a href="https://github.com/Trobikus/archiv-des-vergessens/actions/workflows/test.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/Trobikus/archiv-des-vergessens/test.yml?branch=main&label=CI%2FCD%20Build&style=for-the-badge&color=2EA44F" alt="Build Status" />
   </a>
-  <a href="https://github.com/Trobikus/archiv-des-vergessens/stargazers">
-    <img src="https://img.shields.io/github/stars/Trobikus/archiv-des-vergessens?color=FFD700&style=for-the-badge" alt="Stars" />
+  <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
+    <img src="https://img.shields.io/badge/Version-v1.0.22-6B46C1?style=for-the-badge" alt="Latest Version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-41B883?style=for-the-badge" alt="License" />
   </a>
+  <a href="https://codecov.io/gh/Trobikus/archiv-des-vergessens">
+    <img src="https://img.shields.io/codecov/c/github/Trobikus/archiv-des-vergessens?style=for-the-badge&label=Coverage&color=0088CC" alt="Code Coverage" />
+  </a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4A90E2?style=for-the-badge" alt="Platforms" />
-  <img src="https://img.shields.io/badge/Engine-Tauri%202-FF6B6B?style=for-the-badge" alt="Tauri" />
-  <img src="https://img.shields.io/badge/Tests-115%20JS%20%7C%2018%20Rust%20Passing-brightgreen?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/Engine-Tauri%202-FF6B6B?style=for-the-badge" alt="Tauri Engine" />
 </p>
 
 **Archiv des Vergessens** ist ein atmosphärisches, hybrides **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer, deutschem Idle-Formatierungsstandard, modernem Glassmorphic AAA-Design und einer einzigartigen Welt rund um Erinnerung, Vergessen und die Macht der Mneme.
@@ -49,7 +51,7 @@ Jedes Partikel, das du sammelst, birgt eine Geschichte. Jeder Boss verkörpert e
   - **Kontoweite Truhe (Shared Vault)**: Sicherer Gegenstandstransfer zwischen Charakteren
 - **Server-Account & Server-Persistence**:
   - Benutzerkonto mit Login, Registrierung oder Schnellstart via Gast-Zugang
-  - Sichere SQLite-gestützte Cloud-Speicherung und automatische Synchronisation
+  - Server-seitige SQLite-Persistenz mit automatischer Synchronisation über WebSockets <!-- NOTE: Technisch präzise Beschreibung anstelle von "Cloud-Speicherung". Entwickler erwarten exakte Angaben über die Persistenzschicht (SQLite + WebSockets) statt Marketing-Buzzwords. -->
 - **Echtzeit-Multiplayer**:
   - Globaler Chat & Gilden-Chat mit Chat-Verlauf
   - Gilden-System mit gemeinsamen Boni
@@ -59,6 +61,120 @@ Jedes Partikel, das du sammelst, birgt eine Geschichte. Jeder Boss verkörpert e
   - Ultra-performantes Canvas-Partikelsystem (Zero-Lag 60 FPS)
   - AAA Glassmorphic Dark UI, Custom Glow-Effekte & dynamische Vignetten
   - Vollständige Zweisprachigkeit (**Deutsch DE** & **Englisch EN**)
+
+---
+
+## 🏗️ Projekt-Architektur
+
+Die Softwarearchitektur von **Archiv des Vergessens** kombiniert native Systemleistung mit moderner Web-Technologie und robuster Client-Server-Kommunikation.
+
+```mermaid
+graph TD
+    subgraph Client["Desktop Client (Hybrid Architecture)"]
+        subgraph FE["Preact / Vite Frontend"]
+            UI["Glassmorphic UI (Preact / HTM)"]
+            Engine["Game Loop & Reducer State"]
+            Canvas["Canvas Particle System (60 FPS)"]
+            SocketClient["WebSocket Client Protocol"]
+        end
+
+        subgraph Tauri["Tauri Core 2.0 (Rust)"]
+            IPC["IPC Command Layer (tauri::command)"]
+            SysService["Native OS Services & File I/O"]
+            LocalDB["Embedded SQLite DB"]
+            Updater["Auto-Updater Plugin & Verification"]
+        end
+    end
+
+    subgraph Infrastructure["Backend & Server Infrastructure"]
+        Proxy["Reverse Proxy (Nginx / Caddy)"]
+        
+        subgraph Server["Multiplayer Server (Node.js)"]
+            WSServer["WebSocket Server (ws)"]
+            Auth["Account & Session Manager"]
+            Guilds["Guilds & Global Rankings"]
+            ServerDB[("Server SQLite DB")]
+        end
+    end
+
+    %% Interactions
+    UI --> Engine
+    Engine --> Canvas
+    Engine <--> SocketClient
+    Engine <--> IPC
+    IPC <--> SysService
+    IPC <--> LocalDB
+    IPC <--> Updater
+
+    SocketClient <== "WSS / TLS (Encrypted Port 443)" ==> Proxy
+    Proxy <== "Internal WS" ==> WSServer
+    WSServer <--> Auth
+    WSServer <--> Guilds
+    Auth <--> ServerDB
+    Guilds <--> ServerDB
+```
+
+### Zusammenwirken der Hauptkomponenten:
+
+1. **Tauri Core (`src-tauri/` - Rust)**:
+   - Fungiert als extrem leichtgewichtiger, performanter Native Backend-Wrapper.
+   - Verwaltet native OS-Interaktionen (Window Framing, Tray Icons, lokale SQLite-Persistenz, Kryptographie & Signatur-Verifikation).
+   - Stellt sichere, typsichere IPC-Commands (`tauri::command`) für das Frontend bereit.
+   - Behandelt automatische In-App-Updates über den integrierten Tauri 2.0 Auto-Updater.
+
+2. **Preact / Vite Frontend (`js/` & `index.html` - JavaScript/CSS)**:
+   - Rendering der performanten, responsive Glassmorphic AAA UI mittels **Preact** & **HTM** ohne schweren Bundler-Overhead.
+   - **Game Engine & State Management**: Zentraler Event-Bus (`core/EventBus.js`), Reducer-Architektur und DI-Container für vorhersagbare Statusänderungen.
+   - **Performance Canvas**: Hardwarebeschleunigtes Canvas-Partikelsystem für flüssige 60 FPS Effekte.
+
+3. **Node.js Dedicated Server (`server/` - Express/WebSockets)**:
+   - Verwaltet die Multiplayer-Logik, weltweite Chat-Kanäle, Gilden-Systeme & globale Bestenlisten.
+   - Verarbeitet Authentifizierung (Login, Register & nahtlose Gast-Migration).
+   - Speichert Server-Accounts und Spielstände performant in einer serverseitigen SQLite-Datenbank (`better-sqlite3`).
+   - Gesichert durch **Nginx / Caddy Reverse Proxies** für WSS (WebSocket Secure) Verschlüsselung.
+
+---
+
+## 📂 Projekt-Struktur (Monorepo-Architektur)
+
+Das Repository ist als leichtgewichtiges Monorepo organisiert und vereint den Desktop-Client, den Multiplayer-Server und den Standalone-Launcher in einer zentralen Codebasis:
+
+* **`/js` (Preact Frontend)**: Beinhaltet die komplette Frontend-Spiellogik, Reducer State-Management, Event-Bus und Preact/HTM UI-Komponenten.
+* **`/src-tauri` (Rust Desktop Core)**: Stellt das native Tauri 2 Desktop-Backend in Rust bereit für OS-Integration, native Systemaufrufe, lokale SQLite-Persistenz und Auto-Update-Verifikation.
+* **`/server` (Node.js Multiplayer Backend)**: Betreibt den dedizierten WebSocket-Server für Multiplayer, Chats, Gilden, globale Bestenlisten und serverseitige SQLite-Datenbankpersistenz (`better-sqlite3`).
+* **`/launcher` (Standalone Launcher Sub-Projekt)**: Stellt einen separaten Tauri-Client für automatische App-Updates und den Anwendungsstart bereit.
+* **`/css` (Design-System)**: Beherbergt das modulare Glassmorphic Dark-Designsystem, Theme-Variablen und Animationen.
+* **`/deploy` (Deployment Infrastructure)**: Enthält gebrauchsfertige Reverse-Proxy- und SSL-Konfigurationen für Nginx und Caddy.
+* **`/public` & `/i18n` (Assets & Lokalisierung)**: Beinhaltet statische Mediendateien (Texturen, Audio) sowie i18n-Dateien für Deutsch und Englisch.
+* **`/.github/workflows` (CI/CD Pipelines)**: Automatisierte GitHub Actions für Vitest Unit-Tests, Cargo Test Suite, Code-Coverage und plattformübergreifende Releases.
+
+### Ordnerübersicht:
+
+```text
+archiv-des-vergessens/
+├── 📁 .github/workflows/    # CI/CD Pipelines (Rust Test-Suite, Coverage, Web-Deploy, Release)
+├── 📁 css/                  # Glassmorphic Design-System (Animate, Glow, UI-Theming)
+├── 📁 deploy/               # Server Deployment Configs (Nginx Reverse Proxy & Caddy Setup)
+├── 📁 i18n/                 # Lokalisierungsdateien (Deutsch DE / Englisch EN)
+├── 📁 js/                   # Frontend-Anwendungslogik & UI-Module (Preact + HTM)
+│   ├── 📁 controllers/      # Game Controller (Idle-Progression, Audio, Inventory, Network)
+│   ├── 📁 core/             # Central Event Bus, State Reducer & Dependency Injection
+│   ├── 📁 managers/         # System Manager (Multiplayer Websockets, Save-Game, Auto-Save)
+│   ├── 📁 models/           # Datenmodelle (Player, Items, Quests, Guilds, Achievements)
+│   └── 📁 ui/               # Preact UI-Komponenten (Modals, HUD, Schmiede, Vault)
+├── 📁 launcher/             # Standalone Launcher Sub-Projekt (Tauri 2 Updater Client)
+├── 📁 public/               # Statische Assets (Audio, Texturen, Banner, Favicons)
+├── 📁 scripts/              # Build-, Release- & Key-Generierungs-Hilfsskripte
+├── 📁 server/               # Dedicated Node.js WebSocket- & Persistence-Server
+│   ├── 📁 data/             # Server-Datenbank (SQLite Persistence)
+│   └── 📄 server.js         # Echtzeit-Multiplayer Protocol & Server-Logik
+├── 📁 src-tauri/            # Tauri 2 Desktop-Core (Rust)
+│   ├── 📁 src/              # Rust Native Backend (Commands, Local DB, OS Services)
+│   └── 📄 tauri.conf.json   # Tauri Client Konfiguration, Fenster & Security Policies
+├── 📄 index.html            # Webgame HTML Entry-Point
+├── 📄 package.json          # Node.js Abhängigkeiten, Test- & Build-Skripte
+└── 📄 vite.config.js        # Vite Bundler Konfiguration
+```
 
 ---
 
@@ -82,7 +198,7 @@ Jedes Partikel, das du sammelst, birgt eine Geschichte. Jeder Boss verkörpert e
 3. Der integrierte Launcher prüft automatisch auf Updates.
 4. Erstelle einen Account oder starte direkt als Gast.
 5. Der Client verbindet sich automatisch mit dem öffentlichen Multiplayer-Server:
-   - **Öffentlicher Server**: `ws://35.209.11.134:8080` (öffentlich, stabil)
+   - **Öffentlicher Server**: `wss://api.archiv-des-vergessens.de` (SSL-verschlüsselt, WSS)
 
 ---
 
@@ -123,6 +239,32 @@ npm run typecheck
 
 # 9. Production Desktop-Build erstellen
 npm run tauri:build
+```
+
+---
+
+## 🔐 Deployment & Sicherheit (Reverse Proxy & SSL)
+
+Um die Server-IP zu verbergen und sichere WSS-Verbindungen (WebSocket Secure) zu gewährleisten, wird der Node.js Backend-Server hinter einem Reverse Proxy betrieben.
+
+### 1. Reverse Proxy Konfiguration
+Konfigurationsdateien befinden sich im Ordner `deploy/`:
+- **Nginx**: `deploy/nginx/nginx.conf`
+- **Caddy**: `deploy/caddy/Caddyfile`
+
+### 2. SSL-Zertifikat mit Let's Encrypt / Certbot (Nginx)
+
+```bash
+# Nginx & Certbot installieren
+sudo apt update && sudo apt install nginx certbot python3-certbot-nginx -y
+
+# Nginx Konfiguration kopieren & aktivieren
+sudo cp deploy/nginx/nginx.conf /etc/nginx/sites-available/archiv-des-vergessens.conf
+sudo ln -s /etc/nginx/sites-available/archiv-des-vergessens.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# SSL-Zertifikat automatisch anfordern & konfigurieren
+sudo certbot --nginx -d api.archiv-des-vergessens.de
 ```
 
 ---

@@ -71,4 +71,20 @@ Damit der Server online bleibt, wenn du dein SSH-Fenster schließt, nutzen wir d
    pm2 save
    ```
 
-Der Server ist nun dauerhaft unter `ws://<Deine-Externe-VM-IP>:8080` erreichbar!
+### 3. Reverse Proxy & SSL (WSS) Einrichtung
+Um die IP-Adresse der VM zu verbergen und sichere WSS-Verbindungen (Port 443) zu ermöglichen, nutze Nginx oder Caddy (Konfigurationsdateien befinden sich unter `deploy/`):
+
+```bash
+# Nginx & Certbot installieren
+sudo apt install nginx certbot python3-certbot-nginx -y
+
+# Reverse Proxy Config kopieren und aktivieren
+sudo cp deploy/nginx/nginx.conf /etc/nginx/sites-available/archiv-des-vergessens.conf
+sudo ln -s /etc/nginx/sites-available/archiv-des-vergessens.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# SSL-Zertifikat via Let's Encrypt abrufen
+sudo certbot --nginx -d api.archiv-des-vergessens.de
+```
+
+Der Server ist nun sicher verschlüsselt unter `wss://api.archiv-des-vergessens.de` erreichbar!

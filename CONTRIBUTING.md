@@ -44,22 +44,80 @@ Wir pflegen eine freundliche, inklusive und respektvolle Community. Bitte halte 
 - **Performance-Optimierungen**
 - **Marketing-Material** (Trailer, Screenshots, Social-Media)
 
-## Entwicklungsumgebung
+## 🚀 Erste Schritte für Entwickler
+
+Um lokal an **Archiv des Vergessens** zu arbeiten, benötigst du **Node.js (v18+)** sowie für Desktop-Builds **Rust & Cargo**.
+
+### 1. Repository klonen & Abhängigkeiten installieren
 
 ```bash
-# Repository klonen
 git clone https://github.com/Trobikus/archiv-des-vergessens.git
 cd archiv-des-vergessens
-
-# Frontend + Tauri
 npm install
-npm run tauri:dev
+```
 
-# Server (separat)
+---
+
+### 2. Umgebungsvariablen (.env) konfigurieren
+
+Erstelle im Hauptverzeichnis eine `.env` Datei (basierend auf `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Für die lokale Entwicklung verbindet sich der Client standardmäßig mit deinem lokalen WebSocket-Server. Stelle sicher, dass folgende Variable in deiner `.env` eingetragen ist:
+
+```env
+# WebSocket Server-URL für lokale Entwicklung (Multiplayer & Sync):
+VITE_WS_URL=ws://localhost:8080
+
+# Für spätere Tests gegen den Produktiv-Server:
+# VITE_WS_URL=wss://api.archiv-des-vergessens.de
+```
+
+> **Erläuterung der Umgebungsvariablen:**
+> - `VITE_WS_URL`: Bestimmt die Adresse des Multiplayer-Backend-Servers.
+>   - `ws://localhost:8080`: Nutzt deinen lokalen Node.js-Server (unkodiertes WebSocket).
+>   - `wss://api.archiv-des-vergessens.de`: Verbindet sich mit dem offiziellen Produktiv-Server (TLS/SSL-verschlüsseltes WebSocket).
+
+---
+
+### 3. Node.js Multiplayer-Server lokal starten
+
+Der Multiplayer-Server verarbeitet Accounts, Gilden, globale Bestenlisten und Chats mit serverseitiger SQLite-Persistenz.
+
+Öffne ein Terminal und führe folgende Befehle aus:
+
+```bash
+# In das Server-Verzeichnis wechseln
 cd server
+
+# Server-Abhängigkeiten installieren
 npm install
+
+# Server im Entwicklungsmodus (mit automatischer Aktualisierung bei Dateiänderungen) starten
 npm run dev
 ```
+
+Der Server läuft nun lokal auf `ws://localhost:8080` und speichert Daten lokal im Ordner `server/data/`.
+
+---
+
+### 4. Tauri Desktop Dev-Server starten
+
+Öffne ein **zweites Terminal-Fenster** im Wurzelverzeichnis des Projekts:
+
+```bash
+# Tauri Desktop-App im Entwicklungsmodus starten
+npm run tauri:dev
+# Alternativ: npm run game:dev
+```
+
+**Was dabei passiert:**
+1. Vite startet den Frontend-Entwicklungsserver mit Hot Module Replacement (HMR).
+2. Rust kompiliert die nativen Desktop-Bindings (`src-tauri`).
+3. Ein Fenster der Anwendung öffnet sich und verbindet sich automatisch mit Vite sowie deinem lokalen Multiplayer-Server.
 
 ## Sicherheit & Auto-Updater Key Management
 
