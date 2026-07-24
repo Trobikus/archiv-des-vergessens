@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-07-24
+
+### 🛡️ Backend & Datenbank (Batch 1)
+- **Passwort-Sicherheit**: Erhöhung der PBKDF2-Iterationen auf 100.000 mit SHA-512 und 64 Bytes Schlüssellänge.
+- **Timing-Angriff-Schutz**: Vergleiche in `verifyPassword()` mittels `crypto.timingSafeEqual` und Längenvergleichen abgesichert.
+- **Hash-DoS-Schutz**: Passwörter vor dem Hashing in `hashPassword()` sowie in allen Auth-Routinen (`register`, `login`, `convertGuest`) auf max. 128 Zeichen begrenzt.
+- **Datenbank-Indizes & NOCASE**: SQLite-Indizes für `username` und `email` mit `COLLATE NOCASE` angelegt; Indizes für Leaderboard-Ranking (`idx_leaderboard_rank`) und Chatverlauf (`idx_chats_type_timestamp`, `idx_chats_type_guild_timestamp`) hinzugefügt.
+- **WebSocket-Absicherung**: Typprüfungen für `ws.on('message')`, Abfangen ungültiger JSON-Strings / Payloads und geordnete Fehlerantworten.
+- **Chat & Leaderboard**: Wiederverwendbare Chat-Historienauslieferung (`sendChatHistory`) bei allen Login-/Auth-Varianten; periodisches Chat-Pruning für minimale DB-Last.
+
+---
+
 ## [1.0.7] - 2026-07-24
 
 ### 🐛 Behoben
