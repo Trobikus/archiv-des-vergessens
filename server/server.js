@@ -472,15 +472,15 @@ wss.on('connection', (ws) => {
               return;
             }
 
-            // Check for existing username (case-insensitive via COLLATE NOCASE)
-            const existingUser = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(cleanUsername);
+            // Check for existing username (case-insensitive via column collation)
+            const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUsername);
             if (existingUser) {
               send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
               return;
             }
 
-            // Check for existing email (case-insensitive via COLLATE NOCASE)
-            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE').get(cleanEmail);
+            // Check for existing email (case-insensitive via column collation)
+            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
               return;
@@ -527,7 +527,7 @@ wss.on('connection', (ws) => {
         // Real Server Login
         case 'auth:login': {
           try {
-            const query = sanitize(payload.usernameOrEmail, 100).toLowerCase();
+            const query = sanitize(payload.usernameOrEmail, 100);
             const password = typeof payload.password === 'string' ? payload.password : '';
 
             if (!query || !password) {
@@ -541,7 +541,7 @@ wss.on('connection', (ws) => {
             }
 
             const user = db.prepare(`
-              SELECT * FROM users WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE
+              SELECT * FROM users WHERE username = ? OR email = ?
             `).get(query, query);
 
             if (!user) {
@@ -650,13 +650,13 @@ wss.on('connection', (ws) => {
               return;
             }
 
-            // Uniqueness check via COLLATE NOCASE
-            const existingUser = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(cleanUsername);
+            // Uniqueness check via column collation (COLLATE NOCASE)
+            const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUsername);
             if (existingUser) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_taken' });
               return;
             }
-            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE').get(cleanEmail);
+            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_taken' });
               return;

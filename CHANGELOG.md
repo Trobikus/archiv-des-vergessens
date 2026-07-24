@@ -11,6 +11,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
   - Ersetzung des überkomplexen Float32Array "Zero-Alloc Render Loops" (14 TypedArrays, OffscreenCanvas-Stamps & Index-Swapping) in [game-boot.js](file:///f:/Max_Projekte/archiv-des-vergessens/js/controllers/game-boot.js) durch einen sauberen, gut lesbaren Canvas-2D-Render-Loop auf Basis von Standard-JavaScript-Objekten (`createParticle()`).
   - Massiv gesteigerte Code-Lesbarkeit und Wartbarkeit bei identischer visueller Qualität und flüssiger 60fps Performance (90 Partikel max).
 
+### 💎 Konsistenz & Datenbank-Optimierung (Phase 6)
+- **Vereinheitlichte Datenbank-Abfragen (SQLite Collation)**:
+  - Redundante Abfrage-Level-Klauseln (`COLLATE NOCASE`) sowie `.toLowerCase()`-Transformationen auf Login-Suchanfragen in `server/server.js` entfernt.
+  - Die Datenbank verlässt sich nun konsequent auf die im Tabellenschema definierten Spalten-Collations (`username TEXT UNIQUE COLLATE NOCASE`, `email TEXT UNIQUE COLLATE NOCASE`), was den Server-Code vereinfacht und von SQLite-Indizes optimal profitiert.
+
 ### 🏗️ Architektur & Dependency Injection
 - **DI-Container Repariert**:
   - Sämtliche manuellen, imperativen `set...Service()`- und `SaveManager.setServices()`-Aufrufe aus `js/controllers/game-boot.js` entfernt.
