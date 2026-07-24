@@ -542,14 +542,15 @@ export function addEwigeMneme(amount) {
 }
 
 /**
- * Kauft eine Stufe für einen Idle-Generator.
+ * Kauft eine oder mehrere Stufen für einen Idle-Generator.
  */
-export function buyIdleGeneratorLevel(generatorId, cost) {
+export function buyIdleGeneratorLevel(generatorId, cost, count = 1) {
   return (state) => {
     const gen = state.idleGenerators?.[generatorId];
     if (!gen) return state;
 
     const safeCost = sanitizeNumber(cost, 0);
+    const safeCount = Math.max(1, Math.floor(sanitizeNumber(count, 1)));
     const currentMneme = BigInt(state.resources?.mnemeFragmente || '0');
     const costBigInt = BigInt(safeCost);
 
@@ -565,7 +566,7 @@ export function buyIdleGeneratorLevel(generatorId, cost) {
         ...state.idleGenerators,
         [generatorId]: {
           ...gen,
-          level: gen.level + 1
+          level: gen.level + safeCount
         }
       }
     };

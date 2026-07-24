@@ -41,6 +41,7 @@ function shallowFreezeState(obj) {
  * @typedef {Object} State
  * @property {Object} hero - Helden-Daten
  * @property {Object} resources - Ressourcen (mit BigInt)
+ * @property {Object} [idleGenerators] - Idle-Generatoren (GedankenArchiv)
  * @property {Object} clan - Clan-Daten
  * @property {Object} achievements - Errungenschaften
  * @property {Object} quests - Missionen
