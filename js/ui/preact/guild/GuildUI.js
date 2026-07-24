@@ -24,6 +24,7 @@ export function GuildUI({ stateManager, eventBus, services }) {
   const chatMessages = useStateSelector(stateManager, (state) => state.chat.guild);
 
   useEventBus(eventBus, EVENTS.UI_OPEN_GUILD, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'guild:created', () => setIsOpen(false));
   useEventBus(eventBus, 'guild:memberJoined', () => {});
   useEventBus(eventBus, 'guild:memberLeft', () => {});

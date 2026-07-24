@@ -18,6 +18,7 @@ export function CraftingUI({ stateManager, eventBus, services }) {
   const recipes = craftingService.getAvailableRecipes();
 
   useEventBus(eventBus, EVENTS.UI_OPEN_CRAFTING, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
 
   if (!isOpen) return null;
 

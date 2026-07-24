@@ -17,6 +17,7 @@ export function FriendsUI({ stateManager, eventBus, services }) {
   const hero = useStateSelector(stateManager, (state) => state.hero);
 
   useEventBus(eventBus, EVENTS.UI_OPEN_FRIENDS, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
 
   // Simulation: Wenn die Liste komplett leer ist, schlage nach 8 Sekunden eine Anfrage vor
   useEffect(() => {

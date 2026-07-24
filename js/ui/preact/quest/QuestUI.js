@@ -38,6 +38,7 @@ export function QuestUI({ stateManager, eventBus, services }) {
   useEventBus(eventBus, EVENTS.UI_REFRESH_QUEST, forceUpdate);
   useEventBus(eventBus, EVENTS.QUEST_UPDATED, forceUpdate);
   useEventBus(eventBus, EVENTS.QUEST_COMPLETED, forceUpdate);
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
 
   // Quest-Tracker-Button (FAB)
   const handleTrackerClick = () => setIsOpen(true);

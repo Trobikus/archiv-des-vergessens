@@ -36,6 +36,7 @@ export function CodexUI({ stateManager, eventBus, services }) {
   });
 
   useEventBus(eventBus, EVENTS.UI_OPEN_CODEX, () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'codex:entryUnlocked', () => {});
   useEventBus(eventBus, 'lore:nodeDecrypted', () => {});
 

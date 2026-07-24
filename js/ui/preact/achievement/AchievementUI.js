@@ -14,6 +14,7 @@ export function AchievementUI({ stateManager, eventBus, services }) {
   const achievements = useStateSelector(stateManager, (state) => state.achievements.list);
 
   useEventBus(eventBus, 'ui:openAchievements', () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, EVENTS.ACHIEVEMENT_UNLOCKED, () => {});
   useEventBus(eventBus, EVENTS.ACHIEVEMENT_CLAIMED, () => {});
 

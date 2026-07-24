@@ -90,6 +90,27 @@ export function MainApp({ stateManager, eventBus, services }) {
     };
   }, [eventBus, lang]);
 
+  // Global keydown listener for Escape key to close modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (confirmModal.isOpen) {
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        } else if (newGameModalOpen) {
+          setNewGameModalOpen(false);
+        } else if (vaultModalOpen) {
+          setVaultModalOpen(false);
+        } else if (accountModalOpen) {
+          setAccountModalOpen(false);
+        } else {
+          eventBus.publish('ui:closeAllModals');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmModal.isOpen, newGameModalOpen, vaultModalOpen, accountModalOpen, eventBus]);
+
   const handleNewGameCancel = () => {
     setNewGameModalOpen(false);
   };
