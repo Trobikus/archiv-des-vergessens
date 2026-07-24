@@ -93,20 +93,29 @@ export class NavigationController {
 
     // In-Game Loop Status & Ticks abhören
     let logicTickCount = 0;
+    let cachedTickInfoEl = null;
+    let cachedSpeedIndicatorEl = null;
+    let lastCatchupState = null;
+
     this._eventBus.subscribe(EVENTS.GAME_LOGIC_TICK, (data) => {
       logicTickCount++;
-      const tickInfoEl = document.getElementById('tick-info');
-      if (tickInfoEl) {
-        tickInfoEl.textContent = `Tick: ${logicTickCount} | Δ: ${Math.round(data.delta)}ms`;
+      if (cachedTickInfoEl === null) {
+        cachedTickInfoEl = document.getElementById('tick-info');
+      }
+      if (cachedTickInfoEl) {
+        cachedTickInfoEl.textContent = `Tick: ${logicTickCount} | Δ: ${Math.round(data.delta)}ms`;
       }
       
-      const speedIndicatorEl = document.getElementById('speed-indicator');
-      if (speedIndicatorEl) {
-        const catchupActive = this._gameLoop.isCatchupActive();
-        speedIndicatorEl.style.display = catchupActive ? 'inline-block' : 'none';
+      if (cachedSpeedIndicatorEl === null) {
+        cachedSpeedIndicatorEl = document.getElementById('speed-indicator');
       }
-
-      this._updateGameLoopStatus();
+      if (cachedSpeedIndicatorEl) {
+        const catchupActive = this._gameLoop.isCatchupActive();
+        if (catchupActive !== lastCatchupState) {
+          lastCatchupState = catchupActive;
+          cachedSpeedIndicatorEl.style.display = catchupActive ? 'inline-block' : 'none';
+        }
+      }
     });
 
     // Offline-Modal Schließen (falls DOM offline modal noch besteht, wir behalten die DB-Aktion hier)

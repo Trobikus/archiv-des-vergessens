@@ -164,24 +164,13 @@ export function initParticles(stateManager = null, eventBus = null) {
     dark:  mkStamp('rgba(75,0,130,0.8)',     'rgba(50,0,100,0.2)',      2.5, 11),
   };
 
-  // Hilfsfunktion zur Zuweisung des Stempels pro Partikel basierend auf der Ausrichtung
-  const getStampForParticle = (i, typeKey) => {
-    const total = alignment.aethel + alignment.lethe;
+  // Helper to resolve stamp based on particle index and alignment ratios
+  const getStampForParticle = (i, typeKey, total, aethelRatio, letheRatio) => {
     if (total === 0) return ST_NEUTRAL[typeKey];
-
-    const aethelRatio = alignment.aethel / total;
-    const letheRatio = alignment.lethe / total;
-
-    // Pseudo-zufällige aber deterministische Aufteilung anhand des Indizes i
     const val = (i % 10) / 10;
-
-    if (val < aethelRatio) {
-      return ST_AETHEL[typeKey];
-    } else if (val < aethelRatio + letheRatio) {
-      return ST_LETHE[typeKey];
-    } else {
-      return ST_NEUTRAL[typeKey];
-    }
+    if (val < aethelRatio) return ST_AETHEL[typeKey];
+    if (val < aethelRatio + letheRatio) return ST_LETHE[typeKey];
+    return ST_NEUTRAL[typeKey];
   };
 
   // ---- TypedArray-Partikel-Pool (kein GC im Hot-Loop) ----
@@ -197,6 +186,7 @@ export function initParticles(stateManager = null, eventBus = null) {
   const pwobS    = new Float32Array(COUNT);  // Wackel-Speed
   const pbaseX   = new Float32Array(COUNT);  // Basis-X für Sinusbewegung
   const ptype    = new Uint8Array(COUNT);    // 0=ember 1=dust 2=dark
+  const TYPE_KEYS = ['ember', 'dust', 'dark'];
 
   // Initialisierung: Typ verteilen (15% ember, 25% dust, 60% dark)
   for (let i = 0; i < COUNT; i++) {
@@ -249,14 +239,18 @@ export function initParticles(stateManager = null, eventBus = null) {
     }
     animationId = requestAnimationFrame(loop);
 
-    // Dynamische Hintergrundfarbe: bei hoher Lethe schimmert ein tiefes Dunkelviolett durch
+    // Dynamische Hintergrundfarbe
     let bgR = 5;
     let bgG = 5;
     let bgB = 7;
 
     const total = alignment.aethel + alignment.lethe;
+    let aethelRatio = 0;
+    let letheRatio = 0;
+
     if (total > 0) {
-      const letheRatio = alignment.lethe / total;
+      aethelRatio = alignment.aethel / total;
+      letheRatio = alignment.lethe / total;
       bgR = Math.floor(5 + letheRatio * 11);
       bgG = Math.floor(5 - letheRatio * 2);
       bgB = Math.floor(7 + letheRatio * 16);
@@ -269,16 +263,11 @@ export function initParticles(stateManager = null, eventBus = null) {
     const mx = mouse.x;
     const my = mouse.y;
 
-    // Lethe-Eigenschaften für Physik: rauchigere, wellenartigere Fließpfade
-    let waveAmp = 15;
-    let speedFactor = 1.0;
-    if (total > 0) {
-      const letheRatio = alignment.lethe / total;
-      waveAmp = 15 + letheRatio * 22; // Viel breiteres, rauchigeres Driften
-      speedFactor = 1.0 - letheRatio * 0.35; // Langsameres, schwebendes Steigen
-    }
+    // Lethe-Eigenschaften für Physik
+    const waveAmp = 15 + letheRatio * 22;
+    const speedFactor = 1.0 - letheRatio * 0.35;
 
-    // Update alle Partikel
+    // Update und Zeichnen in einem einzigen Durchlauf
     for (let i = 0; i < COUNT; i++) {
       // Maus-Repulsion: squared-distance Frühausstieg
       const dx = mx - px[i];
@@ -291,7 +280,7 @@ export function initParticles(stateManager = null, eventBus = null) {
         py[i]     -= (dy / dist) * force * 3;
       }
 
-      // Bewegung (unter Berücksichtigung von Lethe-Physik)
+      // Bewegung
       pwob[i] += pwobS[i];
       px[i]    = pbaseX[i] + Math.sin(pwob[i]) * waveAmp + pvx[i];
       py[i]   += pvy[i] * speedFactor;
@@ -303,40 +292,16 @@ export function initParticles(stateManager = null, eventBus = null) {
       if (py[i] < -50 || px[i] < -50 || px[i] > width + 50) {
         _resetParticle(i, false);
       }
-    }
 
-    // ---- Batch-Rendering: globalAlpha-Blöcke ----
-    // Typ 0: Ember
-    for (let i = 0; i < COUNT; i++) {
-      if (ptype[i] !== 0 || palpha[i] < 0.01) continue;
-      const st = getStampForParticle(i, 'ember');
-      const sc = psc[i];
-      const w  = st.img.width  * sc;
-      const h  = st.img.height * sc;
-      ctx.globalAlpha = palpha[i];
-      ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
-    }
-
-    // Typ 1: Dust
-    for (let i = 0; i < COUNT; i++) {
-      if (ptype[i] !== 1 || palpha[i] < 0.01) continue;
-      const st = getStampForParticle(i, 'dust');
-      const sc = psc[i];
-      const w  = st.img.width  * sc;
-      const h  = st.img.height * sc;
-      ctx.globalAlpha = palpha[i];
-      ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
-    }
-
-    // Typ 2: Dark
-    for (let i = 0; i < COUNT; i++) {
-      if (ptype[i] !== 2 || palpha[i] < 0.01) continue;
-      const st = getStampForParticle(i, 'dark');
-      const sc = psc[i];
-      const w  = st.img.width  * sc;
-      const h  = st.img.height * sc;
-      ctx.globalAlpha = palpha[i];
-      ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
+      // Render
+      if (palpha[i] >= 0.01) {
+        const st = getStampForParticle(i, TYPE_KEYS[ptype[i]], total, aethelRatio, letheRatio);
+        const sc = psc[i];
+        const w  = st.img.width  * sc;
+        const h  = st.img.height * sc;
+        ctx.globalAlpha = palpha[i];
+        ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
+      }
     }
 
     ctx.globalAlpha = 1;

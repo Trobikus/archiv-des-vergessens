@@ -85,8 +85,8 @@ export class StateManager {
     this._nextSubscriberId = 0;
     this._middleware = [];
     this._history = [];
-    this._maxHistory = 100;
-    this._isRecording = true;
+    this._maxHistory = 50;
+    this._isRecording = false;
     this._isDispatching = false;
     this._initialized = false;
     this._debounceTimer = null;

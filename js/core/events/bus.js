@@ -78,10 +78,12 @@ export default class EventBus {
         this._publishing = true;
         try {
             this._publishNow(event, data);
-            while (this._queue.length > 0) {
-                const next = this._queue.shift();
+            let i = 0;
+            while (i < this._queue.length) {
+                const next = this._queue[i++];
                 this._publishNow(next.event, next.data);
             }
+            this._queue.length = 0;
         } finally {
             this._publishing = false;
         }
@@ -89,8 +91,9 @@ export default class EventBus {
 
     _publishNow(event, data) {
         const subscribers = this._listeners.get(event);
-        if (subscribers) {
-            for (const sub of subscribers) {
+        if (subscribers && subscribers.length > 0) {
+            const targets = [...subscribers];
+            for (const sub of targets) {
                 try {
                     sub.callback(data);
                 } catch (error) {
@@ -99,11 +102,14 @@ export default class EventBus {
             }
         }
 
-        for (const sub of this._globalListeners) {
-            try {
-                sub.callback(event, data);
-            } catch (error) {
-                console.error(`[EventBus] Fehler in globalem Subscriber ${sub.id}:`, error);
+        if (this._globalListeners.length > 0) {
+            const globalTargets = [...this._globalListeners];
+            for (const sub of globalTargets) {
+                try {
+                    sub.callback(event, data);
+                } catch (error) {
+                    console.error(`[EventBus] Fehler in globalem Subscriber ${sub.id}:`, error);
+                }
             }
         }
     }
