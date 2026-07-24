@@ -144,10 +144,10 @@ export function calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldP
  * Formel: PrestigeWährung = floor(Wurzel(GesamtRessourcen / Schwellenwert))
  * 
  * @param {number|BigInt} totalResources - Gesammelte Gesamt-Ressourcen
- * @param {number} [threshold=1000] - Mindestschwellenwert
+ * @param {number} [threshold=10000] - Mindestschwellenwert (10.000 für 30-60 Min Erst-Prestige)
  * @returns {number}
  */
-export function calculatePrestigeCurrency(totalResources, threshold = 1000) {
+export function calculatePrestigeCurrency(totalResources, threshold = 10000) {
   let numResources = 0;
   if (typeof totalResources === 'bigint') {
     numResources = totalResources > BigInt(Number.MAX_SAFE_INTEGER)
@@ -157,7 +157,7 @@ export function calculatePrestigeCurrency(totalResources, threshold = 1000) {
     numResources = sanitizeNumber(totalResources, 0);
   }
 
-  const safeThreshold = sanitizeNumber(threshold, 1000);
+  const safeThreshold = sanitizeNumber(threshold, 10000);
 
   if (numResources < safeThreshold || safeThreshold <= 0) {
     return 0;

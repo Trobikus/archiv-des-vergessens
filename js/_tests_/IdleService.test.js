@@ -113,10 +113,10 @@ describe('IdleService & Standard Idle Game Formulas', () => {
     });
 
     test('Ewige-Mneme Prestige setzt Generatoren zurück und erhöht den Prestige-Multiplikator', () => {
-      resourceService.addMnemeFragmente(4000);
+      resourceService.addMnemeFragmente(40000);
       idleService.buyGedankenArchivLevel(); // Level 1
 
-      expect(idleService.getPendingEwigeMneme()).toBe(2); // totalMneme >= 4000 -> floor(sqrt(4000/1000)) = 2
+      expect(idleService.getPendingEwigeMneme()).toBe(2); // totalMneme >= 40000 -> floor(sqrt(40000/10000)) = 2
 
       const result = idleService.performEwigeMnemePrestige();
       expect(result.success).toBe(true);

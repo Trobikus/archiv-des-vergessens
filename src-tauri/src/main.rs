@@ -54,10 +54,27 @@ fn show_main_window(app: AppHandle) {
     }
 }
 
+// Command to open external URLs (e.g. GitHub Releases page) in default browser
+#[tauri::command]
+fn open_release_page(url: Option<String>) {
+    let target_url = url.unwrap_or_else(|| "https://github.com/Trobikus/archiv-des-vergessens/releases/latest".to_string());
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("cmd").args(["/C", "start", "", &target_url]).spawn();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(&target_url).spawn();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open").arg(&target_url).spawn();
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
             let label = window.label();
             match event {
@@ -95,7 +112,7 @@ fn main() {
                 _ => {}
             }
         })
-        .invoke_handler(tauri::generate_handler![launch_game, quit_app, close_launcher, show_launcher, show_main_window])
+        .invoke_handler(tauri::generate_handler![launch_game, quit_app, close_launcher, show_launcher, show_main_window, open_release_page])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

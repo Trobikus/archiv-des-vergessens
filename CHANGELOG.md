@@ -4,7 +4,39 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.14] - 2026-07-24
+
+### 🔢 Deutsche Zahlenformatierung & Prestige-Balancing
+- **Zahlenformatierung (`js/utils/formatters.js` & `js/utils.js`)**:
+  - `formatNumber(value, options)` implementiert, um große Zahlen in deutschem Idle-Game Standard zu formatieren (`Tsd.`, `Mio.`, `Mrd.`, `Bio.`, `Brd.`, wissenschaftliche Notation ab `1e18`).
+  - Unterstützt `Number`, `String` und `BigInt` sowie negative Werte und Graceful Handling ungültiger Eingaben.
+  - Zentrale Schnittstelle `js/utils.js` erstellt, welche Formatierungs- und Utility-Funktionen re-exportiert.
+- **Prestige-Schwellenwert Balancing (`js/core/game/math.js` & `js/core/services/idle-service.js`)**:
+  - Standard-Schwellenwert für das Erst-Prestige von `1000` auf `10.000` `mnemeFragmente` erhöht ($\lfloor \sqrt{\text{GesamtMneme} / 10000} \rfloor$), um ein optimales Erst-Prestige nach ca. 30–60 Minuten Spielzeit zu gewährleisten.
+- **Automatisierte Testabdeckung**:
+  - Neue Testsuite `NumberFormatter.test.js` mit 9 Unit-Tests hinzugefügt.
+  - Bestehende Prestige-Tests in `IdleService.test.js` und `IdleMathAndProgression.test.js` auf das neue Balancing angepasst (17 Testdateien, 115 bestandene Tests).
+
+---
+
 ## [1.0.13] - 2026-07-24
+
+### 🚀 Portable Executable Release, Standalone GitHub Releases & Seamless Launcher Transition
+- **Schritt 1: Tauri Grundkonfiguration (`src-tauri/tauri.conf.json`)**:
+  - Produktname in `ArchivDesVergessens` geändert (ohne Leerzeichen), um Pfadprobleme in automatisierten CI/CD Build-Prozessen zu vermeiden und einheitliche Binary-Dateinamen zu garantieren.
+  - Launcher-Fenster auf initial sichtbar gesetzt (`visible: true`), Hauptfenster des Spiels initial verborgen (`visible: false`).
+  - Bundle-Ziele und Tauri-Updater-Artifact-Erstellung deaktiviert (`"active": false`, `"targets": []`, `"createUpdaterArtifacts": false`).
+- **Schritt 2: Automatisierter GitHub Actions Veröffentlichungsprozess (`.github/workflows/release.yml`)**:
+  - Installer-Erstellung und ZIP-Archivierung in GitHub Actions entfernt.
+  - Workflow führt nun `npm run tauri:build` aus und lädt die unverpackte `ArchivDesVergessens.exe` direkt als einzigen Anhang via `softprops/action-gh-release@v2` auf GitHub Releases hoch.
+- **Schritt 3: Programmlogik im Rust-Backend (`src-tauri/src/main.rs`)**:
+  - `launch_game` Befehl verfeinert: Macht das Hauptfenster sichtbar (`show()`), bringt es in den Fokus (`set_focus()`) und schließt das Launcher-Fenster verzögerungsfrei, um Ressourcen zu sparen.
+  - Neuer Backend-Befehl `open_release_page` implementiert zum plattformübergreifenden Öffnen von externen Links im Standardbrowser.
+- **Schritt 4: Portable Release Update-Prüfung (`launcher.js`)**:
+  - Veraltetes `@tauri-apps/plugin-updater` entfernt.
+  - Launcher führt bei Start eine direkte SemVer-Prüfung gegen die GitHub Releases API (`api.github.com`) durch.
+  - Bei neuerer Version wird ein Button "UPDATE AUF GITHUB" sowie ein Hinweis-Toast angezeigt, die den Nutzer direkt zur Download-Seite auf GitHub Releases leiten.
+  - Bei aktueller Version oder Offline-Betrieb steht "PLAY ADVENTURE" zum direkten Spielstart bereit.
 
 ### 🧮 Kern-Berechnungen, Delta-Time Game Loop, Kauf-Logik & Offline-Progression (Schritte 2-5)
 - **Schritt 2: Reine Berechnungsbibliothek (`js/core/game/math.js`)**:

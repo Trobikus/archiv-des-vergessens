@@ -45,8 +45,8 @@ export class IdleService {
     this._slowTickSubscription = null;
     this._partialYield = 0;
 
-    // Standard-Schwellenwert für Ewige-Mneme Prestige (1000 mnemeFragmente)
-    this._prestigeThreshold = 1000;
+    // Standard-Schwellenwert für Ewige-Mneme Prestige (10.000 mnemeFragmente für 30-60 Min Erst-Prestige)
+    this._prestigeThreshold = 10000;
     // Standard-Multiplikator pro Ewige Mneme (+10%)
     this._ewigeMnemeBonus = 0.10;
 
@@ -83,7 +83,7 @@ export class IdleService {
     return calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds);
   }
 
-  static calculatePrestigeCurrency(totalResources, threshold = 1000) {
+  static calculatePrestigeCurrency(totalResources, threshold = 10000) {
     return calculatePrestigeCurrency(totalResources, threshold);
   }
 

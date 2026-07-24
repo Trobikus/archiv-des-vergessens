@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Archiv des Vergessens",
-  "version": "1.0.12",
+  "productName": "ArchivDesVergessens",
+  "version": "1.0.13",
   "identifier": "com.grimoire.archivdesvergessens",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -23,7 +23,7 @@
         "decorations": false,
         "transparent": true,
         "center": true,
-        "visible": false
+        "visible": true
       },
       {
         "title": "Archiv des Vergessens",
@@ -41,30 +41,15 @@
       "csp": null
     }
   },
-  "plugins": {
-    "updater": {
-      "endpoints": [
-        "https://github.com/Trobikus/archiv-des-vergessens/releases/latest/download/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2QTRFNUI0Mzk3MjAyRjEKUldUeEFuSTV0T1drZHNUa0JMOVlOZ2xvejNpem1QWFF2S0paNy9nWlZwYldpcVlaSFFYTzJCcGYK"
-    }
-  },
   "bundle": {
-    "active": true,
-    "createUpdaterArtifacts": true,
-    "targets": "all",
+    "active": false,
+    "createUpdaterArtifacts": false,
+    "targets": [],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
-    ],
-    "windows": {
-      "nsis": {
-        "installMode": "both",
-        "displayLanguageSelector": true,
-        "languages": ["German", "English"]
-      }
-    }
+    ]
   }
 }
