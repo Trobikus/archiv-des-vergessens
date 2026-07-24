@@ -34,13 +34,17 @@ export class Item {
       stamina: Math.floor(this.baseStats.stamina * multiplier)
     };
 
-    // Sockel-Katalysator & Edelstein-Boni hinzurechnen
+    // Sockel-Katalysator, Edelstein & Runen-Boni hinzurechnen
     if (this.sockets && Array.isArray(this.sockets)) {
       for (const socket of this.sockets) {
         if (socket && typeof socket === 'object' && socket.stats) {
           for (const key in socket.stats) {
             if (base[key] !== undefined) {
               base[key] += socket.stats[key];
+            } else if (key === 'flatDamage') {
+              base.attack += socket.stats[key];
+            } else if (key === 'flatDefense') {
+              base.defense += socket.stats[key];
             }
           }
         } else if (socket && typeof socket === 'object' && socket.effects) {
@@ -61,6 +65,7 @@ export class Item {
 
     return base;
   }
+
 
   _determineSetName(name) {
     const setMap = {

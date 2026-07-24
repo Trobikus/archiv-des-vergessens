@@ -6,17 +6,7 @@ import { h, html, useState, useEffect } from '../setup.js';
 export function CombatAnalyticsModal({ analyticsService, eventBus, services, onClose }) {
   const i18nService = services?.i18nService;
   const [lang, setLang] = useState(i18nService ? i18nService.getLanguage() : 'de');
-
-  useEffect(() => {
-    if (eventBus) {
-      const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
-        setLang(data.language);
-      });
-      return () => eventBus.unsubscribe(unsub);
-    }
-  }, [eventBus]);
-
-  const stats = analyticsService ? analyticsService.getStats() : {
+  const [liveStats, setLiveStats] = useState(() => analyticsService ? analyticsService.getStats() : {
     dps: 0,
     totalDamage: 0,
     maxHit: 0,
@@ -27,7 +17,36 @@ export function CombatAnalyticsModal({ analyticsService, eventBus, services, onC
     totalHeal: 0,
     totalMneme: 0,
     durationSeconds: 0
-  };
+  });
+
+  useEffect(() => {
+    if (!eventBus) return;
+
+    const langSub = eventBus.subscribe('i18n:languageChanged', (data) => {
+      if (data?.language) setLang(data.language);
+    });
+
+    const refreshStats = () => {
+      if (analyticsService) {
+        setLiveStats(analyticsService.getStats());
+      }
+    };
+
+    const combatSub = eventBus.subscribe('combat:floating-text', refreshStats);
+    const tickSub = eventBus.subscribe('combat:tick', refreshStats);
+
+    const interval = setInterval(refreshStats, 500);
+
+    return () => {
+      eventBus.unsubscribe(langSub);
+      eventBus.unsubscribe(combatSub);
+      eventBus.unsubscribe(tickSub);
+      clearInterval(interval);
+    };
+  }, [eventBus, analyticsService]);
+
+  const stats = liveStats;
+
 
   return html`
     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(5,8,15,0.85); backdrop-filter: blur(8px); z-index: 9999; display: flex; align-items: center; justify-content: center;" onClick=${onClose}>

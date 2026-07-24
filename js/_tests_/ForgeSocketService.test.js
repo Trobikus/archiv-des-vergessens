@@ -46,6 +46,16 @@ describe('ForgeService Socketing & Enchanting', () => {
     expect(item.sockets[0].id).toBe('ruby_flawless');
   });
 
+  it('sockets a rune into a free socket on an item', () => {
+    const res = forgeService.socketRune(0, 1, 'rune_el', false);
+    expect(res.success).toBe(true);
+
+    const state = stateManager.getState();
+    const item = state.hero.inventory.equipment[0];
+    expect(item.sockets[1]).not.toBeNull();
+    expect(item.sockets[1].id).toBe('rune_el');
+  });
+
   it('enchants an item with an enchantment scroll', () => {
     const res = forgeService.enchantItem(0, 'scroll_mneme_power', false);
     expect(res.success).toBe(true);
@@ -56,3 +66,4 @@ describe('ForgeService Socketing & Enchanting', () => {
     expect(item.enchantment.id).toBe('scroll_mneme_power');
   });
 });
+

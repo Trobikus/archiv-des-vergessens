@@ -26,7 +26,8 @@ export class AccountVaultService {
       essence: '0',
       starIron: '0',
       shadowCrystals: '0',
-      ancientWood: '0'
+      ancientWood: '0',
+      sharedVault: []
     };
     this._isInitialized = false;
   }
@@ -40,11 +41,15 @@ export class AccountVaultService {
       const userId = u && !u.isGuest ? (u.id || u.username) : null;
       const loaded = await SaveManager.loadAccountVault(userId);
       if (loaded) {
-        this._vault = { ...this._vault, ...loaded };
+        this._vault = {
+          ...this._vault,
+          ...loaded,
+          sharedVault: Array.isArray(loaded.sharedVault) ? loaded.sharedVault : []
+        };
       }
       this._isInitialized = true;
       if (this._eventBus) {
-        this._eventBus.publish('vault:updated', { vault: this.getVaultResources() });
+        this._eventBus.publish('vault:updated', { vault: this.getVaultResources(), items: this.getSharedVaultItems() });
       }
     } catch (e) {
       console.error('[AccountVaultService] Fehler bei der Initialisierung:', e);
@@ -56,6 +61,72 @@ export class AccountVaultService {
    */
   getVaultResources() {
     return { ...this._vault };
+  }
+
+  /**
+   * Gibt alle im gemeinsamen Tresor eingelagerten Gegenstände zurück.
+   * @returns {Array}
+   */
+  getSharedVaultItems() {
+    return Array.isArray(this._vault.sharedVault) ? [...this._vault.sharedVault] : [];
+  }
+
+  /**
+   * Fügt einen Gegenstand zum gemeinsamen Account-Lager hinzu.
+   * @param {Object} item
+   */
+  async depositItemToVault(item) {
+    if (!item) return false;
+    if (!Array.isArray(this._vault.sharedVault)) {
+      this._vault.sharedVault = [];
+    }
+
+    const itemData = typeof item.toJSON === 'function' ? item.toJSON() : item;
+    this._vault.sharedVault.push(itemData);
+
+    await this._save();
+    if (this._eventBus) {
+      this._eventBus.publish('vault:updated', {
+        type: 'item_deposited',
+        item: itemData,
+        items: this.getSharedVaultItems()
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Entnimmt einen Gegenstand aus dem gemeinsamen Account-Lager.
+   * @param {number} index
+   * @returns {Object|null}
+   */
+  async withdrawItemFromVault(index) {
+    if (!Array.isArray(this._vault.sharedVault) || index < 0 || index >= this._vault.sharedVault.length) {
+      return null;
+    }
+
+    const [removedItem] = this._vault.sharedVault.splice(index, 1);
+
+    await this._save();
+    if (this._eventBus) {
+      this._eventBus.publish('vault:updated', {
+        type: 'item_withdrawn',
+        item: removedItem,
+        items: this.getSharedVaultItems()
+      });
+    }
+    return removedItem;
+  }
+
+  /**
+   * Leert das gemeinsame Gegenstands-Lager.
+   */
+  async clearSharedVault() {
+    this._vault.sharedVault = [];
+    await this._save();
+    if (this._eventBus) {
+      this._eventBus.publish('vault:updated', { type: 'vault_cleared', items: [] });
+    }
   }
 
   /**

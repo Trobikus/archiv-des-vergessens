@@ -16,7 +16,7 @@ import * as Actions from '../state/actions.js';
 import { selectResources } from '../state/selectors.js';
 import { FORGE_RECIPES } from '../../data/recipes.js';
 import { Item } from '../../models/item.js';
-import { GEMS, ENCHANTMENTS } from '../../data/gems_enchants.js';
+import { GEMS, ENCHANTMENTS, RUNES } from '../../data/gems_enchants.js';
 import RNG from '../../utils/rng.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 
@@ -436,6 +436,74 @@ export class ForgeService {
 
     return { success: true, item, message: `${gem.name} erfolgreich gesockelt!` };
   }
+
+  /**
+   * Sockelt eine Rune in einen freien Sockel.
+   * @param {string|number} slotOrIndex
+   * @param {number} socketIndex
+   * @param {string} runeId
+   * @param {boolean} [isEquipped=false]
+   */
+  socketRune(slotOrIndex, socketIndex, runeId, isEquipped = false) {
+    const rune = RUNES[runeId];
+    if (!rune) {
+      return { success: false, message: 'Ungültige Rune.' };
+    }
+
+    const state = this._stateManager.getState();
+    const itemData = isEquipped
+      ? state.hero.equipment[slotOrIndex]
+      : state.hero.inventory.equipment[slotOrIndex];
+
+    if (!itemData) {
+      return { success: false, message: 'Gegenstand nicht gefunden.' };
+    }
+
+    const item = Item.fromJSON(itemData);
+    if (!item.sockets) item.sockets = [null, null];
+
+    if (socketIndex < 0 || socketIndex >= item.sockets.length) {
+      return { success: false, message: 'Ungültiger Sockelplatz.' };
+    }
+
+    item.sockets[socketIndex] = {
+      id: rune.id,
+      title: rune.name,
+      color: rune.color,
+      icon: rune.icon,
+      stats: rune.stats
+    };
+
+    this._stateManager.dispatch((st) => {
+      const updatedHero = { ...st.hero };
+      if (isEquipped) {
+        updatedHero.equipment = {
+          ...updatedHero.equipment,
+          [slotOrIndex]: item.toJSON ? item.toJSON() : item
+        };
+      } else {
+        const index = Number(slotOrIndex);
+        const newEquip = [...updatedHero.inventory.equipment];
+        newEquip[index] = item.toJSON ? item.toJSON() : item;
+        updatedHero.inventory = {
+          ...updatedHero.inventory,
+          equipment: newEquip
+        };
+      }
+      return { ...st, hero: updatedHero };
+    }, 'forge/socketRune');
+
+    if (this._eventBus) {
+      this._eventBus.publish('ui:showToast', {
+        message: `ᛖ ${rune.name} erfolgreich gesockelt!`,
+        type: 'success',
+        duration: 3000
+      });
+    }
+
+    return { success: true, item, message: `${rune.name} erfolgreich gesockelt!` };
+  }
+
 
   /**
    * Verzaubert einen Gegenstand mit einer Schriftrolle.

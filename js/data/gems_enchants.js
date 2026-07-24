@@ -74,3 +74,67 @@ export const ENCHANTMENTS = {
     costMneme: 1000
   }
 };
+
+export const RUNES = {
+  rune_el: {
+    id: 'rune_el',
+    name: 'Rune El',
+    type: 'rune',
+    color: '#e2e8f0',
+    icon: 'ᛖ',
+    stats: { flatDamage: 10, attackSpeedPercent: 5 },
+    description: '+10 Angriff & +5% Angriffsgeschwindigkeit',
+    costMneme: 300
+  },
+  rune_eth: {
+    id: 'rune_eth',
+    name: 'Rune Eth',
+    type: 'rune',
+    color: '#a7f3d0',
+    icon: 'ᚦ',
+    stats: { flatDefense: 15, maxHpPercent: 8 },
+    description: '+15 Rüstung & +8% Max HP',
+    costMneme: 300
+  },
+  rune_ith: {
+    id: 'rune_ith',
+    name: 'Rune Ith',
+    type: 'rune',
+    color: '#fef08a',
+    icon: 'ᛁ',
+    stats: { critChancePercent: 8, critMultiplierPercent: 10 },
+    description: '+8% Krit-Chance & +10% Krit-Schaden',
+    costMneme: 400
+  },
+  rune_ort: {
+    id: 'rune_ort',
+    name: 'Rune Ort',
+    type: 'rune',
+    color: '#c084fc',
+    icon: 'ᛟ',
+    stats: { mnemeGainPercent: 20 },
+    description: '+20% Mneme-Ertrag',
+    costMneme: 400
+  },
+  rune_sol: {
+    id: 'rune_sol',
+    name: 'Rune Sol',
+    type: 'rune',
+    color: '#fb7185',
+    icon: 'ᛋ',
+    stats: { flatDamage: 25, flatDefense: 20 },
+    description: '+25 Angriff & +20 Rüstung',
+    costMneme: 600
+  },
+  rune_ohm: {
+    id: 'rune_ohm',
+    name: 'Rune Ohm',
+    type: 'rune',
+    color: '#38bdf8',
+    icon: 'ᛟ',
+    stats: { damagePercent: 20, attackSpeedPercent: 10 },
+    description: '+20% Schaden & +10% Angriffsgeschwindigkeit',
+    costMneme: 800
+  }
+};
+
