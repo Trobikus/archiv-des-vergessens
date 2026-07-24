@@ -66,4 +66,8 @@ When maintaining a project with secondary Tauri applications (such as a standalo
 2. **Relative Path Anchoring**: `frontendDist` and `bundle.icon` in the sub-app's `tauri.conf.json` must be relative to the sub-app's `src-tauri` directory (e.g. `"frontendDist": "../../dist"` to reach root output).
 3. **CI Updater Keys**: In GitHub Actions (`release.yml`), all `tauri build` steps MUST pass `TAURI_PRIVATE_KEY` and `TAURI_KEY_PASSWORD` in `env:` if updater code/signing is present.
 
-
+### 10. Automated Release Executable Build Triggering via Git Tags
+When executing a release push or version bump requested by the user:
+1. **SemVer Tag Creation**: After committing version bump changes across `package.json`, `Cargo.toml`, `tauri.conf.json`, and `CHANGELOG.md`, create the matching SemVer git tag (e.g. `git tag v1.0.21`).
+2. **Explicit Tag Push**: Push the tag explicitly to the remote repository (`git push origin v1.0.21`).
+3. **Reasoning**: The GitHub Actions release pipeline (`.github/workflows/release.yml`) is triggered by `push.tags: ['v*.*.*']`. Pushing the `main` branch alone does not trigger the build and release of new executable binaries (`.exe`).
