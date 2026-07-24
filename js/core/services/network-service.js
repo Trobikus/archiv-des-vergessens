@@ -62,7 +62,11 @@ export class NetworkService {
     const customUrl = localStorage.getItem('archiv_server_url');
     if (customUrl) return customUrl;
 
-    // 2. Nur im aktiven Vite-Entwicklungsmodus (npm run dev) auf localhost ausweichen
+    // 2. Umgebungs variable via Vite (.env) falls konfiguriert
+    const envUrl = typeof import.meta !== 'undefined' && import.meta['env'] && import.meta['env'].VITE_WS_URL;
+    if (envUrl) return envUrl;
+
+    // 3. Nur im aktiven Vite-Entwicklungsmodus (npm run dev) auf localhost ausweichen
     if (typeof window !== 'undefined' && window.location) {
       const hostname = window.location.hostname || '';
       const isViteDev = typeof import.meta !== 'undefined' && import.meta['env'] && import.meta['env'].DEV;
@@ -73,8 +77,8 @@ export class NetworkService {
       }
     }
 
-    // 3. Standard für alle Produktiv-Builds (Tauri Release, GitHub Pages, Executable):
-    return 'wss://grimoireinteractive.duckdns.org';
+    // 4. Standard für alle Produktiv-Builds (Tauri Release, GitHub Pages, Executable):
+    return 'wss://api.archiv-des-vergessens.de';
   }
 
   /**

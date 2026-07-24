@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 
-const SERVER_URL = 'ws://35.209.11.134:8080';
+const SERVER_URL = process.env.SERVER_URL || process.env.VITE_WS_URL || 'wss://api.archiv-des-vergessens.de';
 
 console.log(`[Test] Connecting to live server under ${SERVER_URL}...`);
 const ws = new WebSocket(SERVER_URL);
