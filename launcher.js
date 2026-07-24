@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           actionBtn.innerText = 'PRÜFE UPDATES...';
           break;
         case 'update-available':
-          actionBtn.innerText = 'UPDATE AUF GITHUB';
+          actionBtn.innerText = 'UPDATE';
           break;
         case 'ready-to-play':
           actionBtn.innerText = 'PLAY ADVENTURE';
