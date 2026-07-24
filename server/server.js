@@ -28,6 +28,7 @@ const DATA_DIR = join(__dirname, 'data');
 const SAVES_DIR = join(DATA_DIR, 'saves');
 const LEADERBOARD_FILE = join(DATA_DIR, 'leaderboard.json');
 const DB_FILE = join(DATA_DIR, 'database.db');
+const MIGRATION_FLAG_FILE = join(DATA_DIR, 'migration_done.flag');
 
 // Sicherheits- & Validierungskonstanten
 const PBKDF2_ITERATIONS = 100000;
@@ -148,6 +149,12 @@ function generateToken() {
 // ============================================================
 async function migrateOldJsonData() {
   try {
+    // Flag-Prüfung: Falls bereits migriert wurde, unnötige I/O-Zugriffe sofort abbrechen
+    const flagExists = await fs.access(MIGRATION_FLAG_FILE).then(() => true).catch(() => false);
+    if (flagExists) {
+      return;
+    }
+
     // 1. Leaderboard migrieren
     const leaderboardExists = await fs.access(LEADERBOARD_FILE).then(() => true).catch(() => false);
     if (leaderboardExists) {
@@ -244,6 +251,10 @@ async function migrateOldJsonData() {
       await fs.rename(SAVES_DIR, `${SAVES_DIR}.bak`);
       console.log(`[Migration] Alter saves-Ordner umbenannt in ${basename(SAVES_DIR)}.bak`);
     }
+
+    // Flag-Datei erstellen, um zukünftige I/O-Prüfungen beim Serverstart zu vermeiden
+    await fs.writeFile(MIGRATION_FLAG_FILE, new Date().toISOString(), 'utf-8');
+    console.log('[Migration] Migration abgeschlossen und migration_done.flag erstellt.');
   } catch (err) {
     console.error('[Migration] Fehler während des Migrationsprozesses:', err);
   }
