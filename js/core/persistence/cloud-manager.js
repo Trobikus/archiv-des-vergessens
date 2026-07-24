@@ -65,7 +65,16 @@ export class CloudManager {
   _getUserId() {
     let id = localStorage.getItem(this._USER_ID_KEY);
     if (!id) {
-      id = 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
+      const cryptoObj = globalThis.crypto;
+      if (!cryptoObj || typeof cryptoObj.getRandomValues !== 'function') {
+        throw new Error('Secure random generator is not available.');
+      }
+      const randomBytes = new Uint8Array(4);
+      cryptoObj.getRandomValues(randomBytes);
+      const randomValue =
+        ((randomBytes[0] << 24) | (randomBytes[1] << 16) | (randomBytes[2] << 8) | randomBytes[3]) >>> 0;
+      const suffix = randomValue.toString(36).padStart(7, '0').slice(0, 4);
+      id = 'user_' + Date.now().toString(36) + '_' + suffix;
       localStorage.setItem(this._USER_ID_KEY, id);
     }
     return id;
