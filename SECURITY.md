@@ -29,8 +29,8 @@ Du hast zwei Möglichkeiten, uns sicher zu kontaktieren:
 1. **GitHub Private Vulnerability Reporting (Empfohlen)**  
    Nutze den Tab „Security“ in diesem Repository und klicke auf „Report a vulnerability“. Dies erstellt eine private, verschlüsselte Diskussion zwischen dir und den Maintainern.
 2. **Per E-Mail**  
-   Sende eine detaillierte Beschreibung an: **[DEINE_EMAIL_HIER_EINFÜGEN@beispiel.de]**  
-   *(Hinweis: Ersetze dies mit deiner tatsächlichen Kontaktadresse, z.B. einer dedizierten Security- oder Projekt-E-Mail).*
+   Sende eine detaillierte Beschreibung an: **[Grimoire.interactive@gmail.com]**  
+
 
 ---
 
