@@ -43,7 +43,7 @@
   },
   "bundle": {
     "active": false,
-    "createUpdaterArtifacts": false,
+    "createUpdaterArtifacts": true,
     "targets": [],
     "icon": [
       "icons/32x32.png",
@@ -51,5 +51,13 @@
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2QTRFNUI0Mzk3MjAyRjEKUldUeEFuSTV0T1drZHNUa0JMOVlOZ2xvejNpem1QWFF2S0paNy9nWlZwYldpcVlaSFFYTzJCcGYK",
+      "endpoints": [
+        "https://github.com/Trobikus/archiv-des-vergessens/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
