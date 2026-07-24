@@ -56,3 +56,14 @@ When creating a release version bump (e.g. `v1.0.7`), the version string MUST be
 3. `src-tauri/tauri.conf.json` (`"version": "X.Y.Z"`)
 4. `CHANGELOG.md` (`## [X.Y.Z] - YYYY-MM-DD`)
 
+### 8. Tauri 2.0 WebSocket TLS & CSP Configuration
+When integrating WebSocket services in Tauri 2.0 desktop applications:
+1. **CSP Allowed Connect Origins**: WebSockets using `wss://` must be explicitly declared in `src-tauri/tauri.conf.json` under `app.security.csp` (e.g., `connect-src 'self' wss://your-domain.com ws://localhost:*`).
+2. **Reverse Proxy Header Preservation**: In Reverse Proxy setups (Nginx / Caddy), `X-Forwarded-For` and `X-Forwarded-Proto` headers MUST be forwarded to backend servers to ensure IP-based rate limiting and session validation function correctly.
+### 9. Tauri Multi-App Sub-Directory Build Guidelines
+When maintaining a project with secondary Tauri applications (such as a standalone launcher in `launcher/src-tauri` alongside the main app in `src-tauri`):
+1. **Directory Execution Invariant**: Scripts in `package.json` building sub-apps MUST explicitly change working directory before executing `tauri build` (e.g. `"launcher:build": "cd launcher/src-tauri && tauri build"`). Running `tauri build --config launcher/src-tauri/tauri.conf.json` from the root directory causes Tauri CLI v2 to resolve CWD relative to the root `src-tauri`, breaking relative asset paths.
+2. **Relative Path Anchoring**: `frontendDist` and `bundle.icon` in the sub-app's `tauri.conf.json` must be relative to the sub-app's `src-tauri` directory (e.g. `"frontendDist": "../../dist"` to reach root output).
+3. **CI Updater Keys**: In GitHub Actions (`release.yml`), all `tauri build` steps MUST pass `TAURI_PRIVATE_KEY` and `TAURI_KEY_PASSWORD` in `env:` if updater code/signing is present.
+
+

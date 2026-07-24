@@ -21,10 +21,10 @@
   </a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4A90E2?style=for-the-badge" alt="Platforms" />
   <img src="https://img.shields.io/badge/Engine-Tauri%202-FF6B6B?style=for-the-badge" alt="Tauri" />
-  <img src="https://img.shields.io/badge/Tests-115%20Passing-brightgreen?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-115%20JS%20%7C%2018%20Rust%20Passing-brightgreen?style=for-the-badge" alt="Tests" />
 </p>
 
-**Archiv des Vergessens** ist ein atmosphärisches, hybrides **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer, deutschem Idle-Formatierungsstandard, modernem Glassmorphic AAA-Design und einer einzigartigen Welt rund um Erinnerung, Vergessen und die mystische Kraft der Mneme.
+**Archiv des Vergessens** ist ein atmosphärisches, hybrides **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer, deutschem Idle-Formatierungsstandard, modernem Glassmorphic AAA-Design und einer einzigartigen Welt rund um Erinnerung, Vergessen und die Macht der Mneme.
 
 ---
 
@@ -108,13 +108,20 @@ npm run dev
 # 4. Tauri Desktop-App im Entwicklungsmodus starten
 npm run tauri:dev
 
-# 5. Unit-Tests ausführen (Vitest)
+# 5. Frontend Unit-Tests ausführen (Vitest)
 npm run test
 
-# 6. TypeScript Typenprüfung
+# 6. Backend Rust-Tests ausführen (Unit, Integration & E2E)
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# 7. Rust Linter (Clippy) & Formatierung
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+# 8. TypeScript Typenprüfung
 npm run typecheck
 
-# 7. Production Desktop-Build erstellen
+# 9. Production Desktop-Build erstellen
 npm run tauri:build
 ```
 
@@ -126,8 +133,8 @@ npm run tauri:build
 - **Desktop Runtime**: Tauri 2 (Rust Core)
 - **Multiplayer Server**: Node.js, WebSockets (`ws`), SQLite (`better-sqlite3`)
 - **Architektur**: Reducer State-Management, Dependency Injection Container, JSDoc Typing
-- **Quality Assurance**: Vitest (115+ automatisierte Unit-Tests)
-- **CI / CD**: GitHub Actions (Multi-Platform Portable & Release Pipelines)
+- **Quality Assurance**: Vitest (115+ Frontend Unit-Tests) & Cargo Test Suite (18 Rust Unit-, Integrations- & E2E-Tests)
+- **CI / CD**: GitHub Actions (Multi-Platform Portable & Release Pipelines, Rust Test Suite)
 
 ---
 

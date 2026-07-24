@@ -1,20 +1,51 @@
 [package]
 name = "archiv-des-vergessens"
-version = "1.0.20"
+version = "1.0.21"
 description = "Archiv des Vergessens – Ein episches Idle-RPG über Erinnerung, Vergessen und die Macht der Mneme."
 authors = ["Grimoire Interactive"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "archiv_des_vergessens_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "archiv-des-vergessens"
+path = "src/main.rs"
+
+[[test]]
+name = "auth_tests"
+path = "tests/integration/auth_tests.rs"
+
+[[test]]
+name = "db_tests"
+path = "tests/integration/db_tests.rs"
+
+[[test]]
+name = "command_tests"
+path = "tests/integration/command_tests.rs"
+
+[[test]]
+name = "app_tests"
+path = "tests/e2e/app_tests.rs"
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0", features = [] }
+tauri = { version = "2.0", features = ["test"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-updater = "2.3.1"
+tokio = { version = "1.38", features = ["full"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
+thiserror = "1.0"
+rand = "0.8"
+tempfile = "3.10"
 
-
+[dev-dependencies]
+mockall = "0.13"
+rstest = "0.21"

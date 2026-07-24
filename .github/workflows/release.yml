@@ -56,6 +56,9 @@ jobs:
 
       - name: Build Portable Game Executable
         run: npm run game:build
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: Create Portable Game ZIP Archive
         run: |
@@ -63,6 +66,9 @@ jobs:
 
       - name: Build Standalone Launcher Executable
         run: npm run launcher:build
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: Prepare Launcher Executable
         run: |

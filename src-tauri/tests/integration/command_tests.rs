@@ -1,0 +1,48 @@
+use archiv_des_vergessens_lib::commands::{authenticate_command, open_release_page};
+use archiv_des_vergessens_lib::db::DbManager;
+use archiv_des_vergessens_lib::services::auth::AuthService;
+
+#[tokio::test]
+async fn test_save_game_command_execution() {
+    let db = DbManager::open_in_memory().expect("Database init failed");
+
+    let result = db.save_game("HeroCommand", 15000, 3600);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), 1);
+
+    let saved = db.get_save("HeroCommand").unwrap().unwrap();
+    assert_eq!(saved.mneme_points, 15000);
+}
+
+#[tokio::test]
+async fn test_open_release_page_command() {
+    let result = open_release_page(Some(
+        "https://github.com/Trobikus/archiv-des-vergessens".to_string(),
+    ));
+    assert!(result.is_ok());
+    assert_eq!(
+        result.unwrap(),
+        "https://github.com/Trobikus/archiv-des-vergessens"
+    );
+}
+
+#[tokio::test]
+async fn test_authenticate_command_valid_and_invalid() {
+    let salt = AuthService::generate_salt();
+    let password = "CmdTestPassword2026!";
+    let hash_obj = AuthService::hash_password(password, &salt).unwrap();
+
+    let valid_res = authenticate_command(
+        password.to_string(),
+        hash_obj.hash_hex.clone(),
+        hash_obj.salt_hex.clone(),
+    );
+    assert_eq!(valid_res, Ok(true));
+
+    let invalid_res = authenticate_command(
+        "WrongCmdPassword".to_string(),
+        hash_obj.hash_hex,
+        hash_obj.salt_hex,
+    );
+    assert_eq!(invalid_res, Ok(false));
+}

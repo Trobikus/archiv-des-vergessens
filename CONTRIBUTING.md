@@ -60,3 +60,39 @@ cd server
 npm install
 npm run dev
 ```
+
+## Sicherheit & Auto-Updater Key Management
+
+Die Releases von **Archiv des Vergessens** werden mit einem Tauri-Signaturschlüssel signiert.
+Private Schlüssel (`*.key`) dürfen **unter keinen Umständen** ins Git-Repository committet werden.
+
+### Schlüssel generieren / rotieren
+
+Um ein neues Schlüsselpaar für den Auto-Updater zu erstellen:
+
+```bash
+bash scripts/generate-updater-keys.sh
+```
+
+### GitHub Secrets Konfiguration
+
+Trage folgende Repository Secrets unter `Settings > Secrets and variables > Actions` ein:
+
+- `TAURI_PRIVATE_KEY`: Der vollständige Inhalt deiner privaten Schlüsseldatei (`~/.tauri/updater.key`).
+- `TAURI_KEY_PASSWORD`: Das Passwort, das bei der Schlüsselgenerierung festgelegt wurde (falls vorhanden).
+
+### Public Key im Code aktualisieren
+
+Füge den Inhalt der generierten `.pub`-Datei in `src-tauri/tauri.conf.json` ein:
+
+```json
+"plugins": {
+  "updater": {
+    "pubkey": "<DEIN_NEUER_PUBLIC_KEY>",
+    "endpoints": [
+      "https://github.com/Trobikus/archiv-des-vergessens/releases/latest/download/latest.json"
+    ]
+  }
+}
+```
+
