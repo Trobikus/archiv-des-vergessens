@@ -47,7 +47,10 @@ export class CloudManager {
         if (data && data.user) {
           this._userId = data.user.id;
           localStorage.setItem(this._USER_ID_KEY, this._userId);
-          if (this._isEnabled) {
+          if (data.isLoggedIn) {
+            this.setEnabled(true);
+            this.loadFromCloud();
+          } else if (this._isEnabled) {
             this.sync();
           }
         }
@@ -331,6 +334,10 @@ export class CloudManager {
         device: 'cloud-server'
       };
       localStorage.setItem(this._STORAGE_KEY, JSON.stringify(cloudData));
+
+      if (this._eventBus) {
+        this._eventBus.publish('cloud:loaded', { saveData: payload.saveData, timestamp: payload.timestamp });
+      }
     }
 
     if (this._pendingLoadResolve) {

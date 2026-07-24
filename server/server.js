@@ -6,7 +6,8 @@
  * VERANTWORTUNG:
  * - Echtes Echtzeit-Broadcasting von Globalen & Gilden-Chats
  * - Speicherung und Auslieferung von Globalen Bestenlisten (Leaderboard)
- * - Sicheres Speichern & Laden von Spielständen (Cloud Saves)
+ * - Produktionsreife Benutzer-Authentifizierung (Register, Login, Token, Guest Conversion)
+ * - Sicheres Speichern & Laden von Spielständen in SQLite (Cloud Saves)
  * - Extrem ressourcensparend (perfekt für 1 GB RAM e2-micro VMs)
  * ============================================================
  */
@@ -17,6 +18,7 @@ import { promises as fs } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
+import crypto from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,7 +30,7 @@ const LEADERBOARD_FILE = join(DATA_DIR, 'leaderboard.json');
 const DB_FILE = join(DATA_DIR, 'database.db');
 
 // ---- GLOBALE STATS & DATABASE ----
-const clients = new Map(); // Map: WebSocket -> { userId, username, guildId }
+const clients = new Map(); // Map: WebSocket -> { userId, username, guildId, sessionToken }
 let db;
 
 // ============================================================
@@ -43,6 +45,20 @@ async function initStorage() {
     db.pragma('journal_mode = WAL'); // Erhöht die Schreibgeschwindigkeit massiv
 
     // Tabellen anlegen
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        passwordHash TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        avatar TEXT,
+        createdAt INTEGER,
+        lastLogin INTEGER,
+        sessionToken TEXT
+      )
+    `).run();
+
     db.prepare(`
       CREATE TABLE IF NOT EXISTS saves (
         userId TEXT PRIMARY KEY,
@@ -83,6 +99,21 @@ async function initStorage() {
   } catch (err) {
     console.error('[Storage] Fehler bei der Initialisierung:', err);
   }
+}
+
+// ============================================================
+// KRYPTOGRAFIE & PASSWORD HASHING
+// ============================================================
+function generateSalt() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+}
+
+function generateToken() {
+  return 'tok_' + crypto.randomBytes(24).toString('hex');
 }
 
 // ============================================================
@@ -259,14 +290,12 @@ function pruneChatHistory(keepCount = 500) {
 // HILFSFUNKTIONEN
 // ============================================================
 
-// Nachricht an einen bestimmten Client senden
 function send(ws, type, payload) {
   if (ws.readyState === 1) { // OPEN
     ws.send(JSON.stringify({ type, payload }));
   }
 }
 
-// Nachricht an ALLE verbundenen Clients senden (z.B. globaler Chat)
 function broadcast(type, payload) {
   const msg = JSON.stringify({ type, payload });
   for (const [ws] of clients) {
@@ -276,7 +305,6 @@ function broadcast(type, payload) {
   }
 }
 
-// Nachricht an alle Mitglieder einer bestimmten Gilde senden
 function broadcastToGuild(guildId, type, payload) {
   if (!guildId) return;
   const msg = JSON.stringify({ type, payload });
@@ -287,7 +315,6 @@ function broadcastToGuild(guildId, type, payload) {
   }
 }
 
-// String-Bereinigung gegen HTML-Injection
 function sanitize(str, maxLength = 200) {
   if (typeof str !== 'string') return '';
   return str
@@ -310,14 +337,12 @@ const wss = new WebSocketServer({ server: httpServer });
 wss.on('connection', (ws) => {
   console.log('[Net] Neuer Verbindungsversuch...');
   
-  // Heartbeat-Erkennung initialisieren
   ws.isAlive = true;
   ws.on('pong', () => {
     ws.isAlive = true;
   });
   
-  // temporäre Registrierung des nackten Sockets
-  clients.set(ws, { userId: null, username: 'Anonymus', guildId: null });
+  clients.set(ws, { userId: null, username: 'Anonymus', guildId: null, sessionToken: null });
 
   ws.on('message', async (message) => {
     try {
@@ -325,10 +350,12 @@ wss.on('connection', (ws) => {
       const clientInfo = clients.get(ws);
 
       switch (type) {
-        // ---- 1. HANDSHAKE / LOGIN ----
+        // ---- 1. AUTHENTIFIZIERUNG & ACCOUNTS ----
+
+        // Legacy / Guest Handshake
         case 'auth': {
           const rawUserId = sanitize(payload.userId, 50);
-          const rawUsername = sanitize(payload.username, 25) || 'Unbekannter Held';
+          const rawUsername = sanitize(payload.username, 25) || 'Gast-Hüter';
           const rawGuildId = sanitize(payload.guildId, 50) || null;
 
           if (!rawUserId) {
@@ -343,20 +370,242 @@ wss.on('connection', (ws) => {
           console.log(`[Auth] Spieler '${rawUsername}' (${rawUserId}) eingeloggt. Gilde: ${rawGuildId || 'keine'}`);
           send(ws, 'auth:success', { userId: rawUserId, username: rawUsername });
 
-          // --- CHAT-VERLAUF BEIM LOGIN SENDEN ---
-          // 1. Letzte 50 globalen Nachrichten senden
+          // Chatverlauf
           const globalHistory = getGlobalChatHistory(50);
           for (const msg of globalHistory) {
             send(ws, 'chat:globalMessage', msg);
           }
-
-          // 2. Letzte 50 Gilden-Nachrichten senden (falls in einer Gilde)
           if (rawGuildId) {
             const guildHistory = getGuildChatHistory(rawGuildId, 50);
             for (const msg of guildHistory) {
               send(ws, 'chat:guildMessage', msg);
             }
           }
+          break;
+        }
+
+        // Real Server Registration
+        case 'auth:register': {
+          const cleanUsername = sanitize(payload.username, 25);
+          const cleanEmail = sanitize(payload.email, 100).toLowerCase();
+          const password = payload.password || '';
+
+          if (!cleanUsername || cleanUsername.length < 3) {
+            send(ws, 'auth:register:error', { error: 'auth.error.username_short' });
+            return;
+          }
+          if (!cleanEmail || !cleanEmail.includes('@')) {
+            send(ws, 'auth:register:error', { error: 'auth.error.email_invalid' });
+            return;
+          }
+          if (!password || password.length < 6) {
+            send(ws, 'auth:register:error', { error: 'auth.error.password_short' });
+            return;
+          }
+
+          // Check for existing username (case-insensitive)
+          const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
+          if (existingUser) {
+            send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
+            return;
+          }
+
+          // Check for existing email (case-insensitive)
+          const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+          if (existingEmail) {
+            send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
+            return;
+          }
+
+          const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
+          const salt = generateSalt();
+          const passwordHash = hashPassword(password, salt);
+          const token = generateToken();
+          const now = Date.now();
+          const avatar = payload.avatar || '🛡️';
+
+          db.prepare(`
+            INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, avatar, now, now, token);
+
+          clientInfo.userId = userId;
+          clientInfo.username = cleanUsername;
+          clientInfo.sessionToken = token;
+
+          console.log(`[Auth] Neuer Account registriert: '${cleanUsername}' (${userId})`);
+
+          const userObj = {
+            id: userId,
+            username: cleanUsername,
+            email: cleanEmail,
+            avatar,
+            createdAt: now,
+            lastLogin: now,
+            isGuest: false
+          };
+
+          send(ws, 'auth:register:success', { user: userObj, token });
+          send(ws, 'auth:success', { userId, username: cleanUsername });
+          break;
+        }
+
+        // Real Server Login
+        case 'auth:login': {
+          const query = sanitize(payload.usernameOrEmail, 100).toLowerCase();
+          const password = payload.password || '';
+
+          if (!query || !password) {
+            send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
+            return;
+          }
+
+          const user = db.prepare(`
+            SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)
+          `).get(query, query);
+
+          if (!user) {
+            send(ws, 'auth:login:error', { error: 'auth.error.user_not_found' });
+            return;
+          }
+
+          const computedHash = hashPassword(password, user.salt);
+          if (computedHash !== user.passwordHash) {
+            send(ws, 'auth:login:error', { error: 'auth.error.wrong_password' });
+            return;
+          }
+
+          const newToken = generateToken();
+          const now = Date.now();
+
+          db.prepare('UPDATE users SET lastLogin = ?, sessionToken = ? WHERE id = ?').run(now, newToken, user.id);
+
+          clientInfo.userId = user.id;
+          clientInfo.username = user.username;
+          clientInfo.sessionToken = newToken;
+
+          console.log(`[Auth] Erfolgreicher Login: '${user.username}' (${user.id})`);
+
+          const userObj = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar || '🛡️',
+            createdAt: user.createdAt,
+            lastLogin: now,
+            isGuest: false
+          };
+
+          send(ws, 'auth:login:success', { user: userObj, token: newToken });
+          send(ws, 'auth:success', { userId: user.id, username: user.username });
+          break;
+        }
+
+        // Token Verification on Reconnect
+        case 'auth:verifyToken': {
+          const userId = sanitize(payload.userId, 50);
+          const token = payload.token;
+
+          if (!userId || !token) {
+            send(ws, 'auth:verifyToken:error', { error: 'Missing session credentials.' });
+            return;
+          }
+
+          const user = db.prepare('SELECT * FROM users WHERE id = ? AND sessionToken = ?').get(userId, token);
+
+          if (!user) {
+            send(ws, 'auth:verifyToken:error', { error: 'Session token invalid or expired.' });
+            return;
+          }
+
+          clientInfo.userId = user.id;
+          clientInfo.username = user.username;
+          clientInfo.sessionToken = token;
+
+          console.log(`[Auth] Session verifiziert für '${user.username}' (${user.id})`);
+
+          const userObj = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            avatar: user.avatar || '🛡️',
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin,
+            isGuest: false
+          };
+
+          send(ws, 'auth:verifyToken:success', { user: userObj, token });
+          send(ws, 'auth:success', { userId: user.id, username: user.username });
+          break;
+        }
+
+        // Guest Conversion to Account
+        case 'auth:convertGuest': {
+          const guestId = sanitize(payload.guestId, 50);
+          const cleanUsername = sanitize(payload.username, 25);
+          const cleanEmail = sanitize(payload.email, 100).toLowerCase();
+          const password = payload.password || '';
+
+          if (!cleanUsername || cleanUsername.length < 3) {
+            send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_short' });
+            return;
+          }
+          if (!cleanEmail || !cleanEmail.includes('@')) {
+            send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_invalid' });
+            return;
+          }
+          if (!password || password.length < 6) {
+            send(ws, 'auth:convertGuest:error', { error: 'auth.error.password_short' });
+            return;
+          }
+
+          // Uniqueness check
+          const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
+          if (existingUser) {
+            send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_taken' });
+            return;
+          }
+          const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+          if (existingEmail) {
+            send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_taken' });
+            return;
+          }
+
+          const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
+          const salt = generateSalt();
+          const passwordHash = hashPassword(password, salt);
+          const token = generateToken();
+          const now = Date.now();
+
+          db.prepare(`
+            INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
+            VALUES (?, ?, ?, ?, ?, '🛡️', ?, ?, ?)
+          `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, now, now, token);
+
+          // Transfer guest save in SQLite if present
+          if (guestId) {
+            db.prepare('UPDATE saves SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
+            db.prepare('UPDATE leaderboard SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
+          }
+
+          clientInfo.userId = userId;
+          clientInfo.username = cleanUsername;
+          clientInfo.sessionToken = token;
+
+          console.log(`[Auth] Gast-Account '${guestId}' umgewandelt in '${cleanUsername}' (${userId})`);
+
+          const userObj = {
+            id: userId,
+            username: cleanUsername,
+            email: cleanEmail,
+            avatar: '🛡️',
+            createdAt: now,
+            lastLogin: now,
+            isGuest: false
+          };
+
+          send(ws, 'auth:convertGuest:success', { user: userObj, token });
+          send(ws, 'auth:success', { userId, username: cleanUsername });
           break;
         }
 
@@ -374,13 +623,12 @@ wss.on('connection', (ws) => {
             type: 'global'
           };
 
-          // Im SQLite-Chatverlauf speichern
           try {
             db.prepare(`
               INSERT INTO chats (id, player, message, timestamp, type, guildId)
               VALUES (?, ?, ?, ?, 'global', NULL)
             `).run(msg.id, msg.player, msg.message, msg.timestamp);
-            pruneChatHistory(500); // Datenbank klein & schnell halten
+            pruneChatHistory(500);
           } catch (err) {
             console.error('[Chat] Fehler beim Speichern der globalen Nachricht:', err);
           }
@@ -403,13 +651,12 @@ wss.on('connection', (ws) => {
             guildId: clientInfo.guildId
           };
 
-          // Im SQLite-Chatverlauf speichern
           try {
             db.prepare(`
               INSERT INTO chats (id, player, message, timestamp, type, guildId)
               VALUES (?, ?, ?, ?, 'guild', ?)
             `).run(msg.id, msg.player, msg.message, msg.timestamp, msg.guildId);
-            pruneChatHistory(500); // Datenbank klein & schnell halten
+            pruneChatHistory(500);
           } catch (err) {
             console.error('[Chat] Fehler beim Speichern der Gilden-Nachricht:', err);
           }
@@ -511,7 +758,6 @@ wss.on('connection', (ws) => {
             stmt.run(clientInfo.userId, clientInfo.username, prestige, bosses, level, timestamp);
             console.log(`[Leaderboard] Highscore in SQLite aktualisiert für ${clientInfo.username}`);
             
-            // Sende aktualisierte Top 10 an alle zurück
             broadcast('leaderboard:update', getTop10());
           } catch (err) {
             console.error('[Leaderboard] Fehler beim Aktualisieren des Highscores:', err);
@@ -520,7 +766,6 @@ wss.on('connection', (ws) => {
         }
 
         case 'leaderboard:get': {
-          // Sende die Top 10 zurück an den Anfragesteller
           send(ws, 'leaderboard:update', getTop10());
           break;
         }
@@ -558,7 +803,6 @@ const heartbeatInterval = setInterval(() => {
   });
 }, 30000);
 
-// Intervall aufräumen, falls der Server geschlossen wird
 wss.on('close', () => {
   clearInterval(heartbeatInterval);
 });

@@ -5,10 +5,9 @@
  * 
  * VERANTWORTUNG:
  * - Verwaltung von Benutzer-Registrierung, Login, Logout & Session-Tokens
- * - Passwort-Salting & Kryptografisches Hashing (Web Crypto API)
- * - Gast-Konto Generierung & Migration in permanente Konten
- * - Verknüpfung mit EventBus & Persistenz
- * - Bereitstellung von Schnittstellen für REST-Backends (Release-Ready)
+ * - Server-Synchronisation über NetworkService mit offline-fähiger Speicherung
+ * - Gast-Konto Generierung & Migration in permanente SQLite-Server-Konten
+ * - Verknüpfung mit EventBus & CloudManager für Fortschritts-Sync
  * ============================================================
  */
 
@@ -16,18 +15,31 @@ export class AuthService {
   /**
    * @param {import('../events/bus.js').default} eventBus
    * @param {import('../settings.js').default} [settingsManager]
+   * @param {import('./network-service.js').NetworkService} [networkService]
+   * @param {import('../persistence/cloud-manager.js').CloudManager} [cloudManager]
    */
-  constructor(eventBus, settingsManager = null) {
+  constructor(eventBus, settingsManager = null, networkService = null, cloudManager = null) {
     this._eventBus = eventBus;
     this._settingsManager = settingsManager;
+    this._networkService = networkService;
+    this._cloudManager = cloudManager;
 
     this._STORAGE_ACCOUNTS_KEY = 'archiv_auth_accounts';
     this._STORAGE_SESSION_KEY = 'archiv_auth_session';
 
     this._currentUser = null;
     this._sessionToken = null;
+    this._pendingAuthResolves = {};
 
     this._initSession();
+  }
+
+  setNetworkService(networkService) {
+    this._networkService = networkService;
+  }
+
+  setCloudManager(cloudManager) {
+    this._cloudManager = cloudManager;
   }
 
   /**
@@ -39,7 +51,6 @@ export class AuthService {
       if (rawSession) {
         const sessionData = JSON.parse(rawSession);
         if (sessionData && sessionData.user && sessionData.token) {
-          // Prüfe Ablaufdatum der Session (30 Tage Gültigkeit)
           if (!sessionData.expiresAt || new Date(sessionData.expiresAt) > new Date()) {
             this._currentUser = sessionData.user;
             this._sessionToken = sessionData.token;
@@ -54,18 +65,65 @@ export class AuthService {
       this._sessionToken = null;
     }
 
-    // Wenn keine Session existiert, automatisch im Gast-Modus starten
     if (!this._currentUser) {
       this.loginAsGuest();
     }
   }
 
   /**
-   * Hilfsmethode: Erzeugt einen kryptografischen Hash für Passwörter.
-   * @param {string} password
-   * @param {string} salt
-   * @returns {Promise<string>}
+   * Empfängt Server-Auth-Antworten vom NetworkService
    */
+  handleServerAuthResponse(type, payload) {
+    if (type === 'auth:verifyToken:success') {
+      if (payload && payload.user) {
+        this._currentUser = payload.user;
+        this._sessionToken = payload.token || this._sessionToken;
+        this._persistSession();
+        if (this._eventBus) {
+          this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+        }
+      }
+    } else if (type === 'auth:verifyToken:error') {
+      console.warn('[AuthService] Token ungültig laut Server. Zurückschalten auf Gast.');
+      this.logout();
+    }
+
+    if (this._pendingAuthResolves[type]) {
+      const resolvers = this._pendingAuthResolves[type];
+      delete this._pendingAuthResolves[type];
+      for (const resolve of resolvers) {
+        resolve(payload);
+      }
+    }
+  }
+
+  /**
+   * Erwartet eine bestimmte Server-Antwort als Promise mit Timeout
+   */
+  _awaitServerResponse(successType, errorType, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+      let timer = null;
+
+      const handler = (payload) => {
+        if (timer) clearTimeout(timer);
+        resolve(payload);
+      };
+
+      if (!this._pendingAuthResolves[successType]) this._pendingAuthResolves[successType] = [];
+      if (!this._pendingAuthResolves[errorType]) this._pendingAuthResolves[errorType] = [];
+
+      this._pendingAuthResolves[successType].push(handler);
+      this._pendingAuthResolves[errorType].push(handler);
+
+      timer = setTimeout(() => {
+        // Aufräumen bei Timeout
+        this._pendingAuthResolves[successType] = (this._pendingAuthResolves[successType] || []).filter(h => h !== handler);
+        this._pendingAuthResolves[errorType] = (this._pendingAuthResolves[errorType] || []).filter(h => h !== handler);
+        resolve({ timeout: true });
+      }, timeoutMs);
+    });
+  }
+
   async _hashPassword(password, salt) {
     if (typeof crypto !== 'undefined' && crypto.subtle) {
       try {
@@ -78,7 +136,6 @@ export class AuthService {
         console.warn('[AuthService] Fallback für Hashing genutzt:', e);
       }
     }
-    // Fallback Hash
     let hash = 0;
     const str = password + salt;
     for (let i = 0; i < str.length; i++) {
@@ -89,9 +146,6 @@ export class AuthService {
     return 'fb_' + Math.abs(hash).toString(16);
   }
 
-  /**
-   * Erzeugt einen eindeutigen Salt.
-   */
   _generateSalt() {
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
       const arr = new Uint8Array(16);
@@ -101,17 +155,10 @@ export class AuthService {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 
-  /**
-   * Erzeugt einen Session-Token.
-   */
   _generateToken() {
     return 'token_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
   }
 
-  /**
-   * Lädt alle lokal gespeicherten Konten.
-   * @returns {Record<string, any>}
-   */
   _getAccounts() {
     try {
       const raw = localStorage.getItem(this._STORAGE_ACCOUNTS_KEY);
@@ -121,41 +168,22 @@ export class AuthService {
     }
   }
 
-  /**
-   * Speichert die Konten-Datenbank.
-   * @param {Record<string, any>} accounts
-   */
   _saveAccounts(accounts) {
     localStorage.setItem(this._STORAGE_ACCOUNTS_KEY, JSON.stringify(accounts));
   }
 
-  /**
-   * Prüft ob ein Benutzer angemeldet ist.
-   * @returns {boolean}
-   */
   isLoggedIn() {
     return !!this._currentUser && !this._currentUser.isGuest;
   }
 
-  /**
-   * Gibt den aktuell angemeldeten Benutzer zurück.
-   * @returns {object|null}
-   */
   getCurrentUser() {
     return this._currentUser;
   }
 
-  /**
-   * Gibt den aktuellen Session-Token zurück.
-   * @returns {string|null}
-   */
   getToken() {
     return this._sessionToken;
   }
 
-  /**
-   * Meldet den Spieler im Gast-Modus an.
-   */
   loginAsGuest() {
     let guestId = localStorage.getItem('archiv_guest_id');
     if (!guestId) {
@@ -183,10 +211,7 @@ export class AuthService {
   }
 
   /**
-   * Registriert ein neues Konto.
-   * @param {string} username
-   * @param {string} email
-   * @param {string} password
+   * Registriert ein neues Konto auf dem Server (mit lokalem Offline-Fallback)
    */
   async register(username, email, password) {
     const cleanUsername = (username || '').trim();
@@ -202,9 +227,48 @@ export class AuthService {
       return { success: false, error: 'auth.error.password_short' };
     }
 
-    const accounts = this._getAccounts();
+    // Wenn Server verbunden, versuche Registrierung über WebSocket
+    if (this._networkService && this._networkService.isConnected()) {
+      const pendingPromise = this._awaitServerResponse('auth:register:success', 'auth:register:error');
+      
+      const sent = this._networkService.send('auth:register', {
+        username: cleanUsername,
+        email: cleanEmail,
+        password: password
+      });
 
-    // Prüfe ob Benutzername oder E-Mail existiert
+      if (sent) {
+        const res = await pendingPromise;
+        if (!res.timeout) {
+          if (res.user && res.token) {
+            this._currentUser = res.user;
+            this._sessionToken = res.token;
+            this._persistSession();
+
+            // Auch lokal cachen
+            const accounts = this._getAccounts();
+            accounts[res.user.id] = { ...res.user, email: cleanEmail };
+            this._saveAccounts(accounts);
+
+            if (this._eventBus) {
+              this._eventBus.publish('auth:registered', { user: this._currentUser });
+              this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+            }
+
+            if (this._cloudManager) {
+              this._cloudManager.sync();
+            }
+
+            return { success: true, user: this._currentUser };
+          } else if (res.error) {
+            return { success: false, error: res.error };
+          }
+        }
+      }
+    }
+
+    // Offline Fallback Registrierung
+    const accounts = this._getAccounts();
     for (const key in accounts) {
       const acc = accounts[key];
       if (acc.username.toLowerCase() === cleanUsername.toLowerCase()) {
@@ -237,7 +301,6 @@ export class AuthService {
 
     this._saveAccounts(accounts);
 
-    // Automatisch anmelden
     this._currentUser = newUser;
     this._sessionToken = this._generateToken();
     this._persistSession();
@@ -251,9 +314,7 @@ export class AuthService {
   }
 
   /**
-   * Anmelden mit Benutzername/E-Mail und Passwort.
-   * @param {string} usernameOrEmail
-   * @param {string} password
+   * Anmelden mit Benutzername/E-Mail und Passwort (mit Server-Anbindung)
    */
   async login(usernameOrEmail, password) {
     const query = (usernameOrEmail || '').trim().toLowerCase();
@@ -261,6 +322,41 @@ export class AuthService {
       return { success: false, error: 'auth.error.missing_fields' };
     }
 
+    // Wenn Server verbunden, versuche Login über WebSocket
+    if (this._networkService && this._networkService.isConnected()) {
+      const pendingPromise = this._awaitServerResponse('auth:login:success', 'auth:login:error');
+
+      const sent = this._networkService.send('auth:login', {
+        usernameOrEmail: query,
+        password: password
+      });
+
+      if (sent) {
+        const res = await pendingPromise;
+        if (!res.timeout) {
+          if (res.user && res.token) {
+            this._currentUser = res.user;
+            this._sessionToken = res.token;
+            this._persistSession();
+
+            if (this._eventBus) {
+              this._eventBus.publish('auth:login', { user: this._currentUser });
+              this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+            }
+
+            if (this._cloudManager) {
+              this._cloudManager.loadFromCloud();
+            }
+
+            return { success: true, user: this._currentUser };
+          } else if (res.error) {
+            return { success: false, error: res.error };
+          }
+        }
+      }
+    }
+
+    // Offline Fallback Login
     const accounts = this._getAccounts();
     let targetAcc = null;
 
@@ -307,14 +403,48 @@ export class AuthService {
   }
 
   /**
-   * Wandelt ein Gast-Konto in ein permanentes Konto um.
-   * @param {string} username
-   * @param {string} email
-   * @param {string} password
+   * Wandelt ein Gast-Konto in ein permanentes Konto um (mit Server-Anbindung)
    */
   async convertGuestToAccount(username, email, password) {
     if (!this._currentUser || !this._currentUser.isGuest) {
       return { success: false, error: 'auth.error.not_guest' };
+    }
+
+    const guestId = this._currentUser.id;
+
+    if (this._networkService && this._networkService.isConnected()) {
+      const pendingPromise = this._awaitServerResponse('auth:convertGuest:success', 'auth:convertGuest:error');
+
+      const sent = this._networkService.send('auth:convertGuest', {
+        guestId,
+        username,
+        email,
+        password
+      });
+
+      if (sent) {
+        const res = await pendingPromise;
+        if (!res.timeout) {
+          if (res.user && res.token) {
+            this._currentUser = res.user;
+            this._sessionToken = res.token;
+            this._persistSession();
+
+            if (this._eventBus) {
+              this._eventBus.publish('auth:guestConverted', { user: this._currentUser });
+              this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+            }
+
+            if (this._cloudManager) {
+              this._cloudManager.sync();
+            }
+
+            return { success: true, user: this._currentUser };
+          } else if (res.error) {
+            return { success: false, error: res.error };
+          }
+        }
+      }
     }
 
     const result = await this.register(username, email, password);
@@ -326,9 +456,6 @@ export class AuthService {
     return result;
   }
 
-  /**
-   * Meldet den aktuellen Benutzer ab und schaltet in den Gast-Modus zurück.
-   */
   logout() {
     this._currentUser = null;
     this._sessionToken = null;
@@ -341,13 +468,10 @@ export class AuthService {
     return this.loginAsGuest();
   }
 
-  /**
-   * Speichert die Session im LocalStorage.
-   */
   _persistSession() {
     if (!this._currentUser) return;
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30); // 30 Tage gültig
+    expiresAt.setDate(expiresAt.getDate() + 30);
 
     const data = {
       user: this._currentUser,

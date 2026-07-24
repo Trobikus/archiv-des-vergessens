@@ -89,4 +89,41 @@ describe('AuthService', () => {
     expect(authService.isLoggedIn()).toBe(false);
     expect(authService.getCurrentUser().isGuest).toBe(true);
   });
+
+  it('should communicate with networkService when connected during registration and login', async () => {
+    const mockNetworkService = {
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn((type, payload) => {
+        if (type === 'auth:register') {
+          setTimeout(() => {
+            authService.handleServerAuthResponse('auth:register:success', {
+              user: { id: 'usr_server1', username: payload.username, email: payload.email, isGuest: false, avatar: '🛡️' },
+              token: 'tok_server_abc'
+            });
+          }, 10);
+        } else if (type === 'auth:login') {
+          setTimeout(() => {
+            authService.handleServerAuthResponse('auth:login:success', {
+              user: { id: 'usr_server1', username: 'ServerHero', email: 'server@archiv.de', isGuest: false, avatar: '🛡️' },
+              token: 'tok_server_xyz'
+            });
+          }, 10);
+        }
+        return true;
+      })
+    };
+
+    authService.setNetworkService(mockNetworkService);
+
+    const regRes = await authService.register('ServerHero', 'server@archiv.de', 'geheim123');
+    expect(regRes.success).toBe(true);
+    expect(regRes.user.id).toBe('usr_server1');
+    expect(authService.getToken()).toBe('tok_server_abc');
+
+    authService.logout();
+
+    const loginRes = await authService.login('ServerHero', 'geheim123');
+    expect(loginRes.success).toBe(true);
+    expect(authService.getToken()).toBe('tok_server_xyz');
+  });
 });

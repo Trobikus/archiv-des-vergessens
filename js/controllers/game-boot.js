@@ -171,9 +171,12 @@ export async function bootGame() {
   const networkService = container.get('networkService');
   const i18nService = container.get('i18nService');
   const accountVaultService = container.get('accountVaultService');
+  const authService = container.get('authService');
 
   // Querverweise für Netzwerk-Verarbeitung initialisieren
-  networkService.setServices(chatService, leaderboardService, cloudManager);
+  authService.setNetworkService(networkService);
+  authService.setCloudManager(cloudManager);
+  networkService.setServices(chatService, leaderboardService, cloudManager, authService);
 
   // Account-Lager initialisieren
   await accountVaultService.init();
@@ -439,6 +442,11 @@ export async function bootGame() {
 
   // Step 5 (100%): "Starte Game Loop & Partikel-System..."
   await updateBootProgress(100, 'Starte Game Loop & Partikel-System...');
+
+  if (typeof window !== 'undefined' && window['__TAURI__']) {
+    const bar = document.getElementById('intro-loading-bar') || document.querySelector('.intro-loading-bar');
+    if (bar) bar.style.width = '0%';
+  }
 
   const introContainer = document.getElementById('intro-container');
   if (introContainer) {
@@ -774,8 +782,41 @@ export async function bootGame() {
       if (introFinished || introStarted) return;
       introStarted = true;
 
+      // Sicherstellen, dass das Intro-Container sichtbar ist
+      introContainer.style.display = 'flex';
+      introContainer.style.opacity = '1';
+
       logger.info('[GameBoot] Starte Intro-Sequenz nach Vollbild-Fensteröffnung...');
       stopParticles = _startIntroParticles();
+
+      // Ladebalken zurücksetzen und dynamisch füllen
+      const loadingBar = document.getElementById('intro-loading-bar') || document.querySelector('.intro-loading-bar');
+      const loadingText = document.getElementById('intro-loading-text');
+
+      if (loadingBar) {
+        loadingBar.classList.add('manual-progress');
+        loadingBar.style.width = '0%';
+      }
+
+      // Animierte Ladebalken-Fortschritts-Sequenz während des Intros
+      const steps = [
+        { pct: 15, text: 'Initialisiere Archiv-Kern...', delay: 200 },
+        { pct: 35, text: 'Sammle Mneme-Partikel...', delay: 600 },
+        { pct: 60, text: 'Lade Chroniken & Relikte...', delay: 1200 },
+        { pct: 85, text: 'Entsiegele Weltenzustand...', delay: 1800 },
+        { pct: 100, text: 'Das Archiv ist bereit.', delay: 2400 }
+      ];
+
+      steps.forEach(({ pct, text, delay }) => {
+        setTimeout(() => {
+          if (introFinished) return;
+          if (loadingBar) loadingBar.style.width = `${pct}%`;
+          if (loadingText) {
+            loadingText.style.opacity = '1';
+            loadingText.innerText = text;
+          }
+        }, delay);
+      });
 
       // Timer für das automatische Beenden des Intros (7 Sekunden)
       introTimeoutId = setTimeout(finishIntro, 7000);
@@ -806,27 +847,41 @@ export async function bootGame() {
       introContainer.addEventListener('click', handleIntroClick);
     }
 
+    let gameLaunched = false;
+
     // --- LAUNCHER INTEGRATION: Intro erst starten, wenn das Vollbild-Fenster vollständig geöffnet ist ---
     if (window.electronAPI && typeof window.electronAPI.onGameLaunched === 'function') {
       window.electronAPI.onGameLaunched(() => {
+        if (gameLaunched) return;
+        gameLaunched = true;
         logger.info('[GameBoot] Event launcher:game-launched empfangen. Starte Intro...');
         setTimeout(startIntroSequence, 150);
       });
     }
 
-    // Fallback: Bei Fokus / Sichtbarkeitswechsel
-    const handleVisibilityOrFocus = () => {
-      if (!document.hidden && !introStarted && !introFinished) {
-        setTimeout(startIntroSequence, 150);
+    // Fallback: Für Browser-Betrieb ohne Launcher
+    if (!window['__TAURI__']) {
+      gameLaunched = true;
+      if (!document.hidden) {
+        setTimeout(startIntroSequence, 100);
+      } else {
+        const handleBrowserVisibility = () => {
+          if (!document.hidden && !introStarted) {
+            document.removeEventListener('visibilitychange', handleBrowserVisibility);
+            setTimeout(startIntroSequence, 100);
+          }
+        };
+        document.addEventListener('visibilitychange', handleBrowserVisibility);
       }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
-    window.addEventListener('focus', handleVisibilityOrFocus);
-
-    // Falls direkt im Browser ohne Tauri/Launcher geladen
-    if (!document.hidden && !window['__TAURI__']) {
-      startIntroSequence();
+    } else {
+      // Sicherheits-Fallback für Tauri falls launcher:game-launched nicht empfangen wurde
+      setTimeout(() => {
+        if (!gameLaunched && !introStarted && !introFinished) {
+          logger.info('[GameBoot] Sicherheits-Fallback: Starte Intro in Tauri-Umgebung...');
+          gameLaunched = true;
+          startIntroSequence();
+        }
+      }, 5000);
     }
 
     // ============================================================

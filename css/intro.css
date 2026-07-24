@@ -261,9 +261,8 @@
     height: 100%;
     background: linear-gradient(90deg, rgba(197,160,89,0.4), var(--color-gold), var(--color-gold-hover), var(--color-gold));
     background-size: 200% 100%;
-    animation:
-        fillLoading 6.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;  /* endet bei ~6.8s, Transition bei 7.0s */
     will-change: width;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow:
         0 0 6px rgba(197, 160, 89, 0.8),
         0 0 20px rgba(197, 160, 89, 0.4),
@@ -273,8 +272,7 @@
 
 .intro-loading-bar.manual-progress {
     animation: none !important;
-    width: 0%;
-    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Leucht-Punkt am Ende des Ladebalkens */
