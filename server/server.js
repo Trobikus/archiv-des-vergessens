@@ -362,8 +362,11 @@ function broadcastToGuild(guildId, type, payload) {
 function sanitize(str, maxLength = 200) {
   if (typeof str !== 'string') return '';
   return str
+    .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
     .trim()
     .substring(0, maxLength);
 }

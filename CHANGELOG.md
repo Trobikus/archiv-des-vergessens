@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] - 2026-07-24
+
+### 🛡️ Sicherheit & XSS-Prävention (Server & Client)
+- **Erweiterter Server-Sanitizer**: Die `sanitize`-Funktion in `server/server.js` wurde überarbeitet. Sämtliche Sonderzeichen (`&`, `<`, `>`, `"`, `'`) werden nun in genau definierter Reihenfolge vollständig in HTML-Entities (`&amp;`, `&lt;`, `&gt;`, `&quot;`, `&#39;`) umgewandelt, bevor Texte in die Datenbank geschrieben oder per WebSocket gesendet werden.
+- **Client Sanitizer Utility**: `escapeHtml`-Hilfsfunktion in `js/utils/sanitizer.js` ergänzt sowie Null-/Undefined-Absicherung in `sanitizeNumber` verbessert.
+- **Automatisierte Unit-Tests**: Neuer Vitest-Testsuite `js/_tests_/Sanitizer.test.js` hinzugefügt, um HTML-Escaping, String-Säuberung und Server-Sanitizer-Logik umfassend abzutesten.
+
+---
+
 ## [1.0.9] - 2026-07-24
 
 ### ⚙️ CI/CD, Build-Pipeline & Testing (Batch 6)
