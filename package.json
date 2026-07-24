@@ -15,9 +15,10 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
-    "tauri:build:local": "tauri build"
+    "game:dev": "tauri dev",
+    "game:build": "tauri build",
+    "launcher:dev": "tauri dev --config launcher/src-tauri/tauri.conf.json",
+    "launcher:build": "tauri build --config launcher/src-tauri/tauri.conf.json"
   },
   "dependencies": {
     "htm": "^3.1.1",

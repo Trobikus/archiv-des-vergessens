@@ -1,4 +1,4 @@
-name: Tauri Release Build
+name: Tauri Release Build (Game & Standalone Launcher)
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    name: Build & Release Windows EXE
+    name: Build & Release Portable Game & Launcher
     runs-on: windows-latest
 
     steps:
@@ -32,7 +32,9 @@ jobs:
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
+          workspaces: |
+            src-tauri
+            launcher/src-tauri
 
       - name: Install Dependencies
         run: npm install
@@ -43,19 +45,39 @@ jobs:
       - name: Run TypeCheck
         run: npm run typecheck
 
-      - name: Build Tauri Executable
-        run: npm run tauri:build
+      - name: Build Web Frontend Assets
+        run: npm run build
 
-      - name: Create GitHub Release & Upload Executable
+      - name: Build Portable Game Executable
+        run: npm run game:build
+
+      - name: Create Portable Game ZIP Archive
+        run: |
+          Compress-Archive -Path src-tauri/target/release/ArchivDesVergessens.exe -DestinationPath src-tauri/target/release/archiv-des-vergessens.zip -Force
+
+      - name: Build Standalone Launcher Executable
+        run: npm run launcher:build
+
+      - name: Prepare Launcher Executable
+        run: |
+          Copy-Item launcher/src-tauri/target/release/archiv-launcher.exe -Destination launcher/src-tauri/target/release/ArchivDesVergessens-Launcher.exe -Force
+
+      - name: Create GitHub Release & Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/ArchivDesVergessens.exe
-          name: ArchivDesVergessens ${{ github.ref_name }}
+          files: |
+            src-tauri/target/release/archiv-des-vergessens.zip
+            launcher/src-tauri/target/release/ArchivDesVergessens-Launcher.exe
+          name: Archiv des Vergessens ${{ github.ref_name }}
           body: |
-            Neues Portable-Release für ArchivDesVergessens (${{ github.ref_name }}).
-            Lade einfach die `ArchivDesVergessens.exe` herunter und starte sie direkt!
+            ## Neues Release: Archiv des Vergessens (${{ github.ref_name }})
+
+            ### 🚀 Installation & Start
+            1. Lade den **`ArchivDesVergessens-Launcher.exe`** herunter.
+            2. Starte die Launcher-Datei – sie lädt automatisch das Portable-Spielpaket herunter, entpackt es und startet das Spiel!
+
+            *(Alternativ kannst du das Zip-Archiv `archiv-des-vergessens.zip` direkt herunterladen und entpacken).*
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
