@@ -297,6 +297,40 @@ export async function bootGame() {
   // ============================================================
   await updateBootProgress(80, 'Initialisiere UI & Preact-Komponenten...');
 
+  // Preact-UI & globale Services
+  const services = {
+    heroService,
+    resourceService,
+    clanService,
+    storyService,
+    forgeService,
+    craftingService,
+    questService,
+    achievementService,
+    guildService,
+    friendService,
+    chatService,
+    codexService,
+    relicHuntService,
+    dailyRewardService,
+    leaderboardService,
+    storyBranchService,
+    skillTreeService,
+    challengeService,
+    libraryService,
+    tutorialService,
+    i18nService,
+    accountVaultService,
+    authService,
+    networkService,
+    cloudManager,
+    saveManager: SaveManager
+  };
+
+  if (typeof window !== 'undefined') {
+    window.services = services;
+  }
+
   // Preact-UI (alle Komponenten)
   const preactContainer = document.getElementById('preact-root');
   if (preactContainer) {
@@ -304,31 +338,7 @@ export async function bootGame() {
       container: preactContainer,
       stateManager,
       eventBus,
-      services: {
-        heroService,
-        resourceService,
-        clanService,
-        storyService,
-        forgeService,
-        craftingService,
-        questService,
-        achievementService,
-        guildService,
-        friendService,
-        chatService,
-        codexService,
-        relicHuntService,
-        dailyRewardService,
-        leaderboardService,
-        storyBranchService,
-        skillTreeService,
-        challengeService,
-        libraryService,
-        tutorialService,
-        i18nService,
-        saveManager: SaveManager,
-        authService
-      }
+      services
     });
     container.register('preactUI', () => preactUI);
   }

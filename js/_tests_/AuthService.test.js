@@ -191,4 +191,21 @@ describe('AuthService', () => {
     expect(loginRes.success).toBe(false);
     expect(loginRes.error).toBe('auth.error.account_locked');
   });
+
+  it('should prevent concurrent authentication attempts with in_progress error', async () => {
+    // Simulate a slow network request
+    const mockNetworkService = {
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn(() => true) // Never calls handleServerAuthResponse, pending promise will wait
+    };
+    authService.setNetworkService(mockNetworkService);
+
+    // Start first attempt
+    const firstLoginPromise = authService.login('SlowUser', 'password123');
+
+    // Attempt second login immediately
+    const secondLoginRes = await authService.login('SlowUser', 'password123');
+    expect(secondLoginRes.success).toBe(false);
+    expect(secondLoginRes.error).toBe('auth.error.in_progress');
+  });
 });
