@@ -30,6 +30,7 @@ export class AuthService {
     this._currentUser = null;
     this._sessionToken = null;
     this._pendingAuthResolves = {};
+    this._isAuthenticating = false;
 
     this._initSession();
   }
@@ -98,6 +99,7 @@ export class AuthService {
 
     if (this._pendingAuthResolves[type]) {
       const resolvers = [...this._pendingAuthResolves[type]];
+      delete this._pendingAuthResolves[type];
       for (const resolve of resolvers) {
         resolve(payload);
       }
@@ -118,9 +120,15 @@ export class AuthService {
         }
         if (this._pendingAuthResolves[successType]) {
           this._pendingAuthResolves[successType] = this._pendingAuthResolves[successType].filter(h => h !== handler);
+          if (this._pendingAuthResolves[successType].length === 0) {
+            delete this._pendingAuthResolves[successType];
+          }
         }
         if (this._pendingAuthResolves[errorType]) {
           this._pendingAuthResolves[errorType] = this._pendingAuthResolves[errorType].filter(h => h !== handler);
+          if (this._pendingAuthResolves[errorType].length === 0) {
+            delete this._pendingAuthResolves[errorType];
+          }
         }
       };
 
@@ -232,323 +240,349 @@ export class AuthService {
    * Registriert ein neues Konto auf dem Server (mit lokalem Offline-Fallback)
    */
   async register(username, email, password) {
-    const cleanUsername = (username || '').trim();
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    if (!cleanUsername || cleanUsername.length < 3) {
-      return { success: false, error: 'auth.error.username_short' };
+    if (this._isAuthenticating) {
+      return { success: false, error: 'auth.error.in_progress' };
     }
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      return { success: false, error: 'auth.error.email_invalid' };
-    }
-    if (!password || password.length < 6) {
-      return { success: false, error: 'auth.error.password_short' };
-    }
+    this._isAuthenticating = true;
+    try {
+      const cleanUsername = (username || '').trim();
+      const cleanEmail = (email || '').trim().toLowerCase();
 
-    // Wenn Server verbunden, versuche Registrierung über WebSocket
-    if (this._networkService && this._networkService.isConnected()) {
-      const pendingPromise = this._awaitServerResponse('auth:register:success', 'auth:register:error');
-      
-      const sent = this._networkService.send('auth:register', {
-        username: cleanUsername,
-        email: cleanEmail,
-        password: password
-      });
+      if (!cleanUsername || cleanUsername.length < 3) {
+        return { success: false, error: 'auth.error.username_short' };
+      }
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        return { success: false, error: 'auth.error.email_invalid' };
+      }
+      if (!password || password.length < 6) {
+        return { success: false, error: 'auth.error.password_short' };
+      }
 
-      if (sent) {
-        const res = await pendingPromise;
-        if (!res.timeout && res) {
-          if (res.user && res.token) {
-            this._currentUser = res.user;
-            this._sessionToken = res.token;
-            this._persistSession();
+      // Wenn Server verbunden, versuche Registrierung über WebSocket
+      if (this._networkService && this._networkService.isConnected()) {
+        const pendingPromise = this._awaitServerResponse('auth:register:success', 'auth:register:error');
 
-            // Auch lokal cachen für Offline-Fallback
-            const salt = this._generateSalt();
-            const passwordHash = await this._hashPassword(password, salt);
-            const accounts = this._getAccounts();
-            accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
-            this._saveAccounts(accounts);
+        const sent = this._networkService.send('auth:register', {
+          username: cleanUsername,
+          email: cleanEmail,
+          password: password
+        });
 
-            if (this._eventBus) {
-              this._eventBus.publish('auth:registered', { user: this._currentUser });
-              this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+        if (sent) {
+          const res = await pendingPromise;
+          if (!res.timeout && res) {
+            if (res.user && res.token) {
+              this._currentUser = res.user;
+              this._sessionToken = res.token;
+              this._persistSession();
+
+              // Auch lokal cachen für Offline-Fallback
+              const salt = this._generateSalt();
+              const passwordHash = await this._hashPassword(password, salt);
+              const accounts = this._getAccounts();
+              accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
+              this._saveAccounts(accounts);
+
+              if (this._eventBus) {
+                this._eventBus.publish('auth:registered', { user: this._currentUser });
+                this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+              }
+
+              if (this._cloudManager) {
+                this._cloudManager.sync();
+              }
+
+              return { success: true, user: this._currentUser };
+            } else if (res.error) {
+              return { success: false, error: res.error };
             }
-
-            if (this._cloudManager) {
-              this._cloudManager.sync();
-            }
-
-            return { success: true, user: this._currentUser };
-          } else if (res.error) {
-            return { success: false, error: res.error };
           }
         }
       }
-    }
 
-    // Offline Fallback Registrierung
-    const accounts = this._getAccounts();
-    for (const key in accounts) {
-      const acc = accounts[key];
-      if (acc.username && acc.username.toLowerCase() === cleanUsername.toLowerCase()) {
-        return { success: false, error: 'auth.error.username_taken' };
+      // Offline Fallback Registrierung
+      const accounts = this._getAccounts();
+      for (const key in accounts) {
+        const acc = accounts[key];
+        if (acc.username && acc.username.toLowerCase() === cleanUsername.toLowerCase()) {
+          return { success: false, error: 'auth.error.username_taken' };
+        }
+        if (acc.email && acc.email.toLowerCase() === cleanEmail) {
+          return { success: false, error: 'auth.error.email_taken' };
+        }
       }
-      if (acc.email && acc.email.toLowerCase() === cleanEmail) {
-        return { success: false, error: 'auth.error.email_taken' };
+
+      const userId = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+      const salt = this._generateSalt();
+      const passwordHash = await this._hashPassword(password, salt);
+
+      const newUser = {
+        id: userId,
+        username: cleanUsername,
+        email: cleanEmail,
+        isGuest: false,
+        avatar: '🛡️',
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
+      };
+
+      accounts[userId] = {
+        ...newUser,
+        salt,
+        passwordHash
+      };
+
+      this._saveAccounts(accounts);
+
+      this._currentUser = newUser;
+      this._sessionToken = this._generateToken();
+      this._persistSession();
+
+      if (this._eventBus) {
+        this._eventBus.publish('auth:registered', { user: this._currentUser });
+        this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
       }
+
+      return { success: true, user: this._currentUser };
+    } finally {
+      this._isAuthenticating = false;
     }
-
-    const userId = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
-    const salt = this._generateSalt();
-    const passwordHash = await this._hashPassword(password, salt);
-
-    const newUser = {
-      id: userId,
-      username: cleanUsername,
-      email: cleanEmail,
-      isGuest: false,
-      avatar: '🛡️',
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString()
-    };
-
-    accounts[userId] = {
-      ...newUser,
-      salt,
-      passwordHash
-    };
-
-    this._saveAccounts(accounts);
-
-    this._currentUser = newUser;
-    this._sessionToken = this._generateToken();
-    this._persistSession();
-
-    if (this._eventBus) {
-      this._eventBus.publish('auth:registered', { user: this._currentUser });
-      this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-    }
-
-    return { success: true, user: this._currentUser };
   }
 
   /**
    * Anmelden mit Benutzername/E-Mail und Passwort (mit Server-Anbindung)
    */
   async login(usernameOrEmail, password) {
-    const query = (usernameOrEmail || '').trim().toLowerCase();
-    if (!query || !password) {
-      return { success: false, error: 'auth.error.missing_fields' };
+    if (this._isAuthenticating) {
+      return { success: false, error: 'auth.error.in_progress' };
     }
+    this._isAuthenticating = true;
+    try {
+      const query = (usernameOrEmail || '').trim().toLowerCase();
+      if (!query || !password) {
+        return { success: false, error: 'auth.error.missing_fields' };
+      }
 
-    // Wenn Server verbunden, versuche Login über WebSocket
-    if (this._networkService && this._networkService.isConnected()) {
-      const pendingPromise = this._awaitServerResponse('auth:login:success', 'auth:login:error');
+      // Wenn Server verbunden, versuche Login über WebSocket
+      if (this._networkService && this._networkService.isConnected()) {
+        const pendingPromise = this._awaitServerResponse('auth:login:success', 'auth:login:error');
 
-      const sent = this._networkService.send('auth:login', {
-        usernameOrEmail: query,
-        password: password
-      });
+        const sent = this._networkService.send('auth:login', {
+          usernameOrEmail: query,
+          password: password
+        });
 
-      if (sent) {
-        const res = await pendingPromise;
-        if (!res.timeout && res) {
-          if (res.user && res.token) {
-            this._currentUser = res.user;
-            this._sessionToken = res.token;
-            this._persistSession();
+        if (sent) {
+          const res = await pendingPromise;
+          if (!res.timeout && res) {
+            if (res.user && res.token) {
+              this._currentUser = res.user;
+              this._sessionToken = res.token;
+              this._persistSession();
 
-            // Lokal cachen für Offline-Fallback
-            const salt = this._generateSalt();
-            const passwordHash = await this._hashPassword(password, salt);
-            const accounts = this._getAccounts();
-            accounts[res.user.id] = { ...res.user, salt, passwordHash };
-            this._saveAccounts(accounts);
+              // Lokal cachen für Offline-Fallback
+              const salt = this._generateSalt();
+              const passwordHash = await this._hashPassword(password, salt);
+              const accounts = this._getAccounts();
+              accounts[res.user.id] = { ...res.user, salt, passwordHash };
+              this._saveAccounts(accounts);
 
-            if (this._eventBus) {
-              this._eventBus.publish('auth:login', { user: this._currentUser });
-              this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-            }
-
-            return { success: true, user: this._currentUser };
-          } else if (res.error) {
-            // Check if account exists locally before giving up or returning server error
-            const accounts = this._getAccounts();
-            let targetAcc = null;
-            for (const key in accounts) {
-              const acc = accounts[key];
-              if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
-                targetAcc = acc;
-                break;
+              if (this._eventBus) {
+                this._eventBus.publish('auth:login', { user: this._currentUser });
+                this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
               }
-            }
-            if (targetAcc && targetAcc.passwordHash && targetAcc.salt) {
-              const hash = await this._hashPassword(password, targetAcc.salt);
-              if (hash === targetAcc.passwordHash) {
-                targetAcc.lastLogin = new Date().toISOString();
-                accounts[targetAcc.id] = targetAcc;
-                this._saveAccounts(accounts);
 
-                this._currentUser = {
-                  id: targetAcc.id,
-                  username: targetAcc.username,
-                  email: targetAcc.email,
-                  isGuest: false,
-                  avatar: targetAcc.avatar || '🛡️',
-                  createdAt: targetAcc.createdAt,
-                  lastLogin: targetAcc.lastLogin
-                };
-
-                this._sessionToken = targetAcc.sessionToken || this._generateToken();
-                this._persistSession();
-
-                this._networkService.send('auth:register', {
-                  username: targetAcc.username,
-                  email: targetAcc.email || `${targetAcc.username}@local.archiv`,
-                  password: password
-                });
-
-                if (this._eventBus) {
-                  this._eventBus.publish('auth:login', { user: this._currentUser });
-                  this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+              return { success: true, user: this._currentUser };
+            } else if (res.error) {
+              // Bei user_not_found oder Server-Fehler checken wir den lokalen Speicher
+              const accounts = this._getAccounts();
+              let targetAcc = null;
+              for (const key in accounts) {
+                const acc = accounts[key];
+                if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
+                  targetAcc = acc;
+                  break;
                 }
-
-                return { success: true, user: this._currentUser };
-              } else {
-                return { success: false, error: 'auth.error.wrong_password' };
               }
+              if (targetAcc && targetAcc.passwordHash && targetAcc.salt) {
+                const hash = await this._hashPassword(password, targetAcc.salt);
+                if (hash === targetAcc.passwordHash) {
+                  targetAcc.lastLogin = new Date().toISOString();
+                  accounts[targetAcc.id] = targetAcc;
+                  this._saveAccounts(accounts);
+
+                  this._currentUser = {
+                    id: targetAcc.id,
+                    username: targetAcc.username,
+                    email: targetAcc.email,
+                    isGuest: false,
+                    avatar: targetAcc.avatar || '🛡️',
+                    createdAt: targetAcc.createdAt,
+                    lastLogin: targetAcc.lastLogin
+                  };
+
+                  this._sessionToken = targetAcc.sessionToken || this._generateToken();
+                  this._persistSession();
+
+                  // Asynchron im Hintergrund Server-Registrierung nachholen
+                  this._networkService.send('auth:register', {
+                    username: targetAcc.username,
+                    email: targetAcc.email || `${targetAcc.username}@local.archiv`,
+                    password: password
+                  });
+
+                  if (this._eventBus) {
+                    this._eventBus.publish('auth:login', { user: this._currentUser });
+                    this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+                  }
+
+                  return { success: true, user: this._currentUser };
+                } else {
+                  return { success: false, error: 'auth.error.wrong_password' };
+                }
+              }
+              return { success: false, error: res.error };
             }
-            return { success: false, error: res.error };
           }
         }
       }
-    }
 
-    // Offline Fallback Login
-    const accounts = this._getAccounts();
-    let targetAcc = null;
+      // Offline Fallback Login (wenn Server offline oder Timeout)
+      const accounts = this._getAccounts();
+      let targetAcc = null;
 
-    for (const key in accounts) {
-      const acc = accounts[key];
-      if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
-        targetAcc = acc;
-        break;
+      for (const key in accounts) {
+        const acc = accounts[key];
+        if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
+          targetAcc = acc;
+          break;
+        }
       }
-    }
 
-    if (!targetAcc) {
-      return { success: false, error: 'auth.error.user_not_found' };
-    }
+      if (!targetAcc) {
+        return { success: false, error: 'auth.error.user_not_found' };
+      }
 
-    if (!targetAcc.passwordHash || !targetAcc.salt) {
-      return { success: false, error: 'auth.error.wrong_password' };
-    }
+      if (!targetAcc.passwordHash || !targetAcc.salt) {
+        return { success: false, error: 'auth.error.wrong_password' };
+      }
 
-    const hash = await this._hashPassword(password, targetAcc.salt);
-    if (hash !== targetAcc.passwordHash) {
-      return { success: false, error: 'auth.error.wrong_password' };
-    }
+      const hash = await this._hashPassword(password, targetAcc.salt);
+      if (hash !== targetAcc.passwordHash) {
+        return { success: false, error: 'auth.error.wrong_password' };
+      }
 
-    targetAcc.lastLogin = new Date().toISOString();
-    accounts[targetAcc.id] = targetAcc;
-    this._saveAccounts(accounts);
+      targetAcc.lastLogin = new Date().toISOString();
+      accounts[targetAcc.id] = targetAcc;
+      this._saveAccounts(accounts);
 
-    this._currentUser = {
-      id: targetAcc.id,
-      username: targetAcc.username,
-      email: targetAcc.email,
-      isGuest: false,
-      avatar: targetAcc.avatar || '🛡️',
-      createdAt: targetAcc.createdAt,
-      lastLogin: targetAcc.lastLogin
-    };
-
-    this._sessionToken = targetAcc.sessionToken || this._generateToken();
-    this._persistSession();
-
-    // Falls jetzt Server verbunden ist, registriere das bisher nur lokal existierende Konto auf dem Server nach
-    if (this._networkService && this._networkService.isConnected()) {
-      this._networkService.send('auth:register', {
+      this._currentUser = {
+        id: targetAcc.id,
         username: targetAcc.username,
-        email: targetAcc.email || `${targetAcc.username}@local.archiv`,
-        password: password
-      });
-    }
+        email: targetAcc.email,
+        isGuest: false,
+        avatar: targetAcc.avatar || '🛡️',
+        createdAt: targetAcc.createdAt,
+        lastLogin: targetAcc.lastLogin
+      };
 
-    if (this._eventBus) {
-      this._eventBus.publish('auth:login', { user: this._currentUser });
-      this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-    }
+      this._sessionToken = targetAcc.sessionToken || this._generateToken();
+      this._persistSession();
 
-    return { success: true, user: this._currentUser };
+      // Falls jetzt Server verbunden ist, registriere das bisher nur lokal existierende Konto auf dem Server nach
+      if (this._networkService && this._networkService.isConnected()) {
+        this._networkService.send('auth:register', {
+          username: targetAcc.username,
+          email: targetAcc.email || `${targetAcc.username}@local.archiv`,
+          password: password
+        });
+      }
+
+      if (this._eventBus) {
+        this._eventBus.publish('auth:login', { user: this._currentUser });
+        this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+      }
+
+      return { success: true, user: this._currentUser };
+    } finally {
+      this._isAuthenticating = false;
+    }
   }
 
   /**
    * Wandelt ein Gast-Konto in ein permanentes Konto um (mit Server-Anbindung)
    */
   async convertGuestToAccount(username, email, password) {
-    if (!this._currentUser || !this._currentUser.isGuest) {
-      return { success: false, error: 'auth.error.not_guest' };
+    if (this._isAuthenticating) {
+      return { success: false, error: 'auth.error.in_progress' };
     }
+    this._isAuthenticating = true;
+    try {
+      if (!this._currentUser || !this._currentUser.isGuest) {
+        return { success: false, error: 'auth.error.not_guest' };
+      }
 
-    const guestId = this._currentUser.id;
+      const guestId = this._currentUser.id;
 
-    if (this._networkService && this._networkService.isConnected()) {
-      const pendingPromise = this._awaitServerResponse('auth:convertGuest:success', 'auth:convertGuest:error');
+      if (this._networkService && this._networkService.isConnected()) {
+        const pendingPromise = this._awaitServerResponse('auth:convertGuest:success', 'auth:convertGuest:error');
 
-      const sent = this._networkService.send('auth:convertGuest', {
-        guestId,
-        username,
-        email,
-        password
-      });
+        const sent = this._networkService.send('auth:convertGuest', {
+          guestId,
+          username,
+          email,
+          password
+        });
 
-      if (sent) {
-        const res = await pendingPromise;
-        if (!res.timeout) {
-          if (res.user && res.token) {
-            this._currentUser = res.user;
-            this._sessionToken = res.token;
-            this._persistSession();
+        if (sent) {
+          const res = await pendingPromise;
+          if (!res.timeout && res) {
+            if (res.user && res.token) {
+              this._currentUser = res.user;
+              this._sessionToken = res.token;
+              this._persistSession();
 
-            const salt = this._generateSalt();
-            const passwordHash = await this._hashPassword(password, salt);
-            const accounts = this._getAccounts();
-            accounts[res.user.id] = { ...res.user, email, salt, passwordHash };
-            this._saveAccounts(accounts);
+              const salt = this._generateSalt();
+              const passwordHash = await this._hashPassword(password, salt);
+              const accounts = this._getAccounts();
+              accounts[res.user.id] = { ...res.user, email, salt, passwordHash };
+              this._saveAccounts(accounts);
 
-            if (this._eventBus) {
-              this._eventBus.publish('auth:guestConverted', { user: this._currentUser });
-              this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+              if (this._eventBus) {
+                this._eventBus.publish('auth:guestConverted', { user: this._currentUser });
+                this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
+              }
+
+              if (this._cloudManager) {
+                this._cloudManager.sync();
+              }
+
+              return { success: true, user: this._currentUser };
+            } else if (res.error) {
+              return { success: false, error: res.error };
             }
-
-            if (this._cloudManager) {
-              this._cloudManager.sync();
-            }
-
-            return { success: true, user: this._currentUser };
-          } else if (res.error) {
-            return { success: false, error: res.error };
           }
-        } else {
-          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
-    }
 
-    const result = await this.register(username, email, password);
-    if (result.success) {
-      if (this._eventBus) {
-        this._eventBus.publish('auth:guestConverted', { user: result.user });
+      this._isAuthenticating = false;
+      const result = await this.register(username, email, password);
+      if (result.success) {
+        if (this._eventBus) {
+          this._eventBus.publish('auth:guestConverted', { user: result.user });
+        }
       }
+      return result;
+    } finally {
+      this._isAuthenticating = false;
     }
-    return result;
   }
 
   logout() {
     this._currentUser = null;
     this._sessionToken = null;
+    this._pendingAuthResolves = {};
+    this._isAuthenticating = false;
     localStorage.removeItem(this._STORAGE_SESSION_KEY);
 
     if (this._eventBus) {

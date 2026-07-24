@@ -91,6 +91,14 @@ export class NetworkService {
     this._leaderboardService = leaderboardService;
     this._cloudManager = cloudManager;
     this._authService = authService;
+    this._connectTimeout = null;
+  }
+
+  _clearConnectTimeout() {
+    if (this._connectTimeout) {
+      clearTimeout(this._connectTimeout);
+      this._connectTimeout = null;
+    }
   }
 
   /**
@@ -100,6 +108,8 @@ export class NetworkService {
     if (this._ws && (this._ws.readyState === WebSocket.CONNECTING || this._ws.readyState === WebSocket.OPEN)) {
       return;
     }
+
+    this._clearConnectTimeout();
 
     if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
       console.log(`[Network] Verbinde mit Multiplayer-Server unter ${this._serverUrl}...`);
@@ -112,7 +122,21 @@ export class NetworkService {
       return;
     }
 
+    // Setze Verbindungs-Timeout (6000ms) für langsame Handshakes / offline Server
+    this._connectTimeout = setTimeout(() => {
+      if (this._ws && this._ws.readyState !== WebSocket.OPEN) {
+        if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
+          console.warn('[Network] Verbindungsaufbau fehlgeschlagen (Timeout). Starte Reconnect...');
+        }
+        try { this._ws.close(); } catch {}
+        this._ws = null;
+        this._connected = false;
+        this._triggerReconnect();
+      }
+    }, 6000);
+
     this._ws.onopen = () => {
+      this._clearConnectTimeout();
       this._connected = true;
       this._reconnectAttempts = 0;
       console.log('[Network] Verbindung hergestellt! Starte Handshake...');
@@ -126,6 +150,7 @@ export class NetworkService {
     };
 
     this._ws.onclose = () => {
+      this._clearConnectTimeout();
       if (this._connected) {
         this._connected = false;
         console.log('[Network] Verbindung zum Server verloren.');
@@ -135,6 +160,7 @@ export class NetworkService {
     };
 
     this._ws.onerror = (err) => {
+      this._clearConnectTimeout();
       if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
         console.warn('[Network] Multiplayer-Server offline oder nicht erreichbar.');
       }
@@ -298,6 +324,7 @@ export class NetworkService {
   }
 
   destroy() {
+    this._clearConnectTimeout();
     this._startReconnectTimer();
     if (this._ws) {
       this._ws.onclose = null;
