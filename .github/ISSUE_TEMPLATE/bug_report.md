@@ -1,9 +1,10 @@
 ---
-name: 🐛 Bug Report
+name: "\U0001F41B Bug Report"
 about: Melde einen Fehler, um uns zu helfen, die Erinnerungen des Archivs zu bewahren.
 title: "[Bug] <Kurze, prägnante Beschreibung des Fehlers>"
-labels: ["bug", "needs-triage"]
-assignees: ""
+labels: bug, enhancement
+assignees: ''
+
 ---
 
 ## 📜 Beschreibung des Fehlers
