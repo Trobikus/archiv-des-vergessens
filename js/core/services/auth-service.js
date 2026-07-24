@@ -100,12 +100,25 @@ export class AuthService {
   /**
    * Erwartet eine bestimmte Server-Antwort als Promise mit Timeout
    */
-  _awaitServerResponse(successType, errorType, timeoutMs = 4000) {
+  _awaitServerResponse(successType, errorType, timeoutMs = 5000) {
     return new Promise((resolve) => {
       let timer = null;
 
+      const cleanup = () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        if (this._pendingAuthResolves[successType]) {
+          this._pendingAuthResolves[successType] = this._pendingAuthResolves[successType].filter(h => h !== handler);
+        }
+        if (this._pendingAuthResolves[errorType]) {
+          this._pendingAuthResolves[errorType] = this._pendingAuthResolves[errorType].filter(h => h !== handler);
+        }
+      };
+
       const handler = (payload) => {
-        if (timer) clearTimeout(timer);
+        cleanup();
         resolve(payload);
       };
 
@@ -116,9 +129,7 @@ export class AuthService {
       this._pendingAuthResolves[errorType].push(handler);
 
       timer = setTimeout(() => {
-        // Aufräumen bei Timeout
-        this._pendingAuthResolves[successType] = (this._pendingAuthResolves[successType] || []).filter(h => h !== handler);
-        this._pendingAuthResolves[errorType] = (this._pendingAuthResolves[errorType] || []).filter(h => h !== handler);
+        cleanup();
         resolve({ timeout: true });
       }, timeoutMs);
     });
@@ -245,9 +256,11 @@ export class AuthService {
             this._sessionToken = res.token;
             this._persistSession();
 
-            // Auch lokal cachen
+            // Auch lokal cachen für Offline-Fallback
+            const salt = this._generateSalt();
+            const passwordHash = await this._hashPassword(password, salt);
             const accounts = this._getAccounts();
-            accounts[res.user.id] = { ...res.user, email: cleanEmail };
+            accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
             this._saveAccounts(accounts);
 
             if (this._eventBus) {
@@ -263,6 +276,8 @@ export class AuthService {
           } else if (res.error) {
             return { success: false, error: res.error };
           }
+        } else {
+          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
     }
@@ -339,6 +354,13 @@ export class AuthService {
             this._sessionToken = res.token;
             this._persistSession();
 
+            // Lokal cachen für Offline-Fallback
+            const salt = this._generateSalt();
+            const passwordHash = await this._hashPassword(password, salt);
+            const accounts = this._getAccounts();
+            accounts[res.user.id] = { ...res.user, salt, passwordHash };
+            this._saveAccounts(accounts);
+
             if (this._eventBus) {
               this._eventBus.publish('auth:login', { user: this._currentUser });
               this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
@@ -352,6 +374,8 @@ export class AuthService {
           } else if (res.error) {
             return { success: false, error: res.error };
           }
+        } else {
+          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
     }
@@ -370,6 +394,10 @@ export class AuthService {
 
     if (!targetAcc) {
       return { success: false, error: 'auth.error.user_not_found' };
+    }
+
+    if (!targetAcc.passwordHash || !targetAcc.salt) {
+      return { success: false, error: 'auth.error.wrong_password' };
     }
 
     const hash = await this._hashPassword(password, targetAcc.salt);
@@ -430,6 +458,12 @@ export class AuthService {
             this._sessionToken = res.token;
             this._persistSession();
 
+            const salt = this._generateSalt();
+            const passwordHash = await this._hashPassword(password, salt);
+            const accounts = this._getAccounts();
+            accounts[res.user.id] = { ...res.user, email, salt, passwordHash };
+            this._saveAccounts(accounts);
+
             if (this._eventBus) {
               this._eventBus.publish('auth:guestConverted', { user: this._currentUser });
               this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
@@ -443,6 +477,8 @@ export class AuthService {
           } else if (res.error) {
             return { success: false, error: res.error };
           }
+        } else {
+          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
     }

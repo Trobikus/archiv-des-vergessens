@@ -42,17 +42,39 @@ export class NetworkService {
   }
 
   _getServerUrl() {
+    // 1. Manuelle Überschreibung durch Einstellungen/localStorage
     const customUrl = localStorage.getItem('archiv_server_url');
     if (customUrl) return customUrl;
 
+    // 2. Nur im aktiven Vite-Entwicklungsmodus (npm run dev) auf localhost ausweichen
     if (typeof window !== 'undefined' && window.location) {
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      const hostname = window.location.hostname || '';
+      const isViteDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+      const isLocalHost = (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') && window.location.port !== '';
+
+      if (isViteDev && isLocalHost) {
         return 'ws://localhost:8080';
       }
     }
 
+    // 3. Standard für alle Produktiv-Builds (Tauri Release, GitHub Pages, Executable):
     return 'wss://grimoireinteractive.duckdns.org';
+  }
+
+  /**
+   * Ändert die Server-URL zur Laufzeit (z. B. zwischen Produktiv und Test-Server)
+   */
+  setServerUrl(url) {
+    if (!url) {
+      localStorage.removeItem('archiv_server_url');
+    } else {
+      localStorage.setItem('archiv_server_url', url);
+    }
+    this._serverUrl = this._getServerUrl();
+    if (this._ws) {
+      try { this._ws.close(); } catch {}
+    }
+    this.connect();
   }
 
   _getUserId() {
