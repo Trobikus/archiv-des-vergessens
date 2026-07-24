@@ -13,6 +13,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
   - Zentrale Schnittstelle `js/utils.js` erstellt, welche Formatierungs- und Utility-Funktionen re-exportiert.
 - **Prestige-Schwellenwert Balancing (`js/core/game/math.js` & `js/core/services/idle-service.js`)**:
   - Standard-Schwellenwert für das Erst-Prestige von `1000` auf `10.000` `mnemeFragmente` erhöht ($\lfloor \sqrt{\text{GesamtMneme} / 10000} \rfloor$), um ein optimales Erst-Prestige nach ca. 30–60 Minuten Spielzeit zu gewährleisten.
+- **Tauri Updater Plugin Integration (`src-tauri`, `package.json`, `launcher.js`)**:
+  - `tauri-plugin-updater` Abhängigkeit in `src-tauri/Cargo.toml` (v2.3.1) hinzugefügt.
+  - Rust-Plugin `tauri_plugin_updater::Builder::new().build()` in `src-tauri/src/main.rs` registriert.
+  - JS/TS-Side `@tauri-apps/plugin-updater` in `package.json` hinzugefügt und in `launcher.js` mit `check()`, Fortschrittsanzeige für `downloadAndInstall()` und automatischem `relaunch()` eingebunden.
+  - `src-tauri/tauri.conf.json` um den `plugins.updater` Bereich mit `endpoints` und `pubkey` erweitert und `createUpdaterArtifacts: true` aktiviert.
 - **Automatisierte Testabdeckung**:
   - Neue Testsuite `NumberFormatter.test.js` mit 9 Unit-Tests hinzugefügt.
   - Bestehende Prestige-Tests in `IdleService.test.js` und `IdleMathAndProgression.test.js` auf das neue Balancing angepasst (17 Testdateien, 115 bestandene Tests).

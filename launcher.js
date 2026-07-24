@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 /* ============================================================
    LAUNCHER.JS - AAA Native Tauri Launcher
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let updateState = 'checking';
   let latestReleaseUrl = 'https://github.com/Trobikus/archiv-des-vergessens/releases/latest';
+  let pendingUpdate = null;
 
   const appWindow = getCurrentWindow();
 
@@ -185,11 +188,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (actionBtn) {
     actionBtn.addEventListener('click', async () => {
       if (updateState === 'update-available') {
-        console.log('[Launcher] Öffne GitHub Release-Seite:', latestReleaseUrl);
-        try {
-          await invoke('open_release_page', { url: latestReleaseUrl });
-        } catch (e) {
-          window.open(latestReleaseUrl, '_blank');
+        if (pendingUpdate) {
+          console.log('[Launcher] Starte Download und Installation des Updates via Plugin...');
+          try {
+            let downloaded = 0;
+            let contentLength = 0;
+            if (progressContainer) progressContainer.style.display = 'block';
+            actionBtn.style.display = 'none';
+
+            await pendingUpdate.downloadAndInstall((event) => {
+              switch (event.event) {
+                case 'Started':
+                  contentLength = event.data.contentLength || 0;
+                  break;
+                case 'Progress':
+                  downloaded += event.data.chunkLength;
+                  if (contentLength > 0) {
+                    const pct = Math.round((downloaded / contentLength) * 100);
+                    const progressFill = document.getElementById('progress-fill');
+                    const progressLabel = document.getElementById('progress-label');
+                    if (progressFill) progressFill.style.width = `${pct}%`;
+                    if (progressLabel) progressLabel.innerText = `Lade Update herunter... ${pct}%`;
+                  }
+                  break;
+                case 'Finished': {
+                  const progressLabel = document.getElementById('progress-label');
+                  if (progressLabel) progressLabel.innerText = 'Installation abgeschlossen. Neustart...';
+                  break;
+                }
+              }
+            });
+            await relaunch();
+          } catch (err) {
+            console.error('[Launcher] Fehler beim Herunterladen/Installieren des Updates:', err);
+            setUIState('error', 'Update konnte nicht installiert werden.');
+          }
+        } else {
+          console.log('[Launcher] Öffne GitHub Release-Seite:', latestReleaseUrl);
+          try {
+            await invoke('open_release_page', { url: latestReleaseUrl });
+          } catch (e) {
+            window.open(latestReleaseUrl, '_blank');
+          }
         }
       } else if (updateState === 'ready-to-play') {
         console.log('[Launcher] Starte Hauptspiel...');
@@ -206,9 +246,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 5. Portable Release Update-Prüfung via GitHub API
+  // 5. Update-Prüfung via Tauri Updater Plugin & GitHub API Fallback
   async function performUpdateCheck() {
     setUIState('checking');
+    pendingUpdate = null;
+
+    // Versuche zuerst das native Tauri Updater Plugin
+    try {
+      console.log('[Launcher] Prüfe Updates via @tauri-apps/plugin-updater...');
+      const update = await check();
+      if (update && update.available) {
+        console.log(`[Launcher] Plugin hat ein Update auf v${update.version} gefunden!`);
+        pendingUpdate = update;
+        if (updateToast) {
+          updateToast.innerText = `✨ Neue Version v${update.version} verfügbar!`;
+          updateToast.classList.add('show');
+        }
+        setUIState('update-available');
+        return;
+      }
+    } catch (pluginErr) {
+      console.warn('[Launcher] Plugin-Update-Prüfung fehlgeschlagen / nicht konfiguriert, nutze GitHub-Fallback:', pluginErr);
+    }
+
+    // Fallback: GitHub REST API
     try {
       const appVersion = await getVersion();
       const response = await fetch('https://api.github.com/repos/Trobikus/archiv-des-vergessens/releases/latest', {
