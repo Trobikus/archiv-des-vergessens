@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-07-24
+
+### 🏗️ Architektur & Dependency Injection
+- **DI-Container Repariert**:
+  - Sämtliche manuellen, imperativen `set...Service()`- und `SaveManager.setServices()`-Aufrufe aus `js/controllers/game-boot.js` entfernt.
+  - Vollständige Umstellung aller Core-Dienste auf Constructor Injection im `DIContainer` (`js/core/di/config.js`). Zirkuläre Abhängigkeiten (`NetworkService` <-> `AuthService` / `ChatService` / `LeaderboardService`) werden nun über elegante, träge Service-Resolver (`() => c.get(...)`) auflösungsfrei verarbeitet.
+  - `SaveManager.setServices()` wird bei der Service-Anforderung im DI-Container automatisch ausgeführt.
+- **Single Source of Truth für Einstellungen**:
+  - `SettingsManager` (`js/core/settings.js`) als reiner Persistenz-Layer für `localStorage` neu strukturiert (keine parallele/doppelte State-Haltung mehr).
+  - `StateManager` (`state.settings`) ist nun die einzige Quelle der Wahrheit (Single Source of Truth) für alle Spieleinstellungen.
+  - `NavigationController` (`js/controllers/navigation.js`) dispatcht Einstellungsänderungen (`_setMusicVolume` etc.) direkt an den `StateManager` und speichert diese anschließend synchron über den `SettingsManager`.
+- **Automatisierte Vitest-Tests**:
+  - Neuer Testsuite `DIRefactorAndSettingsSSOT.test.js` hinzugefügt (14 Testdateien, 83 bestandene Tests), um DI-Automatismus und State-Single-Source-of-Truth für Einstellungen dauerhaft abzusichern.
+
+---
+
 ## [1.0.11] - 2026-07-24
 
 ### 🚀 Performance & Cleanup

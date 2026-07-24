@@ -119,12 +119,14 @@ export class NavigationController {
     });
 
     // Offline-Modal Schließen (falls DOM offline modal noch besteht, wir behalten die DB-Aktion hier)
-    const offlineCloseBtn = document.getElementById('offline-close-btn');
-    offlineCloseBtn?.addEventListener('click', () => {
-      const modal = document.getElementById('offline-modal-overlay');
-      if (modal) modal.style.display = 'none';
-      this._resourceService.setTimeBank(0);
-    });
+    if (typeof document !== 'undefined') {
+      const offlineCloseBtn = document.getElementById('offline-close-btn');
+      offlineCloseBtn?.addEventListener('click', () => {
+        const modal = document.getElementById('offline-modal-overlay');
+        if (modal) modal.style.display = 'none';
+        this._resourceService?.setTimeBank(0);
+      });
+    }
   }
 
   // ---- VIEW-WECHSEL ----
@@ -472,78 +474,75 @@ export class NavigationController {
   // ---- OPTIONEN SETTINGS LOGIK ----
 
   _setParticles(val) {
-    this._settingsManager.set('particles', val);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, particles: val }
     }), 'settings/updateParticles');
+    this._settingsManager.save(newState.settings);
   }
 
   _setFloating(val) {
-    this._settingsManager.set('floatingText', val);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, floatingText: val }
     }), 'settings/updateFloatingText');
+    this._settingsManager.save(newState.settings);
   }
 
   _setLanguage(val) {
     if (this._i18nService) {
-      this._i18nService.setLanguage(val);
+      this._i18nService.setLanguage(val, false);
     }
-    this._settingsManager.set('language', val);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, language: val }
     }), 'settings/updateLanguage');
+    this._settingsManager.save(newState.settings);
   }
 
   _toggleAudio() {
-    const settings = this._stateManager.getState().settings;
+    const settings = this._stateManager.getState()?.settings || {};
     const newVal = !settings.music;
-    this._settingsManager.set('music', newVal);
-    this._settingsManager.set('sfx', newVal);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, music: newVal, sfx: newVal }
     }), 'settings/toggleAudio');
+    this._settingsManager.save(newState.settings);
   }
 
   _setMusicVolume(val) {
     const isMuted = val === 0;
-    this._settingsManager.set('music', !isMuted);
-    this._settingsManager.set('volume', val / 100);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, music: !isMuted, volume: val / 100 }
     }), 'settings/updateMusicVolume');
+    this._settingsManager.save(newState.settings);
   }
 
   _setSfxVolume(val) {
     const isMuted = val === 0;
-    this._settingsManager.set('sfx', !isMuted);
-    this._settingsManager.set('sfxVolume', val / 100);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, sfx: !isMuted, sfxVolume: val / 100 }
     }), 'settings/updateSfxVolume');
+    this._settingsManager.save(newState.settings);
   }
 
   _setAutosave(val) {
-    this._settingsManager.set('autosave', val);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, autosave: val }
     }), 'settings/updateAutosave');
+    this._settingsManager.save(newState.settings);
   }
 
   _setCloudEnabled(val) {
     this._cloudManager.setEnabled(val);
-    this._settingsManager.set('cloudEnabled', val);
-    this._stateManager.dispatch((state) => ({
+    const newState = this._stateManager.dispatch((state) => ({
       ...state,
       settings: { ...state.settings, cloudEnabled: val }
     }), 'settings/updateCloudEnabled');
+    this._settingsManager.save(newState.settings);
   }
 
   async _syncCloud() {

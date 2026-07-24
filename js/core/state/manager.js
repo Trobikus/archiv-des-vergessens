@@ -216,12 +216,17 @@ export class StateManager {
 
   /**
    * Initialisiert den State (wird beim Boot aufgerufen).
+   * @param {Object} [heroData]
+   * @param {Object} [resourceData]
+   * @param {Object} [clanData]
+   * @param {Object} [settingsData]
    */
-  init(heroData = null, resourceData = null, clanData = null) {
+  init(heroData = null, resourceData = null, clanData = null, settingsData = null) {
     const initialState = this._getInitialState();
     if (heroData) initialState.hero = { ...initialState.hero, ...heroData };
     if (resourceData) initialState.resources = { ...initialState.resources, ...resourceData };
     if (clanData) initialState.clan = { ...initialState.clan, ...clanData };
+    if (settingsData) initialState.settings = { ...initialState.settings, ...settingsData };
     
     // Migriere alten Spielstand-Status vor dem Einfrieren
     const migratedState = this._migrateState(initialState);
