@@ -1,9 +1,10 @@
 ---
-name: ✨ Feature Request
+name: "✨ Feature Request"
 about: Schlage eine neue Idee, Mechanik oder Erweiterung für das Archiv vor.
 title: "[Feature] <Kurze, prägnante Beschreibung der Idee>"
-labels: ["enhancement", "needs-triage"]
-assignees: ""
+labels: enhancement
+assignees: ''
+
 ---
 
 ## 💡 Beschreibung der Idee / des Features
