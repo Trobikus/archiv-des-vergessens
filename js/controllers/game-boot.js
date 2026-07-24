@@ -415,275 +415,251 @@ export async function bootGame() {
 
     // ----------------------------------------------------------
     // MYSTISCHES CANVAS-PARTIKELSYSTEM
-    // Zero-Alloc Render Loop · OffscreenCanvas Stamps · Screen-Blend
+    // Elegantes, gut lesbares Canvas-2D-Partikelsystem (Standard-JS-Objekte)
     // ----------------------------------------------------------
     const _startIntroParticles = () => {
       /** @type {HTMLCanvasElement} */
       const canvas = (/** @type {any} */ (document.getElementById('intro-particle-canvas')));
       if (!canvas) return null;
 
-      // alpha:true für transparenten Hintergrund (screen-blending über dunklem BG)
       const ctx = canvas.getContext('2d', { alpha: true });
+      if (!ctx) return null;
+
       let animFrameId = null;
-      let stopped     = false;
-      let lastTS      = -1;
+      let stopped = false;
+      let lastTS = -1;
 
       const resize = () => {
-        canvas.width  = introContainer.clientWidth  || window.innerWidth;
+        canvas.width = introContainer.clientWidth || window.innerWidth;
         canvas.height = introContainer.clientHeight || window.innerHeight;
-        // Composite-Mode muss nach Canvas-Resize neu gesetzt werden
         ctx.globalCompositeOperation = 'screen';
       };
       resize();
       window.addEventListener('resize', resize, { passive: true });
 
-      // ---- Pre-render Glow-Stamps auf OffscreenCanvas ----
-      // Jeder Partikel-Typ wird einmalig auf eine kleine OffscreenCanvas gezeichnet.
-      // Im Render-Loop nur noch drawImage (GPU-Textur-Blit, null GC, null Shader-Wechsel).
-      const mkStamp = (coreColor, glowColor, coreR, haloR) => {
-        const dim  = Math.ceil(haloR * 2 + 2);
-        const half = dim / 2;
-        const oc   = new OffscreenCanvas(dim, dim);
-        const c    = oc.getContext('2d');
-        const g    = c.createRadialGradient(half, half, coreR * 0.3, half, half, haloR);
-        g.addColorStop(0, glowColor);
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        c.fillStyle = g;
-        c.beginPath(); c.arc(half, half, haloR, 0, 6.283); c.fill();
-        c.fillStyle = coreColor;
-        c.beginPath(); c.arc(half, half, coreR,  0, 6.283); c.fill();
-        return { img: oc, half };
-      };
+      const RUNE_GLYPHS = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᛁ', 'ᛃ', 'ᛇ', 'ᛈ', 'ᛉ', 'ᛊ', 'ᛏ'];
+      const MAX_PARTICLES = 90;
 
-      const mkRuneStamp = (glyph, fontSize) => {
-        const pad  = 8;
-        const dim  = Math.ceil(fontSize + pad * 2);
-        const half = dim / 2;
-        const oc   = new OffscreenCanvas(dim, dim);
-        const c    = oc.getContext('2d');
-        // shadowBlur nur einmalig beim Stamp-Bake (kein Per-Frame-Cost mehr)
-        c.shadowColor   = 'rgba(197,160,89,0.95)';
-        c.shadowBlur    = 5;
-        c.font          = `${fontSize}px serif`;
-        c.textAlign     = 'center';
-        c.textBaseline  = 'middle';
-        c.fillStyle     = '#c5a059';
-        c.fillText(glyph, half, half);
-        return { img: oc, half };
-      };
+      /**
+       * Erstellt ein neues Partikel-Objekt basierend auf seinem Typ.
+       */
+      const createParticle = (type, isInit = false) => {
+        const W = canvas.width;
+        const H = canvas.height;
+        const cx = W * 0.5;
+        const cy = H * 0.5;
 
-      const RUNE_GLYPHS = ['ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ','ᚺ','ᛁ','ᛃ','ᛇ','ᛈ','ᛉ','ᛊ','ᛏ'];
+        const p = {
+          type, // 'ember' | 'dust' | 'rune' | 'spark' | 'orb'
+          x: 0,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          scale: 1,
+          alpha: 0,
+          maxAlpha: 0.5,
+          life: 0,
+          maxLife: 100,
+          wobble: Math.random() * Math.PI * 2,
+          wobbleSpeed: 0.01,
+          colorType: Math.random() > 0.5 ? 'gold' : 'purple',
+          rune: RUNE_GLYPHS[Math.floor(Math.random() * RUNE_GLYPHS.length)],
+          prevX: 0,
+          prevY: 0
+        };
 
-      const ST = {
-        eGold  : mkStamp('#ebd576',              'rgba(197,160,89,0.45)',  1.8, 10),
-        eBright: mkStamp('#fff8c0',              'rgba(235,213,118,0.45)', 1.8, 10),
-        dGold  : mkStamp('rgba(197,160,89,0.9)', 'rgba(197,160,89,0.22)', 1.2,  7),
-        dPurp  : mkStamp('rgba(130,80,200,0.9)', 'rgba(130,80,200,0.22)', 1.2,  7),
-        oGold  : mkStamp('rgba(197,160,89,0.5)', 'rgba(197,160,89,0.28)', 12,  50),
-        oPurp  : mkStamp('rgba(130,80,200,0.4)', 'rgba(130,80,200,0.22)', 12,  50),
-      };
-      const RUNE_SM = RUNE_GLYPHS.map(g => mkRuneStamp(g,  9));
-      const RUNE_LG = RUNE_GLYPHS.map(g => mkRuneStamp(g, 14));
-
-      // ---- TypedArray-Partikel-Pool (null Heap-Alloc im Loop) ----
-      const MAX      = 90;
-      const px       = new Float32Array(MAX);
-      const py       = new Float32Array(MAX);
-      const pvx      = new Float32Array(MAX);
-      const pvy      = new Float32Array(MAX);
-      const psc      = new Float32Array(MAX); // drawImage-Scale
-      const palpha   = new Float32Array(MAX);
-      const pmaxA    = new Float32Array(MAX);
-      const plife    = new Float32Array(MAX);
-      const pmaxLife = new Float32Array(MAX);
-      const pwob     = new Float32Array(MAX);
-      const pwobS    = new Float32Array(MAX);
-      const ptype    = new Uint8Array(MAX);   // 0=ember 1=dust 2=rune 3=spark 4=orb
-      const pcol     = new Uint8Array(MAX);
-      const prun     = new Uint8Array(MAX);
-      const ptx      = new Float32Array(MAX);
-      const pty      = new Float32Array(MAX);
-      let count = 0;
-
-      const reset = (i, init) => {
-        const W = canvas.width, H = canvas.height;
-        const cx = W * 0.5, cy = H * 0.5;
-        plife[i] = 0; palpha[i] = 0; pwob[i] = Math.random() * 6.283;
-        const t = ptype[i];
-        if (t === 0) {
-          const a = Math.random() * 6.283, d = 50 + Math.random() * 110;
-          px[i] = cx + Math.cos(a) * d;
-          py[i] = init ? cy + Math.random() * H * 0.5 : cy + 20 + Math.random() * 70;
-          pvx[i] = (Math.random() - 0.5) * 0.5; pvy[i] = -(0.35 + Math.random() * 0.7);
-          psc[i] = 0.5 + Math.random() * 0.9; pmaxA[i] = 0.4 + Math.random() * 0.5;
-          pmaxLife[i] = 110 + Math.random() * 160; pwobS[i] = 0.022 + Math.random() * 0.025;
-          pcol[i] = Math.random() > 0.4 ? 0 : 1;
-        } else if (t === 1) {
-          px[i] = Math.random() * W; py[i] = init ? Math.random() * H : H + 5;
-          pvx[i] = (Math.random() - 0.5) * 0.2; pvy[i] = -(0.07 + Math.random() * 0.17);
-          psc[i] = 0.4 + Math.random() * 0.75; pmaxA[i] = 0.08 + Math.random() * 0.18;
-          pmaxLife[i] = 280 + Math.random() * 320; pwobS[i] = 0.007 + Math.random() * 0.012;
-          pcol[i] = Math.random() > 0.55 ? 1 : 0;
-        } else if (t === 2) {
-          const a = Math.random() * 6.283, d = 75 + Math.random() * (Math.min(W, H) * 0.28);
-          px[i] = cx + Math.cos(a) * d; py[i] = cy + Math.sin(a) * d;
-          pvx[i] = Math.cos(a) * 0.1; pvy[i] = Math.sin(a) * 0.1;
-          psc[i] = Math.random() > 0.5 ? 1 : 0; pmaxA[i] = 0.12 + Math.random() * 0.22;
-          pmaxLife[i] = 170 + Math.random() * 200; pwobS[i] = 0.012;
-          prun[i] = Math.floor(Math.random() * RUNE_GLYPHS.length);
-        } else if (t === 3) {
-          const a = Math.random() * 6.283;
-          px[i] = cx + (Math.random() - 0.5) * 55; py[i] = cy + (Math.random() - 0.5) * 55;
-          ptx[i] = px[i]; pty[i] = py[i];
-          pvx[i] = Math.cos(a) * (1.4 + Math.random() * 1.9);
-          pvy[i] = Math.sin(a) * (1.4 + Math.random() * 1.9);
-          psc[i] = 0.7 + Math.random() * 0.7; pmaxA[i] = 0.7 + Math.random() * 0.3;
-          pmaxLife[i] = 22 + Math.random() * 38; pwobS[i] = 0;
-        } else {
-          px[i] = cx + (Math.random() - 0.5) * W * 0.5;
-          py[i] = cy + (Math.random() - 0.5) * H * 0.5;
-          pvx[i] = (Math.random() - 0.5) * 0.15; pvy[i] = (Math.random() - 0.5) * 0.15;
-          psc[i] = 0.6 + Math.random() * 0.9; pmaxA[i] = 0.12 + Math.random() * 0.18;
-          pmaxLife[i] = 340 + Math.random() * 400; pwobS[i] = 0.004 + Math.random() * 0.005;
-          pcol[i] = Math.random() > 0.5 ? 0 : 1;
+        if (type === 'ember') {
+          const a = Math.random() * Math.PI * 2;
+          const d = 50 + Math.random() * 110;
+          p.x = cx + Math.cos(a) * d;
+          p.y = isInit ? cy + Math.random() * H * 0.5 : cy + 20 + Math.random() * 70;
+          p.vx = (Math.random() - 0.5) * 0.5;
+          p.vy = -(0.35 + Math.random() * 0.7);
+          p.scale = 0.5 + Math.random() * 0.9;
+          p.maxAlpha = 0.4 + Math.random() * 0.5;
+          p.maxLife = 110 + Math.random() * 160;
+          p.wobbleSpeed = 0.022 + Math.random() * 0.025;
+          p.colorType = Math.random() > 0.4 ? 'gold' : 'bright';
+        } else if (type === 'dust') {
+          p.x = Math.random() * W;
+          p.y = isInit ? Math.random() * H : H + 5;
+          p.vx = (Math.random() - 0.5) * 0.2;
+          p.vy = -(0.07 + Math.random() * 0.17);
+          p.scale = 0.4 + Math.random() * 0.75;
+          p.maxAlpha = 0.08 + Math.random() * 0.18;
+          p.maxLife = 280 + Math.random() * 320;
+          p.wobbleSpeed = 0.007 + Math.random() * 0.012;
+          p.colorType = Math.random() > 0.55 ? 'purple' : 'gold';
+        } else if (type === 'rune') {
+          const a = Math.random() * Math.PI * 2;
+          const d = 75 + Math.random() * (Math.min(W, H) * 0.28);
+          p.x = cx + Math.cos(a) * d;
+          p.y = cy + Math.sin(a) * d;
+          p.vx = Math.cos(a) * 0.1;
+          p.vy = Math.sin(a) * 0.1;
+          p.scale = Math.random() > 0.5 ? 1 : 0.7;
+          p.maxAlpha = 0.12 + Math.random() * 0.22;
+          p.maxLife = 170 + Math.random() * 200;
+          p.wobbleSpeed = 0.012;
+        } else if (type === 'spark') {
+          const a = Math.random() * Math.PI * 2;
+          p.x = cx + (Math.random() - 0.5) * 55;
+          p.y = cy + (Math.random() - 0.5) * 55;
+          p.prevX = p.x;
+          p.prevY = p.y;
+          p.vx = Math.cos(a) * (1.4 + Math.random() * 1.9);
+          p.vy = Math.sin(a) * (1.4 + Math.random() * 1.9);
+          p.scale = 0.7 + Math.random() * 0.7;
+          p.maxAlpha = 0.7 + Math.random() * 0.3;
+          p.maxLife = 22 + Math.random() * 38;
+          p.wobbleSpeed = 0;
+        } else if (type === 'orb') {
+          p.x = cx + (Math.random() - 0.5) * W * 0.5;
+          p.y = cy + (Math.random() - 0.5) * H * 0.5;
+          p.vx = (Math.random() - 0.5) * 0.15;
+          p.vy = (Math.random() - 0.5) * 0.15;
+          p.scale = 0.6 + Math.random() * 0.9;
+          p.maxAlpha = 0.12 + Math.random() * 0.18;
+          p.maxLife = 340 + Math.random() * 400;
+          p.wobbleSpeed = 0.004 + Math.random() * 0.005;
+          p.colorType = Math.random() > 0.5 ? 'gold' : 'purple';
         }
-        if (init) plife[i] = Math.random() * pmaxLife[i];
+
+        if (isInit) {
+          p.life = Math.random() * p.maxLife;
+        }
+
+        return p;
       };
 
-      const initTypes = [...Array(5).fill(4), ...Array(22).fill(1), ...Array(32).fill(0), ...Array(8).fill(2)];
-      count = initTypes.length;
-      for (let i = 0; i < count; i++) { ptype[i] = initTypes[i]; reset(i, true); }
+      // Partikel-Array initialisieren
+      const particles = [];
+      const initTypes = [
+        ...Array(5).fill('orb'),
+        ...Array(22).fill('dust'),
+        ...Array(32).fill('ember'),
+        ...Array(8).fill('rune')
+      ];
 
-      // screen-compositing: überlappende Partikel addieren Helligkeit → Glow ohne shadowBlur
+      for (const t of initTypes) {
+        particles.push(createParticle(t, true));
+      }
+
       ctx.globalCompositeOperation = 'screen';
-
       let sparkCooldown = 65;
 
-      // ---- Zero-Alloc Render-Loop ----
       const tick = (now) => {
         if (stopped) return;
         animFrameId = requestAnimationFrame(tick);
-        if (lastTS < 0) { lastTS = now; return; }          // Warmup-Frame überspringen
-        const dt = Math.min((now - lastTS) / 16.667, 2.5); // normiert: 1.0 = 60fps
+        if (lastTS < 0) {
+          lastTS = now;
+          return;
+        }
+        const dt = Math.min((now - lastTS) / 16.667, 2.5);
         lastTS = now;
-        const W = canvas.width, H = canvas.height;
+
+        const W = canvas.width;
+        const H = canvas.height;
         ctx.clearRect(0, 0, W, H);
 
+        // Gelegentlich neue Funken erzeugen
         sparkCooldown -= dt;
-        if (sparkCooldown <= 0 && count < MAX - 6) {
-          const n = 2 + Math.floor(Math.random() * 4);
-          for (let b = 0; b < n && count < MAX; b++) { ptype[count] = 3; reset(count, false); count++; }
+        if (sparkCooldown <= 0 && particles.length < MAX_PARTICLES - 6) {
+          const count = 2 + Math.floor(Math.random() * 4);
+          for (let b = 0; b < count && particles.length < MAX_PARTICLES; b++) {
+            particles.push(createParticle('spark', false));
+          }
           sparkCooldown = 65 + Math.random() * 75;
         }
 
-        let lt, st, sc, w, h;
+        // Partikel aktualisieren & zeichnen
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.life += dt;
+          p.wobble += p.wobbleSpeed * dt;
 
-        // Orbs
-        for (let i = 0; i < count; i++) {
-          if (ptype[i] !== 4) continue;
-          plife[i] += dt; pwob[i] += pwobS[i] * dt;
-          lt = plife[i] / pmaxLife[i];
-          palpha[i] = lt < 0.2 ? (lt/0.2)*pmaxA[i] : lt > 0.7 ? ((1-lt)/0.3)*pmaxA[i] : pmaxA[i];
-          px[i] += (pvx[i] + Math.cos(pwob[i]) * 0.28) * dt;
-          py[i] += (pvy[i] + Math.sin(pwob[i] * 0.7) * 0.22) * dt;
-          if (palpha[i] > 0.004) {
-            st = pcol[i] ? ST.oPurp : ST.oGold; sc = psc[i];
-            w = st.img.width * sc; h = st.img.height * sc;
-            ctx.globalAlpha = palpha[i];
-            ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
+          const lt = p.life / p.maxLife;
+          p.alpha = lt < 0.2 ? (lt / 0.2) * p.maxAlpha : lt > 0.7 ? ((1 - lt) / 0.3) * p.maxAlpha : p.maxAlpha;
+
+          if (p.type === 'orb') {
+            p.x += (p.vx + Math.cos(p.wobble) * 0.28) * dt;
+            p.y += (p.vy + Math.sin(p.wobble * 0.7) * 0.22) * dt;
+            if (p.alpha > 0.004) {
+              const radius = 25 * p.scale;
+              const grad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, radius);
+              const color = p.colorType === 'purple' ? '130,80,200' : '197,160,89';
+              grad.addColorStop(0, `rgba(${color}, ${p.alpha * 0.6})`);
+              grad.addColorStop(1, 'rgba(0,0,0,0)');
+              ctx.fillStyle = grad;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          } else if (p.type === 'dust') {
+            p.x += (p.vx + Math.sin(p.wobble) * 0.22) * dt;
+            p.y += p.vy * dt;
+            if (p.alpha > 0.004) {
+              ctx.globalAlpha = p.alpha;
+              ctx.fillStyle = p.colorType === 'purple' ? 'rgba(130,80,200,0.9)' : 'rgba(197,160,89,0.9)';
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 1.2 * p.scale, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          } else if (p.type === 'ember') {
+            p.x += (p.vx + Math.sin(p.wobble) * 0.28) * dt;
+            p.y += p.vy * dt;
+            if (p.alpha > 0.004) {
+              ctx.globalAlpha = p.alpha;
+              ctx.fillStyle = p.colorType === 'bright' ? '#fff8c0' : '#ebd576';
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 1.8 * p.scale, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          } else if (p.type === 'rune') {
+            p.x += p.vx * dt;
+            p.y += (p.vy + Math.sin(p.wobble) * 0.18) * dt;
+            if (p.alpha > 0.004) {
+              ctx.globalAlpha = p.alpha;
+              ctx.font = `${p.scale > 0.8 ? 14 : 9}px serif`;
+              ctx.fillStyle = '#c5a059';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(p.rune, p.x, p.y);
+            }
+          } else if (p.type === 'spark') {
+            p.prevX = p.x;
+            p.prevY = p.y;
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            if (p.alpha > 0.02) {
+              ctx.globalAlpha = p.alpha;
+              ctx.strokeStyle = '#ebd576';
+              ctx.lineWidth = p.scale;
+              ctx.lineCap = 'round';
+              ctx.beginPath();
+              ctx.moveTo(p.prevX, p.prevY);
+              ctx.lineTo(p.x, p.y);
+              ctx.stroke();
+            }
           }
-          if (plife[i] >= pmaxLife[i]) reset(i, false);
-        }
 
-        // Dust
-        for (let i = 0; i < count; i++) {
-          if (ptype[i] !== 1) continue;
-          plife[i] += dt; pwob[i] += pwobS[i] * dt;
-          lt = plife[i] / pmaxLife[i];
-          palpha[i] = lt < 0.2 ? (lt/0.2)*pmaxA[i] : lt > 0.7 ? ((1-lt)/0.3)*pmaxA[i] : pmaxA[i];
-          px[i] += (pvx[i] + Math.sin(pwob[i]) * 0.22) * dt;
-          py[i] += pvy[i] * dt;
-          if (palpha[i] > 0.004) {
-            st = pcol[i] ? ST.dPurp : ST.dGold; sc = psc[i];
-            w = st.img.width * sc; h = st.img.height * sc;
-            ctx.globalAlpha = palpha[i];
-            ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
-          }
-          if (plife[i] >= pmaxLife[i]) reset(i, false);
-        }
-
-        // Embers
-        for (let i = 0; i < count; i++) {
-          if (ptype[i] !== 0) continue;
-          plife[i] += dt; pwob[i] += pwobS[i] * dt;
-          lt = plife[i] / pmaxLife[i];
-          palpha[i] = lt < 0.2 ? (lt/0.2)*pmaxA[i] : lt > 0.7 ? ((1-lt)/0.3)*pmaxA[i] : pmaxA[i];
-          px[i] += (pvx[i] + Math.sin(pwob[i]) * 0.28) * dt;
-          py[i] += pvy[i] * dt;
-          if (palpha[i] > 0.004) {
-            st = pcol[i] ? ST.eBright : ST.eGold; sc = psc[i];
-            w = st.img.width * sc; h = st.img.height * sc;
-            ctx.globalAlpha = palpha[i];
-            ctx.drawImage(st.img, px[i] - w * 0.5, py[i] - h * 0.5, w, h);
-          }
-          if (plife[i] >= pmaxLife[i]) reset(i, false);
-        }
-
-        // Runes (vorgerenderte Glyphen-Stamps)
-        for (let i = 0; i < count; i++) {
-          if (ptype[i] !== 2) continue;
-          plife[i] += dt; pwob[i] += pwobS[i] * dt;
-          lt = plife[i] / pmaxLife[i];
-          palpha[i] = lt < 0.2 ? (lt/0.2)*pmaxA[i] : lt > 0.7 ? ((1-lt)/0.3)*pmaxA[i] : pmaxA[i];
-          px[i] += pvx[i] * dt;
-          py[i] += (pvy[i] + Math.sin(pwob[i]) * 0.18) * dt;
-          if (palpha[i] > 0.004) {
-            st = (psc[i] > 0.5 ? RUNE_LG : RUNE_SM)[prun[i]];
-            ctx.globalAlpha = palpha[i];
-            ctx.drawImage(st.img, px[i] - st.half, py[i] - st.half);
-          }
-          if (plife[i] >= pmaxLife[i]) reset(i, false);
-        }
-
-        // Sparks
-        ctx.strokeStyle = '#ebd576';
-        ctx.lineCap = 'round';
-        for (let i = 0; i < count; i++) {
-          if (ptype[i] !== 3) continue;
-          ptx[i] = px[i]; pty[i] = py[i];
-          plife[i] += dt;
-          lt = plife[i] / pmaxLife[i];
-          palpha[i] = lt < 0.1 ? (lt/0.1)*pmaxA[i] : ((1-lt)/0.9)*pmaxA[i];
-          px[i] += pvx[i] * dt; py[i] += pvy[i] * dt;
-          if (palpha[i] > 0.02) {
-            ctx.globalAlpha = palpha[i];
-            ctx.lineWidth   = psc[i];
-            ctx.beginPath();
-            ctx.moveTo(ptx[i], pty[i]); ctx.lineTo(px[i], py[i]);
-            ctx.stroke();
-          }
-        }
-        ctx.globalAlpha = 1;
-
-        // Tote Sparks entfernen (Swap-with-Last, O(1), kein splice/GC)
-        for (let i = count - 1; i >= 0; i--) {
-          if (ptype[i] === 3 && plife[i] >= pmaxLife[i]) {
-            const L = --count;
-            if (i !== L) {
-              ptype[i]=ptype[L]; px[i]=px[L]; py[i]=py[L];
-              pvx[i]=pvx[L]; pvy[i]=pvy[L]; psc[i]=psc[L];
-              palpha[i]=palpha[L]; pmaxA[i]=pmaxA[L];
-              plife[i]=plife[L]; pmaxLife[i]=pmaxLife[L];
-              pwob[i]=pwob[L]; pwobS[i]=pwobS[L];
-              pcol[i]=pcol[L]; prun[i]=prun[L];
-              ptx[i]=ptx[L]; pty[i]=pty[L];
+          // Lebensdauer abgelaufen?
+          if (p.life >= p.maxLife) {
+            if (p.type === 'spark') {
+              particles.splice(i, 1);
+            } else {
+              particles[i] = createParticle(p.type, false);
             }
           }
         }
+
+        ctx.globalAlpha = 1;
       };
 
-      // GPU-Warmup: zwei Frames warten bevor Loop startet
-      requestAnimationFrame(() => { lastTS = performance.now(); requestAnimationFrame(tick); });
+      requestAnimationFrame(() => {
+        lastTS = performance.now();
+        requestAnimationFrame(tick);
+      });
 
       return () => {
         stopped = true;
