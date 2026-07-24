@@ -29,6 +29,12 @@ const SAVES_DIR = join(DATA_DIR, 'saves');
 const LEADERBOARD_FILE = join(DATA_DIR, 'leaderboard.json');
 const DB_FILE = join(DATA_DIR, 'database.db');
 
+// Sicherheits- & Validierungskonstanten
+const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_KEYLEN = 64;
+const PBKDF2_DIGEST = 'sha512';
+const MAX_PASSWORD_LENGTH = 128;
+
 // ---- GLOBALE STATS & DATABASE ----
 const clients = new Map(); // Map: WebSocket -> { userId, username, guildId, sessionToken }
 let db;
@@ -83,6 +89,8 @@ async function initStorage() {
       )
     `).run();
 
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_leaderboard_rank ON leaderboard(prestige DESC, bosses DESC, level DESC)`).run();
+
     db.prepare(`
       CREATE TABLE IF NOT EXISTS chats (
         id TEXT PRIMARY KEY,
@@ -93,6 +101,9 @@ async function initStorage() {
         guildId TEXT
       )
     `).run();
+
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_type_timestamp ON chats(type, timestamp DESC)`).run();
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_type_guild_timestamp ON chats(type, guildId, timestamp DESC)`).run();
 
     console.log('[Storage] SQLite-Datenbank erfolgreich initialisiert.');
 
@@ -112,15 +123,19 @@ function generateSalt() {
 }
 
 function hashPassword(password, salt) {
-  const safePassword = typeof password === 'string' ? password.substring(0, 128) : '';
-  return crypto.pbkdf2Sync(safePassword, salt, 100000, 64, 'sha512').toString('hex');
+  const safePassword = typeof password === 'string' ? password.substring(0, MAX_PASSWORD_LENGTH) : '';
+  const safeSalt = typeof salt === 'string' ? salt : '';
+  return crypto.pbkdf2Sync(safePassword, safeSalt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST).toString('hex');
 }
 
 function verifyPassword(password, salt, storedHash) {
+  if (typeof password !== 'string' || typeof salt !== 'string' || typeof storedHash !== 'string') {
+    return false;
+  }
   const computedHash = hashPassword(password, salt);
   const bufA = Buffer.from(computedHash, 'hex');
   const bufB = Buffer.from(storedHash, 'hex');
-  if (bufA.length !== bufB.length) return false;
+  if (bufA.length !== bufB.length || bufA.length === 0) return false;
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
@@ -282,8 +297,25 @@ function getGuildChatHistory(guildId, limit = 50) {
   }
 }
 
+// Sendet den gespeicherten Chatverlauf (Global & Gilde) an eine Verbindung
+function sendChatHistory(ws, guildId) {
+  const globalHistory = getGlobalChatHistory(50);
+  for (const msg of globalHistory) {
+    send(ws, 'chat:globalMessage', msg);
+  }
+  if (guildId) {
+    const guildHistory = getGuildChatHistory(guildId, 50);
+    for (const msg of guildHistory) {
+      send(ws, 'chat:guildMessage', msg);
+    }
+  }
+}
+
 // Hält die Chat-Datenbank klein und performant
+let chatMessageCounter = 0;
 function pruneChatHistory(keepCount = 500) {
+  chatMessageCounter++;
+  if (chatMessageCounter % 25 !== 0) return; // Nur alle 25 Nachrichten ausführen
   try {
     db.prepare(`
       DELETE FROM chats
@@ -358,8 +390,28 @@ wss.on('connection', (ws) => {
 
   ws.on('message', async (message) => {
     try {
-      const { type, payload } = JSON.parse(message);
+      let parsed;
+      try {
+        parsed = JSON.parse(message);
+      } catch {
+        send(ws, 'error', { message: 'Ungültiges JSON-Format.' });
+        return;
+      }
+
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        send(ws, 'error', { message: 'Ungültiges Nachrichten-Format.' });
+        return;
+      }
+
+      const { type, payload: rawPayload } = parsed;
+      if (typeof type !== 'string' || !type) {
+        send(ws, 'error', { message: 'Nachrichtentyp fehlt oder ist ungültig.' });
+        return;
+      }
+
+      const payload = (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) ? rawPayload : {};
       const clientInfo = clients.get(ws);
+      if (!clientInfo) return;
 
       switch (type) {
         // ---- 1. AUTHENTIFIZIERUNG & ACCOUNTS ----
@@ -382,27 +434,16 @@ wss.on('connection', (ws) => {
           console.log(`[Auth] Spieler '${rawUsername}' (${rawUserId}) eingeloggt. Gilde: ${rawGuildId || 'keine'}`);
           send(ws, 'auth:success', { userId: rawUserId, username: rawUsername });
 
-          // Chatverlauf
-          const globalHistory = getGlobalChatHistory(50);
-          for (const msg of globalHistory) {
-            send(ws, 'chat:globalMessage', msg);
-          }
-          if (rawGuildId) {
-            const guildHistory = getGuildChatHistory(rawGuildId, 50);
-            for (const msg of guildHistory) {
-              send(ws, 'chat:guildMessage', msg);
-            }
-          }
+          sendChatHistory(ws, rawGuildId);
           break;
         }
 
         // Real Server Registration
         case 'auth:register': {
           try {
-            const safePayload = payload || {};
-            const cleanUsername = sanitize(safePayload.username, 25);
-            const cleanEmail = sanitize(safePayload.email, 100).toLowerCase();
-            const password = safePayload.password || '';
+            const cleanUsername = sanitize(payload.username, 25);
+            const cleanEmail = sanitize(payload.email, 100).toLowerCase();
+            const password = typeof payload.password === 'string' ? payload.password : '';
 
             if (!cleanUsername || cleanUsername.length < 3) {
               send(ws, 'auth:register:error', { error: 'auth.error.username_short' });
@@ -412,20 +453,20 @@ wss.on('connection', (ws) => {
               send(ws, 'auth:register:error', { error: 'auth.error.email_invalid' });
               return;
             }
-            if (!password || password.length < 6 || password.length > 128) {
+            if (!password || password.length < 6 || password.length > MAX_PASSWORD_LENGTH) {
               send(ws, 'auth:register:error', { error: 'auth.error.password_short' });
               return;
             }
 
             // Check for existing username (case-insensitive via COLLATE NOCASE)
-            const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUsername);
+            const existingUser = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(cleanUsername);
             if (existingUser) {
               send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
               return;
             }
 
             // Check for existing email (case-insensitive via COLLATE NOCASE)
-            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
               return;
@@ -436,7 +477,7 @@ wss.on('connection', (ws) => {
             const passwordHash = hashPassword(password, salt);
             const token = generateToken();
             const now = Date.now();
-            const avatar = safePayload.avatar || '🛡️';
+            const avatar = sanitize(payload.avatar, 10) || '🛡️';
 
             db.prepare(`
               INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
@@ -461,6 +502,7 @@ wss.on('connection', (ws) => {
 
             send(ws, 'auth:register:success', { user: userObj, token });
             send(ws, 'auth:success', { userId, username: cleanUsername });
+            sendChatHistory(ws, clientInfo.guildId);
           } catch (err) {
             console.error('[Auth] Registrierungsfehler:', err);
             send(ws, 'auth:register:error', { error: 'auth.error.missing_fields' });
@@ -471,17 +513,21 @@ wss.on('connection', (ws) => {
         // Real Server Login
         case 'auth:login': {
           try {
-            const safePayload = payload || {};
-            const query = sanitize(safePayload.usernameOrEmail, 100).toLowerCase();
-            const password = safePayload.password || '';
+            const query = sanitize(payload.usernameOrEmail, 100).toLowerCase();
+            const password = typeof payload.password === 'string' ? payload.password : '';
 
             if (!query || !password) {
               send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
               return;
             }
 
+            if (password.length > MAX_PASSWORD_LENGTH) {
+              send(ws, 'auth:login:error', { error: 'auth.error.wrong_password' });
+              return;
+            }
+
             const user = db.prepare(`
-              SELECT * FROM users WHERE username = ? OR email = ?
+              SELECT * FROM users WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE
             `).get(query, query);
 
             if (!user) {
@@ -517,6 +563,7 @@ wss.on('connection', (ws) => {
 
             send(ws, 'auth:login:success', { user: userObj, token: newToken });
             send(ws, 'auth:success', { userId: user.id, username: user.username });
+            sendChatHistory(ws, clientInfo.guildId);
           } catch (err) {
             console.error('[Auth] Login-Fehler:', err);
             send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
@@ -528,7 +575,7 @@ wss.on('connection', (ws) => {
         case 'auth:verifyToken': {
           try {
             const userId = sanitize(payload.userId, 50);
-            const token = payload.token;
+            const token = typeof payload.token === 'string' ? payload.token : '';
 
             if (!userId || !token) {
               send(ws, 'auth:verifyToken:error', { error: 'Missing session credentials.' });
@@ -560,6 +607,7 @@ wss.on('connection', (ws) => {
 
             send(ws, 'auth:verifyToken:success', { user: userObj, token });
             send(ws, 'auth:success', { userId: user.id, username: user.username });
+            sendChatHistory(ws, clientInfo.guildId);
           } catch (err) {
             console.error('[Auth] Token-Verifizierungsfehler:', err);
             send(ws, 'auth:verifyToken:error', { error: 'Session token invalid or expired.' });
@@ -573,7 +621,7 @@ wss.on('connection', (ws) => {
             const guestId = sanitize(payload.guestId, 50);
             const cleanUsername = sanitize(payload.username, 25);
             const cleanEmail = sanitize(payload.email, 100).toLowerCase();
-            const password = payload.password || '';
+            const password = typeof payload.password === 'string' ? payload.password : '';
 
             if (!cleanUsername || cleanUsername.length < 3) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_short' });
@@ -583,18 +631,18 @@ wss.on('connection', (ws) => {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_invalid' });
               return;
             }
-            if (!password || password.length < 6) {
+            if (!password || password.length < 6 || password.length > MAX_PASSWORD_LENGTH) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.password_short' });
               return;
             }
 
-            // Uniqueness check
-            const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
+            // Uniqueness check via COLLATE NOCASE
+            const existingUser = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(cleanUsername);
             if (existingUser) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_taken' });
               return;
             }
-            const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+            const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_taken' });
               return;
@@ -635,6 +683,7 @@ wss.on('connection', (ws) => {
 
             send(ws, 'auth:convertGuest:success', { user: userObj, token });
             send(ws, 'auth:success', { userId, username: cleanUsername });
+            sendChatHistory(ws, clientInfo.guildId);
           } catch (err) {
             console.error('[Auth] Fehler bei Gast-Umwandlung:', err);
             send(ws, 'auth:convertGuest:error', { error: 'auth.error.missing_fields' });
