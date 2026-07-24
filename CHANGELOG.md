@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-07-24
+
+### ⚙️ CI/CD, Build-Pipeline & Testing (Batch 6)
+- **GitHub Actions Upgrade**: Node.js Version in allen Workflows (`deploy.yml` & `release.yml`) auf **Node.js 24.x** aktualisiert.
+- **Rust-Caching**: `swatinem/rust-cache@v2` im Tauri Release-Workflow integriert für drastisch reduzierte Build-Zeiten.
+- **Updater-Artifacts**: Parameter `createUpdaterArtifacts: true` in der `tauri-action` explizit aktiviert, um `.zip` / `.exe` / `.sig` Auto-Updater-Dateien zuverlässig zu erzeugen.
+- **NSIS-Installer**: NSIS-Konfiguration in `tauri.conf.json` (`installMode: "both"`) überprüft und bestätigt für freie Wahl des Installationsverzeichnisses.
+- **Unit-Tests & Typ-Prüfung**:
+  - `AuthService.test.js` mit Vitest erweitert (Login-Flow, Offline-Fallback, Token-Verifizierung & Concurrent Auth Locks).
+  - TypeScript-Typdeklarationen in `global.d.ts` und JSDoc in `account-vault-service.js` korrigiert für fehlerfreie `npm run typecheck` Ausführung.
+
+---
+
 ## [1.0.8] - 2026-07-24
 
 ### 🛡️ Backend & Datenbank (Batch 1)

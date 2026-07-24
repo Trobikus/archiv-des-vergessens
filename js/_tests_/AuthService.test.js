@@ -208,4 +208,21 @@ describe('AuthService', () => {
     expect(secondLoginRes.success).toBe(false);
     expect(secondLoginRes.error).toBe('auth.error.in_progress');
   });
+
+  it('should handle token verification success and error responses', () => {
+    // Simulate token verification success
+    authService.handleServerAuthResponse('auth:verifyToken:success', {
+      user: { id: 'usr_verified', username: 'VerifiedUser', isGuest: false },
+      token: 'token_verified_123'
+    });
+
+    expect(authService.getCurrentUser().username).toBe('VerifiedUser');
+    expect(authService.getToken()).toBe('token_verified_123');
+    expect(authService.isLoggedIn()).toBe(true);
+
+    // Simulate token verification error for non-local account
+    authService.handleServerAuthResponse('auth:verifyToken:error', {});
+    expect(authService.getToken()).toBeNull();
+    expect(eventBus.publish).toHaveBeenCalledWith('auth:sessionExpired', expect.any(Object));
+  });
 });
