@@ -1,5 +1,31 @@
 import { h, html, useState, useEffect, useCallback } from '../setup.js';
 
+// Helper-Funktion für benutzerfreundliche Fehlermeldungen
+function getAuthErrorMessage(errorCode, t, additionalData = {}) {
+  const errorMessages = {
+    'auth.error.username_short': t('auth.error.username_short', 'Username muss zwischen 3 und 25 Zeichen lang sein.'),
+    'auth.error.username_invalid_chars': t('auth.error.username_invalid_chars', 'Username darf nur Buchstaben, Zahlen und Unterstriche enthalten.'),
+    'auth.error.username_blacklisted': t('auth.error.username_blacklisted', 'Dieser Username ist nicht erlaubt.'),
+    'auth.error.username_taken': t('auth.error.username_taken', 'Dieser Username ist bereits vergeben.'),
+    'auth.error.username_too_similar': t('auth.error.username_too_similar', 
+      `Dieser Username ist zu ähnlich zu "${additionalData.similarTo || 'einem bestehenden User'}". Bitte wähle einen anderen.`),
+    'auth.error.email_invalid': t('auth.error.email_invalid', 'Bitte gib eine gültige E-Mail-Adresse ein.'),
+    'auth.error.email_taken': t('auth.error.email_taken', 'Diese E-Mail-Adresse wird bereits verwendet.'),
+    'auth.error.password_short': t('auth.error.password_short', 'Passwort muss mindestens 6 Zeichen lang sein.'),
+    'auth.error.password_too_long': t('auth.error.password_too_long', 'Passwort darf maximal 128 Zeichen lang sein.'),
+    'auth.error.rate_limit': t('auth.error.rate_limit', 
+      `Zu viele Versuche. Bitte warte ${additionalData.retryAfter || 60} Sekunden.`),
+    'auth.error.wrong_password': t('auth.error.wrong_password', 'Falsches Passwort.'),
+    'auth.error.user_not_found': t('auth.error.user_not_found', 'Kein Account mit diesen Daten gefunden.'),
+    'auth.error.not_guest': t('auth.error.not_guest', 'Nur Gast-Accounts können umgewandelt werden.'),
+    'auth.error.server_error': t('auth.error.server_error', 'Server-Fehler. Bitte versuche es später erneut.'),
+    'auth.error.server_timeout': t('auth.error.server_timeout', 'Server antwortet nicht. Offline-Modus aktiv.'),
+    'auth.error.missing_fields': t('auth.error.missing_fields', 'Bitte fülle alle Felder aus.')
+  };
+  
+  return errorMessages[errorCode] || t('common.error', 'Ein unerwarteter Fehler ist aufgetreten.');
+}
+
 export function LoginView({ eventBus, services }) {
   const { authService, i18nService } = services || {};
 
@@ -55,10 +81,15 @@ export function LoginView({ eventBus, services }) {
           handleProceedToMenu();
         }, 800);
       } else {
-        setErrorMessage(t(res.error || 'auth.error.missing_fields', 'Fehler beim Anmelden'));
+        const errorMsg = getAuthErrorMessage(res.error, t, {
+          similarTo: res.similarTo,
+          retryAfter: res.retryAfter
+        });
+        setErrorMessage(errorMsg);
       }
     } catch (err) {
-      setErrorMessage(t('common.error', 'Ein Fehler ist aufgetreten.'));
+      console.error('[Auth] Unerwarteter Fehler:', err);
+      setErrorMessage(t('common.error', 'Ein unerwarteter Fehler ist aufgetreten.'));
     } finally {
       setLoading(false);
     }
@@ -80,10 +111,15 @@ export function LoginView({ eventBus, services }) {
           handleProceedToMenu();
         }, 800);
       } else {
-        setErrorMessage(t(res.error || 'auth.error.missing_fields', 'Fehler bei der Registrierung'));
+        const errorMsg = getAuthErrorMessage(res.error, t, {
+          similarTo: res.similarTo,
+          retryAfter: res.retryAfter
+        });
+        setErrorMessage(errorMsg);
       }
     } catch (err) {
-      setErrorMessage(t('common.error', 'Ein Fehler ist aufgetreten.'));
+      console.error('[Auth] Unerwarteter Fehler:', err);
+      setErrorMessage(t('common.error', 'Ein unerwarteter Fehler ist aufgetreten.'));
     } finally {
       setLoading(false);
     }
@@ -212,15 +248,59 @@ export function LoginView({ eventBus, services }) {
 
           <!-- Banners -->
           ${errorMessage && html`
-            <div class="form-banner-error">
-              <span>⚠️</span> <span>${errorMessage}</span>
+            <div class="auth-error-box error-shake" style="
+              background: rgba(255, 59, 48, 0.15);
+              border: 1px solid rgba(255, 59, 48, 0.4);
+              border-radius: 8px;
+              padding: 12px 16px;
+              margin: 12px 0;
+              color: #ff6b6b;
+              display: flex;
+              align-items: flex-start;
+              gap: 8px;
+              animation: slideIn 0.3s ease-out;
+            ">
+              <span style="font-size: 20px; flex-shrink: 0;">⚠️</span>
+              <div style="flex: 1; line-height: 1.4;">
+                <div style="font-weight: 600; margin-bottom: 4px;">Fehler</div>
+                <div style="font-size: 14px;">${errorMessage}</div>
+              </div>
+              <button 
+                onClick=${() => setErrorMessage('')}
+                style="
+                  background: none;
+                  border: none;
+                  color: #ff6b6b;
+                  cursor: pointer;
+                  padding: 4px;
+                  font-size: 18px;
+                  opacity: 0.7;
+                "
+              >×</button>
             </div>
           `}
+          
           ${successMessage && html`
-            <div class="form-banner-success">
-              <span>✓</span> <span>${successMessage}</span>
+            <div class="auth-success-box" style="
+              background: rgba(52, 199, 89, 0.15);
+              border: 1px solid rgba(52, 199, 89, 0.4);
+              border-radius: 8px;
+              padding: 12px 16px;
+              margin: 12px 0;
+              color: #52c41a;
+              display: flex;
+              align-items: flex-start;
+              gap: 8px;
+              animation: slideIn 0.3s ease-out;
+            ">
+              <span style="font-size: 20px; flex-shrink: 0;">✓</span>
+              <div style="flex: 1; line-height: 1.4;">
+                <div style="font-weight: 600; margin-bottom: 4px;">Erfolgreich</div>
+                <div style="font-size: 14px;">${successMessage}</div>
+              </div>
             </div>
           `}
+
 
           <!-- LOGIN FORM -->
           ${activeTab === 'login' && html`

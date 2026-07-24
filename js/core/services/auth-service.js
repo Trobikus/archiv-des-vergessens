@@ -252,14 +252,64 @@ export class AuthService {
       const cleanUsername = (username || '').trim();
       const cleanEmail = (email || '').trim().toLowerCase();
 
-      if (!cleanUsername || cleanUsername.length < 3) {
-        return { success: false, error: 'auth.error.username_short' };
+      // ========== ERWEITERTE VALIDIERUNG ==========
+
+      // Username-Länge
+      if (!cleanUsername || cleanUsername.length < 3 || cleanUsername.length > 25) {
+        return { 
+          success: false, 
+          error: 'auth.error.username_short',
+          message: 'Username muss 3-25 Zeichen lang sein.'
+        };
       }
-      if (!cleanEmail || !cleanEmail.includes('@')) {
-        return { success: false, error: 'auth.error.email_invalid' };
+
+      // Username-Zeichen
+      if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+        return {
+          success: false,
+          error: 'auth.error.username_invalid_chars',
+          message: 'Nur Buchstaben, Zahlen und Unterstriche erlaubt.'
+        };
       }
+
+      // Email-Format (RFC-konform)
+      const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!cleanEmail || !emailRegex.test(cleanEmail) || cleanEmail.length > 254) {
+        return { 
+          success: false, 
+          error: 'auth.error.email_invalid',
+          message: 'Ungültige E-Mail-Adresse.'
+        };
+      }
+
+      // Passwort-Stärke
       if (!password || password.length < 6) {
-        return { success: false, error: 'auth.error.password_short' };
+        return { 
+          success: false, 
+          error: 'auth.error.password_short',
+          message: 'Passwort muss mindestens 6 Zeichen haben.'
+        };
+      }
+
+      if (password.length > 128) {
+        return {
+          success: false,
+          error: 'auth.error.password_too_long'
+        };
+      }
+
+      // Lokale Duplikat-Prüfung VOR Server-Request
+      const accounts = this._getAccounts();
+      const normalizedUsername = cleanUsername.toLowerCase();
+
+      for (const key in accounts) {
+        const acc = accounts[key];
+        if (acc.username?.toLowerCase() === normalizedUsername) {
+          return { success: false, error: 'auth.error.username_taken' };
+        }
+        if (acc.email?.toLowerCase() === cleanEmail) {
+          return { success: false, error: 'auth.error.email_taken' };
+        }
       }
 
       // Wenn Server verbunden, versuche Registrierung über WebSocket
@@ -283,9 +333,9 @@ export class AuthService {
               // Auch lokal cachen für Offline-Fallback
               const salt = this._generateSalt();
               const passwordHash = await this._hashPassword(password, salt);
-              const accounts = this._getAccounts();
-              accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
-              this._saveAccounts(accounts);
+              const freshAccounts = this._getAccounts();
+              freshAccounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
+              this._saveAccounts(freshAccounts);
 
               if (this._eventBus) {
                 this._eventBus.publish('auth:registered', { user: this._currentUser });
@@ -305,17 +355,6 @@ export class AuthService {
       }
 
       // Offline Fallback Registrierung
-      const accounts = this._getAccounts();
-      for (const key in accounts) {
-        const acc = accounts[key];
-        if (acc.username && acc.username.toLowerCase() === cleanUsername.toLowerCase()) {
-          return { success: false, error: 'auth.error.username_taken' };
-        }
-        if (acc.email && acc.email.toLowerCase() === cleanEmail) {
-          return { success: false, error: 'auth.error.email_taken' };
-        }
-      }
-
       const userId = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
       const salt = this._generateSalt();
       const passwordHash = await this._hashPassword(password, salt);
@@ -517,69 +556,113 @@ export class AuthService {
    * Wandelt ein Gast-Konto in ein permanentes Konto um (mit Server-Anbindung)
    */
   async convertGuestToAccount(username, email, password) {
-    if (this._isAuthenticating) {
-      return { success: false, error: 'auth.error.in_progress' };
+    if (!this._currentUser || !this._currentUser.isGuest) {
+      return { success: false, error: 'auth.error.not_guest' };
     }
-    this._isAuthenticating = true;
-    try {
-      if (!this._currentUser || !this._currentUser.isGuest) {
-        return { success: false, error: 'auth.error.not_guest' };
-      }
-
-      const guestId = this._currentUser.id;
-
-      if (this._networkService && this._networkService.isConnected()) {
-        const pendingPromise = this._awaitServerResponse('auth:convertGuest:success', 'auth:convertGuest:error');
-
-        const sent = this._networkService.send('auth:convertGuest', {
-          guestId,
-          username,
-          email,
-          password
-        });
-
-        if (sent) {
-          const res = await pendingPromise;
-          if (!res.timeout && res) {
-            if (res.user && res.token) {
-              this._currentUser = res.user;
-              this._sessionToken = res.token;
-              this._persistSession();
-
-              const salt = this._generateSalt();
-              const passwordHash = await this._hashPassword(password, salt);
-              const accounts = this._getAccounts();
-              accounts[res.user.id] = { ...res.user, email, salt, passwordHash };
-              this._saveAccounts(accounts);
-
-              if (this._eventBus) {
-                this._eventBus.publish('auth:guestConverted', { user: this._currentUser });
-                this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-              }
-
-              if (this._cloudManager) {
-                this._cloudManager.sync();
-              }
-
-              return { success: true, user: this._currentUser };
-            } else if (res.error) {
-              return { success: false, error: res.error };
+    
+    const guestId = this._currentUser.id;
+    const cleanUsername = (username || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    
+    // ========== LOKALE VALIDIERUNG ==========
+    if (!cleanUsername || cleanUsername.length < 3 || cleanUsername.length > 25) {
+      return { success: false, error: 'auth.error.username_short' };
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+      return { success: false, error: 'auth.error.username_invalid_chars' };
+    }
+    
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      return { success: false, error: 'auth.error.email_invalid' };
+    }
+    
+    if (!password || password.length < 6 || password.length > 128) {
+      return { success: false, error: 'auth.error.password_short' };
+    }
+    
+    // ========== SERVER-REQUEST ==========
+    if (this._networkService && this._networkService.isConnected()) {
+      const pendingPromise = this._awaitServerResponse('auth:convertGuest:success', 'auth:convertGuest:error');
+      
+      const sent = this._networkService.send('auth:convertGuest', {
+        guestId,
+        username: cleanUsername,
+        email: cleanEmail,
+        password: password
+      });
+      
+      if (sent) {
+        const res = await pendingPromise;
+        if (!res.timeout) {
+          if (res.user && res.token) {
+            // Account erfolgreich erstellt
+            this._currentUser = res.user;
+            this._sessionToken = res.token;
+            this._persistSession();
+            
+            // Lokal cachen
+            const salt = this._generateSalt();
+            const passwordHash = await this._hashPassword(password, salt);
+            const accounts = this._getAccounts();
+            accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
+            this._saveAccounts(accounts);
+            
+            // Gast-ID aus LocalStorage entfernen
+            localStorage.removeItem('archiv_guest_id');
+            
+            if (this._eventBus) {
+              this._eventBus.publish('auth:guestConverted', { 
+                user: this._currentUser,
+                migrated: res.migrated || {}
+              });
+              this._eventBus.publish('auth:stateChanged', { 
+                user: this._currentUser, 
+                isLoggedIn: true 
+              });
             }
+            
+            if (this._cloudManager) {
+              this._cloudManager.sync();
+            }
+            
+            return { 
+              success: true, 
+              user: this._currentUser,
+              migrated: res.migrated || {}
+            };
+          } else if (res.error) {
+            return { 
+              success: false, 
+              error: res.error,
+              similarTo: res.similarTo,
+              retryAfter: res.retryAfter
+            };
           }
+        } else {
+          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
-
-      this._isAuthenticating = false;
-      const result = await this.register(username, email, password);
-      if (result.success) {
-        if (this._eventBus) {
-          this._eventBus.publish('auth:guestConverted', { user: result.user });
-        }
-      }
-      return result;
-    } finally {
-      this._isAuthenticating = false;
     }
+    
+    // ========== OFFLINE FALLBACK ==========
+    // Wenn kein Server, nutze die normale register() Methode
+    const result = await this.register(cleanUsername, cleanEmail, password);
+    
+    if (result.success) {
+      // Gast-ID entfernen
+      localStorage.removeItem('archiv_guest_id');
+      
+      if (this._eventBus) {
+        this._eventBus.publish('auth:guestConverted', { 
+          user: result.user,
+          migrated: { save: false, leaderboard: false }
+        });
+      }
+    }
+    
+    return result;
   }
 
   logout() {

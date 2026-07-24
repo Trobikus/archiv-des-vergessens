@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.22] - 2026-07-24
+
+### 🔒 Gast-Account Konvertierungs-Transaktionen, Safe-Quit Optimierungen & Bugfixes
+- **SQLite Transaktions-Sicherheit bei Gast-Konvertierung (`server/server.js`)**:
+  - `db.transaction()` Wrapper für die atomare Umwandlung von Gast-Accounts in registrierte Konten.
+  - Sichere Vorab-Validierung von bestehenden Speicherständen (`saves`) und Bestenlisten-Einträgen (`leaderboard`).
+  - Automatisches Erstellen von Fallback-Speicherständen und Avatar-Sanitizing.
+- **Mehrfenster Safe-Quit & Beendigungs-Schutz (`src-tauri/src/lib.rs` & `js/controllers/game-boot.js`)**:
+  - `AtomicBool` Flag im Rust-Backend zur Verhinderung von Multiple-Close-Thread Race Conditions.
+  - Behebung der fehlenden `cleanupDone`-Variablendeklaration im Browser/Desktop `beforeunload`-Eventlistener in `game-boot.js`.
+- **Preact/UI Syntax-Fehlerbehebung (`js/ui/preact/account/AccountModal.js`, `js/ui/preact/views/LoginView.js`)**:
+  - Korrektur von unterbrochenen String-Literalen in `getAuthErrorMessage` für den Fehlerfall `auth.error.username_too_similar`.
+  - Erfolgreiche Verifizierung der TypeScript-Typenprüfung (`npm run typecheck`) und Frontend-Testsuite (115 passing tests).
+- **Tauri 2 Fensterkonfiguration (`src-tauri/tauri.conf.json`)**:
+  - Fensterlayout um Resizable-, Maximizable- und Maximized-Eigenschaften für optimierte Desktop-Benutzererfahrung erweitert.
+
+---
+
 ## [1.0.21] - 2026-07-24
 
 ### 🧪 Vollständiges Rust-Test-Framework & Tauri 2.x Backend Refactoring
