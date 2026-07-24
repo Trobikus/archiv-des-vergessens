@@ -6,6 +6,20 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ## [1.0.12] - 2026-07-24
 
+### ♾️ Standard Idle-Game Mathematik & Lore Integration
+- **Branchenstandard-Formeln Implementiert (`IdleService`)**:
+  - **Kostenformel (Upgrades/Gebäude)**: $\text{Kosten} = \lfloor \text{BasisKosten} \cdot 1.15^{\text{Level}} \rfloor$ (15% exponentielle Steigerung pro Stufe).
+  - **Ertragsformel (Ressourcen/Sekunde)**: $\text{ErtragProSekunde} = \text{BasisErtrag} \cdot \text{Level} \cdot (1 + \sum \text{UpgradeBonusse}) \cdot \text{PrestigeMultiplikator}$.
+  - **Prestige-Formel (Verewigung)**: $\text{PrestigeWährung} = \lfloor \sqrt{\frac{\text{GesamtRessourcen}}{\text{Schwellenwert}}} \rfloor$ (Wurzel-Skalierung zur Eindeudung des Wachstums).
+- **Archiv des Vergessens Lore Mapping**:
+  - **Ressource**: `mnemeFragmente` (`resources.mnemeFragmente`, kumulativ getrackt via `resources.totalMnemeFragmente`).
+  - **Generator/Gebäude**: `gedankenArchiv` (`idleGenerators.gedankenArchiv`).
+  - **Prestige-Währung**: `ewigeMneme` (`resources.ewigeMneme`), gewährt einen dauerhaften Multiplikator-Boost (+10% pro Ewige Mneme).
+- **State & DI Integration**:
+  - State-Klassifizierung und Migration in `manager.js`, Pure-Reducer Actions in `actions.js`, Selektoren in `selectors.js` sowie DI-Container Registrierung von `IdleService` in `config.js`.
+- **Automatisierte Testabdeckung**:
+  - Neue Vitest-Testsuite `IdleService.test.js` mit 11 Tests hinzugefügt (15 Testdateien, 94 bestandene Tests).
+
 ### 🧹 Refactoring & Code-Vereinfachung (Phase 5)
 - **Intro-Partikelsystem Vereinfacht**:
   - Ersetzung des überkomplexen Float32Array "Zero-Alloc Render Loops" (14 TypedArrays, OffscreenCanvas-Stamps & Index-Swapping) in [game-boot.js](file:///f:/Max_Projekte/archiv-des-vergessens/js/controllers/game-boot.js) durch einen sauberen, gut lesbaren Canvas-2D-Render-Loop auf Basis von Standard-JavaScript-Objekten (`createParticle()`).

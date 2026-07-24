@@ -472,6 +472,139 @@ export function finishTutorial() {
 }
 
 // ============================================================
+// IDLE GAME ACTIONS
+// ============================================================
+
+/**
+ * Fügt Mneme-Fragmente hinzu.
+ */
+export function addMnemeFragmente(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const current = BigInt(state.resources?.mnemeFragmente || '0');
+    const currentTotal = BigInt(state.resources?.totalMnemeFragmente || '0');
+    const added = BigInt(Math.floor(safeAmount));
+
+    return {
+      ...state,
+      resources: {
+        ...state.resources,
+        mnemeFragmente: String(current + added),
+        totalMnemeFragmente: String(currentTotal + added)
+      }
+    };
+  };
+}
+
+/**
+ * Zieht Mneme-Fragmente ab.
+ */
+export function removeMnemeFragmente(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const current = BigInt(state.resources?.mnemeFragmente || '0');
+    const sub = BigInt(Math.floor(safeAmount));
+    if (current < sub) return state;
+
+    return {
+      ...state,
+      resources: {
+        ...state.resources,
+        mnemeFragmente: String(current - sub)
+      }
+    };
+  };
+}
+
+/**
+ * Fügt Ewige Mneme hinzu.
+ */
+export function addEwigeMneme(amount) {
+  return (state) => {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return state;
+
+    const current = BigInt(state.resources?.ewigeMneme || '0');
+    const added = BigInt(Math.floor(safeAmount));
+
+    return {
+      ...state,
+      resources: {
+        ...state.resources,
+        ewigeMneme: String(current + added)
+      }
+    };
+  };
+}
+
+/**
+ * Kauft eine Stufe für einen Idle-Generator.
+ */
+export function buyIdleGeneratorLevel(generatorId, cost) {
+  return (state) => {
+    const gen = state.idleGenerators?.[generatorId];
+    if (!gen) return state;
+
+    const safeCost = sanitizeNumber(cost, 0);
+    const currentMneme = BigInt(state.resources?.mnemeFragmente || '0');
+    const costBigInt = BigInt(safeCost);
+
+    if (currentMneme < costBigInt) return state;
+
+    return {
+      ...state,
+      resources: {
+        ...state.resources,
+        mnemeFragmente: String(currentMneme - costBigInt)
+      },
+      idleGenerators: {
+        ...state.idleGenerators,
+        [generatorId]: {
+          ...gen,
+          level: gen.level + 1
+        }
+      }
+    };
+  };
+}
+
+/**
+ * Führt ein Ewige-Mneme-Prestige durch.
+ */
+export function resetEwigeMnemePrestige(ewigeMnemeReward = 0) {
+  return (state) => {
+    const rewardBigInt = BigInt(Math.floor(sanitizeNumber(ewigeMnemeReward, 0)));
+    const currentEwige = BigInt(state.resources?.ewigeMneme || '0');
+
+    // Reset idleGenerators levels back to 0
+    const resetGenerators = {};
+    if (state.idleGenerators) {
+      for (const [key, gen] of Object.entries(state.idleGenerators)) {
+        resetGenerators[key] = {
+          ...gen,
+          level: 0
+        };
+      }
+    }
+
+    return {
+      ...state,
+      resources: {
+        ...state.resources,
+        mnemeFragmente: '0',
+        totalMnemeFragmente: '0',
+        ewigeMneme: String(currentEwige + rewardBigInt)
+      },
+      idleGenerators: resetGenerators
+    };
+  };
+}
+
+// ============================================================
 // BATCH-ACTIONS
 // ============================================================
 
@@ -508,5 +641,10 @@ export default {
   setSavingStatus,
   setTutorialStep,
   finishTutorial,
+  addMnemeFragmente,
+  removeMnemeFragmente,
+  addEwigeMneme,
+  buyIdleGeneratorLevel,
+  resetEwigeMnemePrestige,
   batch
 };

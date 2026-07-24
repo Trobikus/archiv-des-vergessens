@@ -12,7 +12,7 @@
 
 import StateManager from '../state/manager.js';
 import * as Actions from '../state/actions.js';
-import { selectResources, selectParticlesBigInt, selectRelicsBigInt } from '../state/selectors.js';
+import { selectResources, selectParticlesBigInt, selectRelicsBigInt, selectMnemeFragmenteBigInt, selectEwigeMnemeBigInt } from '../state/selectors.js';
 import { sanitizeNumber, clamp } from '../../utils/sanitizer.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
@@ -270,6 +270,70 @@ export class ResourceService {
         timeBank: (state.resources.timeBank || 0) + safeSeconds
       }
     }), 'resource/addTimeBank');
+  }
+
+  /**
+   * Gibt Mneme-Fragmente als BigInt zurück.
+   */
+  getMnemeFragmenteBigInt() {
+    return selectMnemeFragmenteBigInt(this._stateManager.getState());
+  }
+
+  /**
+   * Fügt Mneme-Fragmente hinzu.
+   */
+  addMnemeFragmente(amount) {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return;
+
+    this._stateManager.dispatch(Actions.addMnemeFragmente(safeAmount), 'resource/addMnemeFragmente');
+    this._eventBus.publish('resources:updated', {
+      type: 'mnemeFragmente',
+      amount: safeAmount,
+      total: this.getResources().mnemeFragmente
+    });
+  }
+
+  /**
+   * Entfernt Mneme-Fragmente.
+   */
+  removeMnemeFragmente(amount) {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return false;
+
+    const current = this.getMnemeFragmenteBigInt();
+    const remove = BigInt(Math.floor(safeAmount));
+    if (current < remove) return false;
+
+    this._stateManager.dispatch(Actions.removeMnemeFragmente(safeAmount), 'resource/removeMnemeFragmente');
+    this._eventBus.publish('resources:updated', {
+      type: 'mnemeFragmente',
+      amount: -safeAmount,
+      total: this.getResources().mnemeFragmente
+    });
+    return true;
+  }
+
+  /**
+   * Gibt Ewige Mneme als BigInt zurück.
+   */
+  getEwigeMnemeBigInt() {
+    return selectEwigeMnemeBigInt(this._stateManager.getState());
+  }
+
+  /**
+   * Fügt Ewige Mneme hinzu.
+   */
+  addEwigeMneme(amount) {
+    const safeAmount = sanitizeNumber(amount, 0);
+    if (safeAmount <= 0) return;
+
+    this._stateManager.dispatch(Actions.addEwigeMneme(safeAmount), 'resource/addEwigeMneme');
+    this._eventBus.publish('resources:updated', {
+      type: 'ewigeMneme',
+      amount: safeAmount,
+      total: this.getResources().ewigeMneme
+    });
   }
 }
 
