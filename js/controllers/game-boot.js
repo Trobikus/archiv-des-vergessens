@@ -167,42 +167,12 @@ export async function bootGame() {
   const libraryService = container.get('libraryService');
   const settingsManager = container.get('settingsManager');
   const cloudManager = container.get('cloudManager');
+  const saveManager = container.get('saveManager');
   const tutorialService = container.get('tutorialService');
   const networkService = container.get('networkService');
   const i18nService = container.get('i18nService');
   const accountVaultService = container.get('accountVaultService');
   const authService = container.get('authService');
-
-  // Querverweise für Netzwerk-Verarbeitung initialisieren
-  authService.setNetworkService(networkService);
-  authService.setCloudManager(cloudManager);
-  networkService.setServices(chatService, leaderboardService, cloudManager, authService);
-
-  // SaveManager Services setzen (inklusive authService für Gast/Account Prüfungen)
-  SaveManager.setServices({
-    stateManager,
-    authService,
-    heroService,
-    resourceService,
-    clanService,
-    storyService,
-    forgeService,
-    craftingService,
-    questService,
-    achievementService,
-    guildService,
-    friendService,
-    chatService,
-    codexService,
-    relicHuntService,
-    dailyRewardService,
-    leaderboardService,
-    storyBranchService,
-    skillTreeService,
-    challengeService,
-    libraryService,
-    cloudManager
-  });
 
   // Alte Gast-Speicherstände bereinigen
   await SaveManager.clearGuestSaves();
@@ -222,8 +192,9 @@ export async function bootGame() {
   // ============================================================
   await updateBootProgress(60, 'Lade und hydriere Spielstand...');
 
-  // State mit Default-Werten initialisieren
-  stateManager.init(null, null, null);
+  // State mit Default-Werten und geladenen Einstellungen initialisieren
+  const initialSettings = settingsManager.load();
+  stateManager.init(null, null, null, initialSettings);
 
   // Save laden, falls vorhanden
   const savedState = await SaveManager.load();

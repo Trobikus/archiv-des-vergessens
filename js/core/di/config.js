@@ -44,11 +44,23 @@ export function registerServices(container) {
   // CORE
   // ============================================================
   
-  container.register('settingsManager', () => new SettingsManager(container.get('eventBus')));
+  container.register('settingsManager', (c) => new SettingsManager(c.get('eventBus'), c.get('stateManager')));
   container.register('i18nService', (c) => new I18nService(c.get('eventBus'), c.get('settingsManager')));
-  container.register('authService', (c) => new AuthService(c.get('eventBus'), c.get('settingsManager')));
+  container.register('authService', (c) => new AuthService(
+    c.get('eventBus'),
+    c.get('settingsManager'),
+    c.get('networkService'),
+    c.get('cloudManager')
+  ));
   container.register('accountVaultService', (c) => new AccountVaultService(c.get('eventBus'), c.get('authService')));
-  container.register('networkService', (c) => new NetworkService(c.get('stateManager'), c.get('eventBus')));
+  container.register('networkService', (c) => new NetworkService(
+    c.get('stateManager'),
+    c.get('eventBus'),
+    () => c.get('chatService'),
+    () => c.get('leaderboardService'),
+    () => c.get('cloudManager'),
+    () => c.get('authService')
+  ));
   container.register('cloudManager', (c) => new CloudManager(c.get('eventBus'), c.get('networkService')));
 
   // ============================================================
@@ -82,7 +94,33 @@ export function registerServices(container) {
   // PERSISTENZ
   // ============================================================
   
-  container.register('saveManager', () => SaveManager);
+  container.register('saveManager', (c) => {
+    SaveManager.setServices({
+      stateManager: c.get('stateManager'),
+      authService: c.get('authService'),
+      heroService: c.get('heroService'),
+      resourceService: c.get('resourceService'),
+      clanService: c.get('clanService'),
+      storyService: c.get('storyService'),
+      forgeService: c.get('forgeService'),
+      craftingService: c.get('craftingService'),
+      questService: c.get('questService'),
+      achievementService: c.get('achievementService'),
+      guildService: c.get('guildService'),
+      friendService: c.get('friendService'),
+      chatService: c.get('chatService'),
+      codexService: c.get('codexService'),
+      relicHuntService: c.get('relicHuntService'),
+      dailyRewardService: c.get('dailyRewardService'),
+      leaderboardService: c.get('leaderboardService'),
+      storyBranchService: c.get('storyBranchService'),
+      skillTreeService: c.get('skillTreeService'),
+      challengeService: c.get('challengeService'),
+      libraryService: c.get('libraryService'),
+      cloudManager: c.get('cloudManager')
+    });
+    return SaveManager;
+  });
 
   // ============================================================
   // GAME LOOP

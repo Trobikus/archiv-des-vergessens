@@ -15,8 +15,12 @@ export class NetworkService {
   /**
    * @param {import('../state/manager.js').StateManager} stateManager
    * @param {import('../events/bus.js').default} eventBus
+   * @param {import('./chat-service.js').ChatService|function():import('./chat-service.js').ChatService} [chatService]
+   * @param {import('./leaderboard-service.js').LeaderboardService|function():import('./leaderboard-service.js').LeaderboardService} [leaderboardService]
+   * @param {import('../persistence/cloud-manager.js').CloudManager|function():import('../persistence/cloud-manager.js').CloudManager} [cloudManager]
+   * @param {import('./auth-service.js').AuthService|function():import('./auth-service.js').AuthService} [authService]
    */
-  constructor(stateManager, eventBus) {
+  constructor(stateManager, eventBus, chatService = null, leaderboardService = null, cloudManager = null, authService = null) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
     this._ws = null;
@@ -32,13 +36,25 @@ export class NetworkService {
     this._serverUrl = this._getServerUrl();
 
     // Registrierte Services
-    this._chatService = null;
-    this._leaderboardService = null;
-    this._cloudManager = null;
-    this._authService = null;
+    this._chatService = chatService;
+    this._leaderboardService = leaderboardService;
+    this._cloudManager = cloudManager;
+    this._authService = authService;
+    this._connectTimeout = null;
 
     // Verbindung beim Start aufbauen
     this.connect();
+  }
+
+  _getService(service) {
+    if (typeof service === 'function') {
+      return service();
+    }
+    return service;
+  }
+
+  _getAuthService() {
+    return this._getService(this._authService);
   }
 
   _getServerUrl() {
@@ -171,9 +187,10 @@ export class NetworkService {
    * Authentifiziert den Client beim Server.
    */
   _authenticate() {
-    if (this._authService) {
-      const user = this._authService.getCurrentUser();
-      const token = this._authService.getToken();
+    const authService = this._getAuthService();
+    if (authService) {
+      const user = authService.getCurrentUser();
+      const token = authService.getToken();
       if (user && !user.isGuest && token) {
         this.send('auth:verifyToken', { userId: user.id, token });
         return;
@@ -234,54 +251,78 @@ export class NetworkService {
         case 'auth:verifyToken:error':
         case 'auth:convertGuest:success':
         case 'auth:convertGuest:error':
-          if (this._authService && typeof this._authService.handleServerAuthResponse === 'function') {
-            this._authService.handleServerAuthResponse(type, payload);
+          {
+            const authService = this._getAuthService();
+            if (authService && typeof authService.handleServerAuthResponse === 'function') {
+              authService.handleServerAuthResponse(type, payload);
+            }
           }
           this._eventBus.publish(`network:${type}`, payload);
           break;
 
         // --- CHAT RESPONSES ---
         case 'chat:globalMessage':
-          if (this._chatService) {
-            this._chatService.addReceivedGlobalMessage(payload);
+          {
+            const chatService = this._getService(this._chatService);
+            if (chatService) {
+              chatService.addReceivedGlobalMessage(payload);
+            }
           }
           break;
 
         case 'chat:guildMessage':
-          if (this._chatService) {
-            this._chatService.addReceivedGuildMessage(payload);
+          {
+            const chatService = this._getService(this._chatService);
+            if (chatService) {
+              chatService.addReceivedGuildMessage(payload);
+            }
           }
           break;
 
         // --- LEADERBOARD RESPONSES ---
         case 'leaderboard:update':
-          if (this._leaderboardService) {
-            this._leaderboardService.addReceivedGlobalEntries(payload);
+          {
+            const leaderboardService = this._getService(this._leaderboardService);
+            if (leaderboardService) {
+              leaderboardService.addReceivedGlobalEntries(payload);
+            }
           }
           break;
 
         // --- CLOUD SAVE RESPONSES ---
         case 'cloud:save:success':
-          if (this._cloudManager) {
-            this._cloudManager.onCloudSaveSuccess(payload.timestamp);
+          {
+            const cloudManager = this._getService(this._cloudManager);
+            if (cloudManager) {
+              cloudManager.onCloudSaveSuccess(payload.timestamp);
+            }
           }
           break;
 
         case 'cloud:save:error':
-          if (this._cloudManager) {
-            this._cloudManager.onCloudSaveError(payload.error);
+          {
+            const cloudManager = this._getService(this._cloudManager);
+            if (cloudManager) {
+              cloudManager.onCloudSaveError(payload.error);
+            }
           }
           break;
 
         case 'cloud:load:success':
-          if (this._cloudManager) {
-            this._cloudManager.onCloudLoadSuccess(payload);
+          {
+            const cloudManager = this._getService(this._cloudManager);
+            if (cloudManager) {
+              cloudManager.onCloudLoadSuccess(payload);
+            }
           }
           break;
 
         case 'cloud:load:error':
-          if (this._cloudManager) {
-            this._cloudManager.onCloudLoadError(payload.error);
+          {
+            const cloudManager = this._getService(this._cloudManager);
+            if (cloudManager) {
+              cloudManager.onCloudLoadError(payload.error);
+            }
           }
           break;
 
