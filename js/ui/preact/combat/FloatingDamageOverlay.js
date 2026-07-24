@@ -9,6 +9,8 @@ export function FloatingDamageOverlay({ eventBus }) {
   useEffect(() => {
     if (!eventBus) return;
 
+    const activeTimeouts = new Set();
+
     const subId = eventBus.subscribe('combat:floating-text', (data) => {
       if (!data) return;
 
@@ -28,13 +30,20 @@ export function FloatingDamageOverlay({ eventBus }) {
       setNumbers(prev => [...prev.slice(-15), newNumber]);
 
       // Auto-prune after 1 second animation duration
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        activeTimeouts.delete(timer);
         setNumbers(prev => prev.filter(n => n.id !== id));
       }, 950);
+      activeTimeouts.add(timer);
     });
 
-    return () => eventBus.unsubscribe(subId);
+    return () => {
+      eventBus.unsubscribe(subId);
+      activeTimeouts.forEach(timer => clearTimeout(timer));
+      activeTimeouts.clear();
+    };
   }, [eventBus]);
+
 
   return html`
     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 899;">

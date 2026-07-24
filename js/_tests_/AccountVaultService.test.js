@@ -68,4 +68,18 @@ describe('AccountVaultService & Class Gathering Specialization', () => {
     expect(resourceService.getResources().relics).toBe(150);
     expect(accountVaultService.getVaultResources().relics).toBe('150');
   });
+
+  test('deposits and withdraws items cleanly from sharedVault array', async () => {
+    const testItem = { name: 'Ur-Klinge', rarity: 'legendary', level: 5 };
+    await accountVaultService.depositItemToVault(testItem);
+
+    const items = accountVaultService.getSharedVaultItems();
+    expect(items.length).toBe(1);
+    expect(items[0].name).toBe('Ur-Klinge');
+
+    const withdrawn = await accountVaultService.withdrawItemFromVault(0);
+    expect(withdrawn.name).toBe('Ur-Klinge');
+    expect(accountVaultService.getSharedVaultItems().length).toBe(0);
+  });
 });
+

@@ -260,8 +260,11 @@ export class NavigationController {
         const clampedOffline = Math.min(offlineMs, 12 * 60 * 60 * 1000);
         
         // Offline-Fortschritt berechnen
+        const offlineHours = clampedOffline / (3600 * 1000);
+        const exponentialScale = Math.pow(1.02, offlineHours); // Exponentieller Skalierungsfaktor für Offline-Ertrag
         const prestigeBonus = state.hero?.prestige?.level * 2 || 0;
         const libraryBonus = (state.library?.upgrades?.clan_boost || 0) * 0.05;
+        const talentBonus = ((state.hero?.talents?.allocatedNodeIds || []).length * 1.5) / 100;
         const tickRateMs = 10000; // CONFIG.CLAN.TICK_RATE_MS ist 10000 (10 Sekunden)
         const expPerCycle = 1; // CONFIG.CLAN.EXP_PER_CYCLE ist 1
         
@@ -290,9 +293,9 @@ export class NavigationController {
           let remainingTime = clampedOffline;
           
           while (remainingTime > 0) {
-            let rate = baseRate * Math.pow(1.05, memberLevel - 1);
+            let rate = baseRate * Math.pow(1.05, memberLevel - 1) * exponentialScale;
             rate *= (1 + prestigeBonus / 100);
-            rate *= (1 + libraryBonus);
+            rate *= (1 + libraryBonus + talentBonus);
             
             if (rate <= 0) break;
             
