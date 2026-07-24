@@ -386,226 +386,246 @@ wss.on('connection', (ws) => {
 
         // Real Server Registration
         case 'auth:register': {
-          const cleanUsername = sanitize(payload.username, 25);
-          const cleanEmail = sanitize(payload.email, 100).toLowerCase();
-          const password = payload.password || '';
+          try {
+            const cleanUsername = sanitize(payload.username, 25);
+            const cleanEmail = sanitize(payload.email, 100).toLowerCase();
+            const password = payload.password || '';
 
-          if (!cleanUsername || cleanUsername.length < 3) {
-            send(ws, 'auth:register:error', { error: 'auth.error.username_short' });
-            return;
+            if (!cleanUsername || cleanUsername.length < 3) {
+              send(ws, 'auth:register:error', { error: 'auth.error.username_short' });
+              return;
+            }
+            if (!cleanEmail || !cleanEmail.includes('@')) {
+              send(ws, 'auth:register:error', { error: 'auth.error.email_invalid' });
+              return;
+            }
+            if (!password || password.length < 6) {
+              send(ws, 'auth:register:error', { error: 'auth.error.password_short' });
+              return;
+            }
+
+            // Check for existing username (case-insensitive)
+            const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
+            if (existingUser) {
+              send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
+              return;
+            }
+
+            // Check for existing email (case-insensitive)
+            const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+            if (existingEmail) {
+              send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
+              return;
+            }
+
+            const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
+            const salt = generateSalt();
+            const passwordHash = hashPassword(password, salt);
+            const token = generateToken();
+            const now = Date.now();
+            const avatar = payload.avatar || '🛡️';
+
+            db.prepare(`
+              INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, avatar, now, now, token);
+
+            clientInfo.userId = userId;
+            clientInfo.username = cleanUsername;
+            clientInfo.sessionToken = token;
+
+            console.log(`[Auth] Neuer Account registriert: '${cleanUsername}' (${userId})`);
+
+            const userObj = {
+              id: userId,
+              username: cleanUsername,
+              email: cleanEmail,
+              avatar,
+              createdAt: now,
+              lastLogin: now,
+              isGuest: false
+            };
+
+            send(ws, 'auth:register:success', { user: userObj, token });
+            send(ws, 'auth:success', { userId, username: cleanUsername });
+          } catch (err) {
+            console.error('[Auth] Registrierungsfehler:', err);
+            send(ws, 'auth:register:error', { error: 'auth.error.missing_fields' });
           }
-          if (!cleanEmail || !cleanEmail.includes('@')) {
-            send(ws, 'auth:register:error', { error: 'auth.error.email_invalid' });
-            return;
-          }
-          if (!password || password.length < 6) {
-            send(ws, 'auth:register:error', { error: 'auth.error.password_short' });
-            return;
-          }
-
-          // Check for existing username (case-insensitive)
-          const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
-          if (existingUser) {
-            send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
-            return;
-          }
-
-          // Check for existing email (case-insensitive)
-          const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-          if (existingEmail) {
-            send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
-            return;
-          }
-
-          const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
-          const salt = generateSalt();
-          const passwordHash = hashPassword(password, salt);
-          const token = generateToken();
-          const now = Date.now();
-          const avatar = payload.avatar || '🛡️';
-
-          db.prepare(`
-            INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, avatar, now, now, token);
-
-          clientInfo.userId = userId;
-          clientInfo.username = cleanUsername;
-          clientInfo.sessionToken = token;
-
-          console.log(`[Auth] Neuer Account registriert: '${cleanUsername}' (${userId})`);
-
-          const userObj = {
-            id: userId,
-            username: cleanUsername,
-            email: cleanEmail,
-            avatar,
-            createdAt: now,
-            lastLogin: now,
-            isGuest: false
-          };
-
-          send(ws, 'auth:register:success', { user: userObj, token });
-          send(ws, 'auth:success', { userId, username: cleanUsername });
           break;
         }
 
         // Real Server Login
         case 'auth:login': {
-          const query = sanitize(payload.usernameOrEmail, 100).toLowerCase();
-          const password = payload.password || '';
+          try {
+            const query = sanitize(payload.usernameOrEmail, 100).toLowerCase();
+            const password = payload.password || '';
 
-          if (!query || !password) {
+            if (!query || !password) {
+              send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
+              return;
+            }
+
+            const user = db.prepare(`
+              SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)
+            `).get(query, query);
+
+            if (!user) {
+              send(ws, 'auth:login:error', { error: 'auth.error.user_not_found' });
+              return;
+            }
+
+            const computedHash = hashPassword(password, user.salt);
+            if (computedHash !== user.passwordHash) {
+              send(ws, 'auth:login:error', { error: 'auth.error.wrong_password' });
+              return;
+            }
+
+            const newToken = generateToken();
+            const now = Date.now();
+
+            db.prepare('UPDATE users SET lastLogin = ?, sessionToken = ? WHERE id = ?').run(now, newToken, user.id);
+
+            clientInfo.userId = user.id;
+            clientInfo.username = user.username;
+            clientInfo.sessionToken = newToken;
+
+            console.log(`[Auth] Erfolgreicher Login: '${user.username}' (${user.id})`);
+
+            const userObj = {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              avatar: user.avatar || '🛡️',
+              createdAt: user.createdAt,
+              lastLogin: now,
+              isGuest: false
+            };
+
+            send(ws, 'auth:login:success', { user: userObj, token: newToken });
+            send(ws, 'auth:success', { userId: user.id, username: user.username });
+          } catch (err) {
+            console.error('[Auth] Login-Fehler:', err);
             send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
-            return;
           }
-
-          const user = db.prepare(`
-            SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)
-          `).get(query, query);
-
-          if (!user) {
-            send(ws, 'auth:login:error', { error: 'auth.error.user_not_found' });
-            return;
-          }
-
-          const computedHash = hashPassword(password, user.salt);
-          if (computedHash !== user.passwordHash) {
-            send(ws, 'auth:login:error', { error: 'auth.error.wrong_password' });
-            return;
-          }
-
-          const newToken = generateToken();
-          const now = Date.now();
-
-          db.prepare('UPDATE users SET lastLogin = ?, sessionToken = ? WHERE id = ?').run(now, newToken, user.id);
-
-          clientInfo.userId = user.id;
-          clientInfo.username = user.username;
-          clientInfo.sessionToken = newToken;
-
-          console.log(`[Auth] Erfolgreicher Login: '${user.username}' (${user.id})`);
-
-          const userObj = {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            avatar: user.avatar || '🛡️',
-            createdAt: user.createdAt,
-            lastLogin: now,
-            isGuest: false
-          };
-
-          send(ws, 'auth:login:success', { user: userObj, token: newToken });
-          send(ws, 'auth:success', { userId: user.id, username: user.username });
           break;
         }
 
         // Token Verification on Reconnect
         case 'auth:verifyToken': {
-          const userId = sanitize(payload.userId, 50);
-          const token = payload.token;
+          try {
+            const userId = sanitize(payload.userId, 50);
+            const token = payload.token;
 
-          if (!userId || !token) {
-            send(ws, 'auth:verifyToken:error', { error: 'Missing session credentials.' });
-            return;
-          }
+            if (!userId || !token) {
+              send(ws, 'auth:verifyToken:error', { error: 'Missing session credentials.' });
+              return;
+            }
 
-          const user = db.prepare('SELECT * FROM users WHERE id = ? AND sessionToken = ?').get(userId, token);
+            const user = db.prepare('SELECT * FROM users WHERE id = ? AND sessionToken = ?').get(userId, token);
 
-          if (!user) {
+            if (!user) {
+              send(ws, 'auth:verifyToken:error', { error: 'Session token invalid or expired.' });
+              return;
+            }
+
+            clientInfo.userId = user.id;
+            clientInfo.username = user.username;
+            clientInfo.sessionToken = token;
+
+            console.log(`[Auth] Session verifiziert für '${user.username}' (${user.id})`);
+
+            const userObj = {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              avatar: user.avatar || '🛡️',
+              createdAt: user.createdAt,
+              lastLogin: user.lastLogin,
+              isGuest: false
+            };
+
+            send(ws, 'auth:verifyToken:success', { user: userObj, token });
+            send(ws, 'auth:success', { userId: user.id, username: user.username });
+          } catch (err) {
+            console.error('[Auth] Token-Verifizierungsfehler:', err);
             send(ws, 'auth:verifyToken:error', { error: 'Session token invalid or expired.' });
-            return;
           }
-
-          clientInfo.userId = user.id;
-          clientInfo.username = user.username;
-          clientInfo.sessionToken = token;
-
-          console.log(`[Auth] Session verifiziert für '${user.username}' (${user.id})`);
-
-          const userObj = {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            avatar: user.avatar || '🛡️',
-            createdAt: user.createdAt,
-            lastLogin: user.lastLogin,
-            isGuest: false
-          };
-
-          send(ws, 'auth:verifyToken:success', { user: userObj, token });
-          send(ws, 'auth:success', { userId: user.id, username: user.username });
           break;
         }
 
         // Guest Conversion to Account
         case 'auth:convertGuest': {
-          const guestId = sanitize(payload.guestId, 50);
-          const cleanUsername = sanitize(payload.username, 25);
-          const cleanEmail = sanitize(payload.email, 100).toLowerCase();
-          const password = payload.password || '';
+          try {
+            const guestId = sanitize(payload.guestId, 50);
+            const cleanUsername = sanitize(payload.username, 25);
+            const cleanEmail = sanitize(payload.email, 100).toLowerCase();
+            const password = payload.password || '';
 
-          if (!cleanUsername || cleanUsername.length < 3) {
-            send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_short' });
-            return;
+            if (!cleanUsername || cleanUsername.length < 3) {
+              send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_short' });
+              return;
+            }
+            if (!cleanEmail || !cleanEmail.includes('@')) {
+              send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_invalid' });
+              return;
+            }
+            if (!password || password.length < 6) {
+              send(ws, 'auth:convertGuest:error', { error: 'auth.error.password_short' });
+              return;
+            }
+
+            // Uniqueness check
+            const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
+            if (existingUser) {
+              send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_taken' });
+              return;
+            }
+            const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+            if (existingEmail) {
+              send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_taken' });
+              return;
+            }
+
+            const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
+            const salt = generateSalt();
+            const passwordHash = hashPassword(password, salt);
+            const token = generateToken();
+            const now = Date.now();
+
+            db.prepare(`
+              INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
+              VALUES (?, ?, ?, ?, ?, '🛡️', ?, ?, ?)
+            `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, now, now, token);
+
+            // Transfer guest save in SQLite if present
+            if (guestId) {
+              db.prepare('UPDATE saves SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
+              db.prepare('UPDATE leaderboard SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
+            }
+
+            clientInfo.userId = userId;
+            clientInfo.username = cleanUsername;
+            clientInfo.sessionToken = token;
+
+            console.log(`[Auth] Gast-Account '${guestId}' umgewandelt in '${cleanUsername}' (${userId})`);
+
+            const userObj = {
+              id: userId,
+              username: cleanUsername,
+              email: cleanEmail,
+              avatar: '🛡️',
+              createdAt: now,
+              lastLogin: now,
+              isGuest: false
+            };
+
+            send(ws, 'auth:convertGuest:success', { user: userObj, token });
+            send(ws, 'auth:success', { userId, username: cleanUsername });
+          } catch (err) {
+            console.error('[Auth] Fehler bei Gast-Umwandlung:', err);
+            send(ws, 'auth:convertGuest:error', { error: 'auth.error.missing_fields' });
           }
-          if (!cleanEmail || !cleanEmail.includes('@')) {
-            send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_invalid' });
-            return;
-          }
-          if (!password || password.length < 6) {
-            send(ws, 'auth:convertGuest:error', { error: 'auth.error.password_short' });
-            return;
-          }
-
-          // Uniqueness check
-          const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?)').get(cleanUsername);
-          if (existingUser) {
-            send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_taken' });
-            return;
-          }
-          const existingEmail = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-          if (existingEmail) {
-            send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_taken' });
-            return;
-          }
-
-          const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
-          const salt = generateSalt();
-          const passwordHash = hashPassword(password, salt);
-          const token = generateToken();
-          const now = Date.now();
-
-          db.prepare(`
-            INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
-            VALUES (?, ?, ?, ?, ?, '🛡️', ?, ?, ?)
-          `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, now, now, token);
-
-          // Transfer guest save in SQLite if present
-          if (guestId) {
-            db.prepare('UPDATE saves SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
-            db.prepare('UPDATE leaderboard SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
-          }
-
-          clientInfo.userId = userId;
-          clientInfo.username = cleanUsername;
-          clientInfo.sessionToken = token;
-
-          console.log(`[Auth] Gast-Account '${guestId}' umgewandelt in '${cleanUsername}' (${userId})`);
-
-          const userObj = {
-            id: userId,
-            username: cleanUsername,
-            email: cleanEmail,
-            avatar: '🛡️',
-            createdAt: now,
-            lastLogin: now,
-            isGuest: false
-          };
-
-          send(ws, 'auth:convertGuest:success', { user: userObj, token });
-          send(ws, 'auth:success', { userId, username: cleanUsername });
           break;
         }
 
