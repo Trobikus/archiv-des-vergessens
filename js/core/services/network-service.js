@@ -49,7 +49,7 @@ export class NetworkService {
     // 2. Nur im aktiven Vite-Entwicklungsmodus (npm run dev) auf localhost ausweichen
     if (typeof window !== 'undefined' && window.location) {
       const hostname = window.location.hostname || '';
-      const isViteDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+      const isViteDev = typeof import.meta !== 'undefined' && import.meta['env'] && import.meta['env'].DEV;
       const isLocalHost = (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') && window.location.port !== '';
 
       if (isViteDev && isLocalHost) {
