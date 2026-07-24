@@ -44,12 +44,16 @@ src-tauri/bin/
 launcher/src-tauri/target/
 launcher/src-tauri/bin/
 
-# Security / Private Keys
+# Security / Private Keys & Config
 *.key
 *.key.pub
 updater.key
 updater.key.pub
 src-tauri/updater.key*
+config.toml
+*.toml.secret
+data/
+*.db
 server/data/*.db
 server/data/*.db-wal
 server/data/*.db-shm

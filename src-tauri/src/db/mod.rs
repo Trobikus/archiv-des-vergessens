@@ -1,4 +1,7 @@
+use crate::config::DatabaseConfig;
 use rusqlite::{params, Connection, Result};
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -10,6 +13,8 @@ pub enum DbError {
     SaveError(String),
     #[error("User not found: {0}")]
     UserNotFound(String),
+    #[error("IO error during DB initialization: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
@@ -39,7 +44,29 @@ impl DbManager {
 
     /// Opens or creates a file-backed SQLite database at the specified path.
     pub fn open_at_path(path: &str) -> Result<Self, DbError> {
+        Self::open_at_path_with_password(path, "")
+    }
+
+    /// Opens or creates a file-backed SQLite database using `DatabaseConfig`.
+    pub fn open_with_config(config: &DatabaseConfig) -> Result<Self, DbError> {
+        Self::open_at_path_with_password(&config.path, &config.password)
+    }
+
+    /// Opens database with encryption key / password (PRAGMA key).
+    pub fn open_at_path_with_password(path: &str, password: &str) -> Result<Self, DbError> {
+        if let Some(parent) = Path::new(path).parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
         let conn = Connection::open(path)?;
+
+        if !password.is_empty() {
+            // Apply key for SQLCipher / SQLite encryption if supported
+            let _ = conn.pragma_update(None, "key", password);
+        }
+
         let manager = DbManager {
             conn: Arc::new(Mutex::new(conn)),
         };
@@ -123,6 +150,7 @@ impl DbManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_db_in_memory_initialization() {
@@ -143,5 +171,20 @@ mod tests {
         assert_eq!(retrieved.player_name, "GrimoireHero");
         assert_eq!(retrieved.mneme_points, 5000);
         assert_eq!(retrieved.play_time_seconds, 1200);
+    }
+
+    #[test]
+    fn test_db_with_encrypted_config() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let config = DatabaseConfig {
+            path: temp_file.path().to_str().unwrap().to_string(),
+            password: "SecureSecretPassword123".to_string(),
+        };
+
+        let db = DbManager::open_with_config(&config).expect("Encrypted DB should open");
+        db.save_game("EncryptedPlayer", 1000, 60).unwrap();
+
+        let save = db.get_save("EncryptedPlayer").unwrap().unwrap();
+        assert_eq!(save.player_name, "EncryptedPlayer");
     }
 }

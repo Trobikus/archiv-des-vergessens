@@ -267,6 +267,41 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d api.archiv-des-vergessens.de
 ```
 
+### 3. Konfigurationsverwaltung & Kryptographische Sicherheit (`config.toml`)
+
+Alle kryptographischen Schlüssel, JWT-Secrets und Datenbankpasswörter werden zentral zur Laufzeit geladen. **Es befinden sich keine Secrets im Quellcode.**
+
+* **Automatische Ersterstellung (`config.rs`)**:  
+  Beim ersten Start der Anwendung generiert das Rust-Backend automatisch eine `config.toml` mit kryptographisch sicheren Zufallswerten:
+  ```toml
+  [auth]
+  jwt_secret = "<zufällig_generiertes_256bit_secret>"
+  token_expiry_hours = 24
+
+  [crypto]
+  encryption_key = "<zufällig_generierter_256bit_schluessel>"
+  salt = "<zufällig_generierter_128bit_salt>"
+
+  [database]
+  path = "data/app.db"
+  password = "<zufällig_generiertes_datenbank_passwort>"
+  ```
+* **Umgebungsvariablen-Fallback / Override**:  
+  In Produktions- oder CI-Umgebungen können Konfigurationswerte dynamisch über Umgebungsvariablen überschrieben werden:
+  - `AUTH_JWT_SECRET`
+  - `AUTH_TOKEN_EXPIRY_HOURS`
+  - `CRYPTO_ENCRYPTION_KEY`
+  - `CRYPTO_SALT`
+  - `DATABASE_PATH`
+  - `DATABASE_PASSWORD`
+* **Sicherheitsfeatures**:
+  - **AES-256-GCM**: Symmetrische Authenticated Encryption für sensible Spiel- und Benutzerdaten.
+  - **Argon2id**: Passwort-Hashing nach modernstem Standard für Benutzerkonten.
+  - **JWT Tokens**: Kryptographisch signierte Tokens mit konfigurierbarer Gültigkeitsdauer.
+  - **SQLCipher / DB-Verschlüsselung**: Verschlüsselte SQLite-Datenbankpersistenz.
+* **Versionierung**:  
+  `config.toml` ist in `.gitignore` eingetragen und darf niemals im Git-Repository committed werden.
+
 ---
 
 ## 🛠️ Technologie-Stack

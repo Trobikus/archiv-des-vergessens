@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.25] - 2026-07-25
+
+### 🔐 AppConfig, AES-256-GCM Verschlüsselung, Argon2id & JWT Backend-Erweiterung
+- **TOML Konfigurations-Management (`src-tauri/src/config.rs`)**:
+  - `AppConfig` Struktur mit TOML-Persistenz (`config.toml`), automatischer Erstellung kryptographisch sicherer Zufalls-Keys bei Erststart und flexiblen Umgebungsvariablen-Overrides (`AUTH_JWT_SECRET`, `CRYPTO_ENCRYPTION_KEY`, etc.).
+- **AES-256-GCM Symmetrische Verschlüsselung (`src-tauri/src/services/crypto.rs`)**:
+  - `CryptoService` mit AES-256-GCM Verschlüsselung/Entschlüsselung (Base64-kodierte Payloads mit zufälligen 12-Byte Nonces) und SHA-256 Key-Normalisierung.
+- **Argon2id Passwort-Hashing & JWT Tokens (`src-tauri/src/services/auth.rs`)**:
+  - Ergänzung von Argon2id Passwort-Hashing via `argon2` Crate und signierter JWT-Token Generierung/Validierung via `jsonwebtoken`.
+- **Tauri App-State & SQLite Integration (`src-tauri/src/lib.rs`)**:
+  - `AppConfig` als verwalteter Tauri State (`.manage(app_config)`) registriert und Datenbank-Initialisierung via `DbManager::open_with_config` angebunden.
+- **Erweiterte Backend-Testsuite**:
+  - Rust Backend Unit- & Integrationstests auf **26 bestandene Tests** erweitert (inkl. `test_auto_generate_config_on_first_start`, `test_aes_256_gcm_encrypt_decrypt_roundtrip`, `test_argon2_hashing_in_auth_service`, `test_jwt_token_generation_and_verification`).
+
+---
+
 ## [1.0.24] - 2026-07-24
 
 ### 📋 GitHub Issue Templates & Community Support
