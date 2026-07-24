@@ -48,6 +48,12 @@ jobs:
       - name: Build Web Frontend Assets
         run: npm run build
 
+      - name: Verify Dist Build Output
+        run: |
+          Get-ChildItem -Path ./dist
+          if (-not (Test-Path "./dist/index.html")) { throw "index.html fehlt in ./dist!" }
+          if (-not (Test-Path "./dist/launcher.html")) { throw "launcher.html fehlt in ./dist!" }
+
       - name: Build Portable Game Executable
         run: npm run game:build
 
