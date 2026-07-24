@@ -361,10 +361,35 @@ export async function bootGame() {
   // 11. CLEANUP & SICHERES BEENDEN (Schnittstelle zu Electron & Browser)
   // ============================================================
 
-  let cleanupDone = false;
+  // Safe-Quit Handler für Tauri / Electron Integration
+  if (window.electronAPI && typeof window.electronAPI.onQuitRequested === 'function') {
+    window.electronAPI.onQuitRequested(async () => {
+      logger.info('[GameBoot] Safe-Quit Beendigung angefordert via Tauri...');
+      try {
+        await SaveManager.save(stateManager.getState());
+        if (settingsManager.get('cloudEnabled')) {
+          await cloudManager.sync(stateManager.getState());
+        }
+      } catch (error) {
+        console.warn('[GameBoot] Safe-Quit-Speichern fehlgeschlagen:', error);
+      } finally {
+        if (typeof window.electronAPI.sendQuitReady === 'function') {
+          window.electronAPI.sendQuitReady();
+        }
+      }
+    });
+  }
 
-  // Safe-Quit (Browser / Desktop)
+  // Safe-Quit (Browser / Fallback)
+  let cleanupDone = false;
   window.addEventListener('beforeunload', (e) => {
+    // In Tauri desktop environment, gracefully ignore browser beforeunload traps
+    if (window['__TAURI__']) {
+      try {
+        SaveManager.save(stateManager.getState());
+      } catch (_) {}
+      return;
+    }
 
     if (cleanupDone) return;
     cleanupDone = true;
@@ -389,8 +414,6 @@ export async function bootGame() {
 
     logger.info('[GameBoot] Browser-Cleanup gestartet.');
 
-    // Verhindere das sofortige Schließen des Fensters im Browser.
-    // Während der Benutzer die Bestätigung liest, läuft das Speichern im Hintergrund fertig!
     e.preventDefault();
     e.returnValue = 'Möchtest du das Archiv wirklich verlassen? Dein Fortschritt wird gespeichert.';
     return e.returnValue;
@@ -430,8 +453,10 @@ export async function bootGame() {
       let lastTS = -1;
 
       const resize = () => {
-        canvas.width = introContainer.clientWidth || window.innerWidth;
-        canvas.height = introContainer.clientHeight || window.innerHeight;
+        const targetW = (introContainer && introContainer.clientWidth > 0) ? introContainer.clientWidth : window.innerWidth;
+        const targetH = (introContainer && introContainer.clientHeight > 0) ? introContainer.clientHeight : window.innerHeight;
+        canvas.width = targetW;
+        canvas.height = targetH;
         ctx.globalCompositeOperation = 'screen';
       };
       resize();

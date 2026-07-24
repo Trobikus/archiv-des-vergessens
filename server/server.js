@@ -30,6 +30,11 @@ const LEADERBOARD_FILE = join(DATA_DIR, 'leaderboard.json');
 const DB_FILE = join(DATA_DIR, 'database.db');
 const MIGRATION_FLAG_FILE = join(DATA_DIR, 'migration_done.flag');
 
+// ========== AUTO-BACKUP SYSTEM ==========
+const BACKUP_DIR = join(DATA_DIR, 'backups');
+const BACKUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 Stunden
+const MAX_BACKUPS = 7; // Behalte die letzten 7 Backups
+
 // Sicherheits- & Validierungskonstanten
 const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_KEYLEN = 64;
@@ -41,15 +46,136 @@ const clients = new Map(); // Map: WebSocket -> { userId, username, guildId, ses
 let db;
 
 // ============================================================
+// AUTO-BACKUP & DATENBANK-INTEGRITÄT
+// ============================================================
+async function createDatabaseBackup() {
+  try {
+    await fs.mkdir(BACKUP_DIR, { recursive: true });
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFile = join(BACKUP_DIR, `database_${timestamp}.db`);
+    
+    // SQLite Online Backup API verwenden (sicherer als einfaches File-Copy)
+    const backupDb = new Database(backupFile);
+    
+    db.backup(backupDb)
+      .then(() => {
+        console.log(`[Backup] Datenbank-Backup erstellt: ${backupFile}`);
+        backupDb.close();
+        
+        // Alte Backups aufräumen
+        cleanupOldBackups();
+      })
+      .catch(err => {
+        console.error('[Backup] Fehler beim Erstellen:', err);
+        backupDb.close();
+      });
+      
+  } catch (err) {
+    console.error('[Backup] Fehler:', err);
+  }
+}
+
+async function cleanupOldBackups() {
+  try {
+    const files = await fs.readdir(BACKUP_DIR);
+    const dbBackups = files
+      .filter(f => f.startsWith('database_') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    
+    if (dbBackups.length > MAX_BACKUPS) {
+      const filesToDelete = dbBackups.slice(MAX_BACKUPS);
+      for (const file of filesToDelete) {
+        await fs.unlink(join(BACKUP_DIR, file));
+        console.log(`[Backup] Altes Backup gelöscht: ${file}`);
+      }
+    }
+  } catch (err) {
+    console.error('[Backup] Fehler beim Aufräumen:', err);
+  }
+}
+
+// Integrity Check beim Server-Start
+function verifyDatabaseIntegrity() {
+  try {
+    const result = db.pragma('integrity_check');
+    if (result[0]?.integrity_check === 'ok') {
+      console.log('[Storage] Datenbank-Integrität OK ✓');
+      return true;
+    } else {
+      console.error('[Storage] Datenbank korrupt!', result);
+      return false;
+    }
+  } catch (err) {
+    console.error('[Storage] Integritätsprüfung fehlgeschlagen:', err);
+    return false;
+  }
+}
+
+// Periodisches VACUUM (optimiert Datenbank)
+function scheduleVacuum() {
+  const VACUUM_INTERVAL = 7 * 24 * 60 * 60 * 1000; // Wöchentlich
+  
+  setInterval(() => {
+    try {
+      console.log('[Storage] Führe VACUUM durch...');
+      db.exec('VACUUM');
+      console.log('[Storage] VACUUM abgeschlossen ✓');
+    } catch (err) {
+      console.error('[Storage] VACUUM fehlgeschlagen:', err);
+    }
+  }, VACUUM_INTERVAL);
+}
+
+async function attemptRecoveryFromBackup() {
+  try {
+    const files = await fs.readdir(BACKUP_DIR);
+    const backups = files
+      .filter(f => f.startsWith('database_') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    
+    if (backups.length === 0) {
+      console.error('[Recovery] Keine Backups verfügbar!');
+      return false;
+    }
+    
+    const latestBackup = join(BACKUP_DIR, backups[0]);
+    console.log(`[Recovery] Versuche Wiederherstellung von: ${latestBackup}`);
+    
+    // Backup kopieren
+    await fs.copyFile(latestBackup, DB_FILE);
+    
+    // DB neu laden
+    db = new Database(DB_FILE);
+    db.pragma('journal_mode = WAL');
+    
+    if (verifyDatabaseIntegrity()) {
+      console.log('[Recovery] Wiederherstellung erfolgreich ✓');
+      return true;
+    }
+    
+    return false;
+  } catch (err) {
+    console.error('[Recovery] Fehler:', err);
+    return false;
+  }
+}
+
+// ============================================================
 // DATEN-VERZEICHNISSE & SQLITE INITIALISIEREN
 // ============================================================
 async function initStorage() {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
-
-    // SQLite-Datenbank initialisieren
+    await fs.mkdir(BACKUP_DIR, { recursive: true });
+    
+    // SQLite initialisieren
     db = new Database(DB_FILE);
-    db.pragma('journal_mode = WAL'); // Erhöht die Schreibgeschwindigkeit massiv
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL'); // Balance zwischen Sicherheit und Performance
+    db.pragma('foreign_keys = ON');
 
     // Tabellen anlegen
     db.prepare(`
@@ -108,8 +234,21 @@ async function initStorage() {
 
     console.log('[Storage] SQLite-Datenbank erfolgreich initialisiert.');
 
-    // Automatische Migration von Altdaten
+    // Integritätsprüfung
+    if (!verifyDatabaseIntegrity()) {
+      console.warn('[Storage] Versuche Recovery von letztem Backup...');
+      await attemptRecoveryFromBackup();
+    }
+
+    // Migration
     await migrateOldJsonData();
+
+    // Backup-Scheduler starten
+    createDatabaseBackup(); // Sofortiges Backup
+    setInterval(createDatabaseBackup, BACKUP_INTERVAL);
+
+    // VACUUM-Scheduler starten
+    scheduleVacuum();
 
   } catch (err) {
     console.error('[Storage] Fehler bei der Initialisierung:', err);
@@ -382,6 +521,96 @@ function sanitize(str, maxLength = 200) {
     .substring(0, maxLength);
 }
 
+// ========== NEU: Duplikat-Prüfungs-Helper ==========
+const USERNAME_BLACKLIST = [
+  'admin', 'administrator', 'system', 'root', 'moderator', 'mod',
+  'support', 'help', 'info', 'test', 'null', 'undefined', 'user',
+  'guest', 'bot', 'server', 'official', 'archive', 'vergessen'
+];
+
+function levenshteinDistance(s1, s2) {
+  if (s1.length < s2.length) return levenshteinDistance(s2, s1);
+  if (s2.length === 0) return s1.length;
+  
+  let previousRow = Array.from({length: s2.length + 1}, (_, i) => i);
+  
+  for (let i = 0; i < s1.length; i++) {
+    let currentRow = [i + 1];
+    for (let j = 0; j < s2.length; j++) {
+      const insertions = previousRow[j + 1] + 1;
+      const deletions = currentRow[j] + 1;
+      const substitutions = previousRow[j] + (s1[i] !== s2[j] ? 1 : 0);
+      currentRow.push(Math.min(insertions, deletions, substitutions));
+    }
+    previousRow = currentRow;
+  }
+  return previousRow[previousRow.length - 1];
+}
+
+function validateEmailFormat(email) {
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(email) && email.length >= 6 && email.length <= 254;
+}
+
+function checkUsernameSimilarity(newUsername, db) {
+  const normalized = newUsername.toLowerCase();
+  
+  // Blacklist-Check
+  if (USERNAME_BLACKLIST.includes(normalized)) {
+    return { isDuplicate: true, reason: 'auth.error.username_blacklisted' };
+  }
+  
+  // Ähnlichkeitsprüfung gegen bestehende Usernamen
+  const existingUsers = db.prepare('SELECT username FROM users').all();
+  
+  for (const user of existingUsers) {
+    const existingNormalized = user.username.toLowerCase();
+    
+    // Exakte Übereinstimmung (sollte durch UNIQUE Constraint abgedeckt sein)
+    if (normalized === existingNormalized) {
+      return { isDuplicate: true, reason: 'auth.error.username_taken' };
+    }
+    
+    // Levenshtein-Distanz für ähnliche Namen
+    const distance = levenshteinDistance(normalized, existingNormalized);
+    const maxLength = Math.max(normalized.length, existingNormalized.length);
+    const similarity = ((maxLength - distance) / maxLength) * 100;
+    
+    // Warne bei >85% Ähnlichkeit
+    if (similarity > 85 && maxLength > 3) {
+      return { 
+        isDuplicate: true, 
+        reason: 'auth.error.username_too_similar',
+        similarTo: user.username 
+      };
+    }
+  }
+  
+  return { isDuplicate: false };
+}
+
+// Rate Limiting Map (IP -> {count, resetTime})
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 Minuten
+const RATE_LIMIT_MAX = 5; // Max 5 Registrierungen pro IP
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  let record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    record = { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
+    rateLimitMap.set(ip, record);
+  }
+  
+  if (record.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, retryAfter: Math.ceil((record.resetTime - now) / 1000) };
+  }
+  
+  record.count++;
+  return { allowed: true };
+}
+
 // ============================================================
 // SERVER ERSTELLEN
 // ============================================================
@@ -458,54 +687,105 @@ wss.on('connection', (ws) => {
             const cleanUsername = sanitize(payload.username, 25);
             const cleanEmail = sanitize(payload.email, 100).toLowerCase();
             const password = typeof payload.password === 'string' ? payload.password : '';
-
-            if (!cleanUsername || cleanUsername.length < 3) {
-              send(ws, 'auth:register:error', { error: 'auth.error.username_short' });
+            const clientIp = ws._socket.remoteAddress || 'unknown';
+            
+            // ========== VALIDIERUNG ==========
+            if (!cleanUsername || cleanUsername.length < 3 || cleanUsername.length > 25) {
+              send(ws, 'auth:register:error', { 
+                error: 'auth.error.username_short',
+                message: 'Username muss zwischen 3 und 25 Zeichen lang sein.'
+              });
               return;
             }
-            if (!cleanEmail || !cleanEmail.includes('@')) {
-              send(ws, 'auth:register:error', { error: 'auth.error.email_invalid' });
+            
+            // Username: Nur alphanumerisch + Unterstrich
+            if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+              send(ws, 'auth:register:error', {
+                error: 'auth.error.username_invalid_chars',
+                message: 'Username darf nur Buchstaben, Zahlen und Unterstriche enthalten.'
+              });
               return;
             }
+            
+            // Email-Format-Validierung
+            if (!validateEmailFormat(cleanEmail)) {
+              send(ws, 'auth:register:error', { 
+                error: 'auth.error.email_invalid',
+                message: 'Ungültiges E-Mail-Format.'
+              });
+              return;
+            }
+            
             if (!password || password.length < 6 || password.length > MAX_PASSWORD_LENGTH) {
-              send(ws, 'auth:register:error', { error: 'auth.error.password_short' });
+              send(ws, 'auth:register:error', { 
+                error: 'auth.error.password_short',
+                message: 'Passwort muss zwischen 6 und 128 Zeichen lang sein.'
+              });
               return;
             }
-
-            // Check for existing username (case-insensitive via column collation)
-            const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUsername);
-            if (existingUser) {
-              send(ws, 'auth:register:error', { error: 'auth.error.username_taken' });
+            
+            // ========== RATE LIMITING ==========
+            const rateCheck = checkRateLimit(clientIp);
+            if (!rateCheck.allowed) {
+              send(ws, 'auth:register:error', {
+                error: 'auth.error.rate_limit',
+                message: `Zu viele Versuche. Bitte warte ${rateCheck.retryAfter} Sekunden.`,
+                retryAfter: rateCheck.retryAfter
+              });
               return;
             }
-
-            // Check for existing email (case-insensitive via column collation)
+            
+            // ========== DUPLIKAT-PRÜFUNG ==========
+            const similarityCheck = checkUsernameSimilarity(cleanUsername, db);
+            if (similarityCheck.isDuplicate) {
+              send(ws, 'auth:register:error', {
+                error: similarityCheck.reason,
+                similarTo: similarityCheck.similarTo
+              });
+              return;
+            }
+            
+            // Exakter Email-Check
             const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:register:error', { error: 'auth.error.email_taken' });
               return;
             }
-
+            
+            // ========== REGISTRIERUNG MIT TRANSACTION ==========
             const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
             const salt = generateSalt();
             const passwordHash = hashPassword(password, salt);
             const token = generateToken();
             const now = Date.now();
             const avatar = sanitize(payload.avatar, 10) || '🛡️';
-
-            db.prepare(`
-              INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, avatar, now, now, token);
-
-            clientInfo.userId = userId;
+            
+            const registerTransaction = db.transaction(() => {
+              // User einfügen
+              db.prepare(`
+                INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, avatar, now, now, token);
+              
+              // Leeren Save-Eintrag vorbereiten (für sofortige Cloud-Sync-Bereitschaft)
+              db.prepare(`
+                INSERT OR IGNORE INTO saves (userId, username, saveData, version, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+              `).run(userId, cleanUsername, JSON.stringify({}), '1.0', now);
+              
+              return { userId, token };
+            });
+            
+            const result = registerTransaction();
+            
+            clientInfo.userId = result.userId;
             clientInfo.username = cleanUsername;
-            clientInfo.sessionToken = token;
-
-            console.log(`[Auth] Neuer Account registriert: '${cleanUsername}' (${userId})`);
-
+            clientInfo.sessionToken = result.token;
+            
+            console.log(`[Auth] Neuer Account registriert: '${cleanUsername}' (${result.userId})`);
+            
             const userObj = {
-              id: userId,
+              id: result.userId,
               username: cleanUsername,
               email: cleanEmail,
               avatar,
@@ -513,13 +793,17 @@ wss.on('connection', (ws) => {
               lastLogin: now,
               isGuest: false
             };
-
-            send(ws, 'auth:register:success', { user: userObj, token });
-            send(ws, 'auth:success', { userId, username: cleanUsername });
+            
+            send(ws, 'auth:register:success', { user: userObj, token: result.token });
+            send(ws, 'auth:success', { userId: result.userId, username: cleanUsername });
             sendChatHistory(ws, clientInfo.guildId);
+            
           } catch (err) {
             console.error('[Auth] Registrierungsfehler:', err);
-            send(ws, 'auth:register:error', { error: 'auth.error.missing_fields' });
+            send(ws, 'auth:register:error', { 
+              error: 'auth.error.server_error',
+              message: 'Server-Fehler bei der Registrierung.'
+            });
           }
           break;
         }
@@ -629,78 +913,171 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        // Guest Conversion to Account
         case 'auth:convertGuest': {
           try {
             const guestId = sanitize(payload.guestId, 50);
             const cleanUsername = sanitize(payload.username, 25);
             const cleanEmail = sanitize(payload.email, 100).toLowerCase();
-            const password = typeof payload.password === 'string' ? payload.password : '';
-
-            if (!cleanUsername || cleanUsername.length < 3) {
-              send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_short' });
+            const password = payload.password || '';
+            const clientIp = ws._socket.remoteAddress || 'unknown';
+            
+            // ========== VALIDIERUNG ==========
+            if (!guestId || !guestId.startsWith('guest_')) {
+              send(ws, 'auth:convertGuest:error', { 
+                error: 'auth.error.invalid_guest',
+                message: 'Ungültige Gast-ID.'
+              });
               return;
             }
-            if (!cleanEmail || !cleanEmail.includes('@')) {
-              send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_invalid' });
+            
+            if (!cleanUsername || cleanUsername.length < 3 || cleanUsername.length > 25) {
+              send(ws, 'auth:convertGuest:error', { 
+                error: 'auth.error.username_short',
+                message: 'Username muss zwischen 3 und 25 Zeichen lang sein.'
+              });
               return;
             }
-            if (!password || password.length < 6 || password.length > MAX_PASSWORD_LENGTH) {
-              send(ws, 'auth:convertGuest:error', { error: 'auth.error.password_short' });
+            
+            if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+              send(ws, 'auth:convertGuest:error', {
+                error: 'auth.error.username_invalid_chars',
+                message: 'Username darf nur Buchstaben, Zahlen und Unterstriche enthalten.'
+              });
               return;
             }
-
-            // Uniqueness check via column collation (COLLATE NOCASE)
-            const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(cleanUsername);
-            if (existingUser) {
-              send(ws, 'auth:convertGuest:error', { error: 'auth.error.username_taken' });
+            
+            if (!validateEmailFormat(cleanEmail)) {
+              send(ws, 'auth:convertGuest:error', { 
+                error: 'auth.error.email_invalid',
+                message: 'Ungültiges E-Mail-Format.'
+              });
               return;
             }
+            
+            if (!password || password.length < 6 || password.length > 128) {
+              send(ws, 'auth:convertGuest:error', { 
+                error: 'auth.error.password_short',
+                message: 'Passwort muss zwischen 6 und 128 Zeichen lang sein.'
+              });
+              return;
+            }
+            
+            // ========== RATE LIMITING ==========
+            const rateCheck = checkRateLimit(clientIp);
+            if (!rateCheck.allowed) {
+              send(ws, 'auth:convertGuest:error', {
+                error: 'auth.error.rate_limit',
+                message: `Zu viele Versuche. Bitte warte ${rateCheck.retryAfter} Sekunden.`,
+                retryAfter: rateCheck.retryAfter
+              });
+              return;
+            }
+            
+            // ========== DUPLIKAT-PRÜFUNG ==========
+            const similarityCheck = checkUsernameSimilarity(cleanUsername, db);
+            if (similarityCheck.isDuplicate) {
+              send(ws, 'auth:convertGuest:error', {
+                error: similarityCheck.reason,
+                similarTo: similarityCheck.similarTo
+              });
+              return;
+            }
+            
             const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
             if (existingEmail) {
               send(ws, 'auth:convertGuest:error', { error: 'auth.error.email_taken' });
               return;
             }
-
+            
+            // ========== GAST-DATEN VALIDIERUNG ==========
+            const guestSave = db.prepare('SELECT * FROM saves WHERE userId = ?').get(guestId);
+            const guestLeaderboard = db.prepare('SELECT * FROM leaderboard WHERE userId = ?').get(guestId);
+            
+            if (!guestSave && !guestLeaderboard) {
+              console.warn(`[Auth] Gast ${guestId} hat keine gespeicherten Daten.`);
+            }
+            
+            // ========== KONVERTIERUNG MIT TRANSACTION ==========
             const userId = 'usr_' + Date.now().toString(36) + '_' + crypto.randomBytes(4).toString('hex');
             const salt = generateSalt();
             const passwordHash = hashPassword(password, salt);
             const token = generateToken();
             const now = Date.now();
-
-            db.prepare(`
-              INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
-              VALUES (?, ?, ?, ?, ?, '🛡️', ?, ?, ?)
-            `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, now, now, token);
-
-            // Transfer guest save in SQLite if present
-            if (guestId) {
-              db.prepare('UPDATE saves SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
-              db.prepare('UPDATE leaderboard SET userId = ?, username = ? WHERE userId = ?').run(userId, cleanUsername, guestId);
-            }
-
-            clientInfo.userId = userId;
+            const avatar = sanitize(payload.avatar, 10) || '🛡️';
+            
+            const convertTransaction = db.transaction(() => {
+              // Neuen User erstellen
+              db.prepare(`
+                INSERT INTO users (id, username, email, passwordHash, salt, avatar, createdAt, lastLogin, sessionToken)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(userId, cleanUsername, cleanEmail, passwordHash, salt, avatar, now, now, token);
+              
+              // Gast-Save übertragen (falls vorhanden)
+              if (guestSave) {
+                db.prepare(`
+                  UPDATE saves 
+                  SET userId = ?, username = ?, version = ?, timestamp = ?
+                  WHERE userId = ?
+                `).run(userId, cleanUsername, guestSave.version || '1.0', now, guestId);
+                
+                console.log(`[Auth] Gast-Save von ${guestId} zu ${userId} migriert`);
+              } else {
+                // Leeren Save erstellen falls keiner existiert
+                db.prepare(`
+                  INSERT OR IGNORE INTO saves (userId, username, saveData, version, timestamp)
+                  VALUES (?, ?, ?, ?, ?)
+                `).run(userId, cleanUsername, JSON.stringify({}), '1.0', now);
+              }
+              
+              // Leaderboard übertragen (falls vorhanden)
+              if (guestLeaderboard) {
+                db.prepare(`
+                  UPDATE leaderboard 
+                  SET userId = ?, username = ?
+                  WHERE userId = ?
+                `).run(userId, cleanUsername, guestId);
+                
+                console.log(`[Auth] Leaderboard-Eintrag von ${guestId} zu ${userId} migriert`);
+              }
+              
+              return { userId, token, saveMigrated: !!guestSave, leaderboardMigrated: !!guestLeaderboard };
+            });
+            
+            const result = convertTransaction();
+            
+            clientInfo.userId = result.userId;
             clientInfo.username = cleanUsername;
-            clientInfo.sessionToken = token;
-
-            console.log(`[Auth] Gast-Account '${guestId}' umgewandelt in '${cleanUsername}' (${userId})`);
-
+            clientInfo.sessionToken = result.token;
+            
+            console.log(`[Auth] Gast-Account '${guestId}' umgewandelt in '${cleanUsername}' (${result.userId})`);
+            console.log(`[Auth] Save migriert: ${result.saveMigrated}, Leaderboard migriert: ${result.leaderboardMigrated}`);
+            
             const userObj = {
-              id: userId,
+              id: result.userId,
               username: cleanUsername,
               email: cleanEmail,
-              avatar: '🛡️',
+              avatar,
               createdAt: now,
               lastLogin: now,
               isGuest: false
             };
-
-            send(ws, 'auth:convertGuest:success', { user: userObj, token });
-            send(ws, 'auth:success', { userId, username: cleanUsername });
-            sendChatHistory(ws, clientInfo.guildId);
+            
+            send(ws, 'auth:convertGuest:success', { 
+              user: userObj, 
+              token: result.token,
+              migrated: {
+                save: result.saveMigrated,
+                leaderboard: result.leaderboardMigrated
+              }
+            });
+            send(ws, 'auth:success', { userId: result.userId, username: cleanUsername });
+            
           } catch (err) {
             console.error('[Auth] Fehler bei Gast-Umwandlung:', err);
-            send(ws, 'auth:convertGuest:error', { error: 'auth.error.missing_fields' });
+            send(ws, 'auth:convertGuest:error', { 
+              error: 'auth.error.server_error',
+              message: 'Server-Fehler bei der Gast-Konvertierung.'
+            });
           }
           break;
         }
