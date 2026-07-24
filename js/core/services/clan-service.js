@@ -505,41 +505,57 @@ export class ClanService {
     
     this._activeExpeditions.delete(memberId);
     
-    // Expedition-Status im State entfernen
-    this._stateManager.dispatch((state) => ({
-      ...state,
-      clan: {
-        ...state.clan,
-        expeditionStatus: {
-          ...state.clan.expeditionStatus,
-          [memberId]: false
-        }
-      }
-    }), 'clan/expeditionComplete');
-    
     const success = RNG.next() < expedition.successChance;
     let reward = null;
+    const member = this.getMember(memberId);
     
-    if (success) {
-      const member = this.getMember(memberId);
-      if (member) {
-        reward = this._generateReward(member);
-        if (reward.particles) this._resourceService.addParticles(reward.particles);
-        if (reward.relics) this._resourceService.addRelics(reward.relics);
-        this._addMemberExperience(memberId, 5 + Math.floor(RNG.next() * 5));
-        
-        // _successfulExpeditions im Helden-Zustand erhöhen (wichtig für Quest q13 & Achievements)
-        this._stateManager.dispatch((state) => ({
-          ...state,
-          hero: {
-            ...state.hero,
-            _successfulExpeditions: (state.hero._successfulExpeditions || 0) + 1
-          }
-        }), 'hero/incrementSuccessfulExpeditions');
-      }
-    } else {
-      this._addMemberExperience(memberId, 1);
+    if (success && member) {
+      reward = this._generateReward(member);
+      if (reward.particles) this._resourceService.addParticles(reward.particles);
+      if (reward.relics) this._resourceService.addRelics(reward.relics);
     }
+
+    const expGain = success ? (5 + Math.floor(RNG.next() * 5)) : 1;
+
+    // Konsolidierter Einzel-Dispatch für alle Statusänderungen der Expedition
+    this._stateManager.dispatch((state) => {
+      let updatedHero = state.hero;
+      if (success && member) {
+        updatedHero = {
+          ...state.hero,
+          _successfulExpeditions: (state.hero._successfulExpeditions || 0) + 1
+        };
+      }
+
+      let updatedMembers = state.clan.members;
+      const index = state.clan.members.findIndex(m => m.id === memberId);
+      if (index !== -1) {
+        const membersCopy = [...state.clan.members];
+        const m = { ...membersCopy[index] };
+        m.experience += expGain;
+        while (m.experience >= m.expToNextLevel) {
+          m.experience -= m.expToNextLevel;
+          m.level++;
+          m.expToNextLevel = Math.floor(m.expToNextLevel * 1.15);
+          this._eventBus.publish('clan:memberLevelUp', { memberId, newLevel: m.level });
+        }
+        membersCopy[index] = m;
+        updatedMembers = membersCopy;
+      }
+
+      return {
+        ...state,
+        hero: updatedHero,
+        clan: {
+          ...state.clan,
+          members: updatedMembers,
+          expeditionStatus: {
+            ...state.clan.expeditionStatus,
+            [memberId]: false
+          }
+        }
+      };
+    }, 'clan/expeditionComplete');
     
     this._eventBus.publish('expedition:complete', { memberId, success, reward });
     

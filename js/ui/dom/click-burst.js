@@ -130,7 +130,8 @@ export function initClickBurst(stateManager) {
       p.life -= 0.016; // approx 60fps
 
       if (p.life <= 0) {
-        particles.splice(i, 1);
+        particles[i] = particles[particles.length - 1];
+        particles.pop();
         continue;
       }
 

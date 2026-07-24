@@ -3,6 +3,7 @@ name: Deploy Webgame to Pages
 on:
   push:
     branches: 'main' # Löst das Deployment aus, sobald du auf 'main' pushst
+  workflow_dispatch: # Ermöglicht das manuelle Ausführen im Actions-Tab
 
 permissions:
   contents: read

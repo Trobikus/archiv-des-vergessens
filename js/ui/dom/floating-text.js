@@ -44,7 +44,8 @@ export function initFloatingText(eventBus, settingsManager) {
       if (progress >= 1) {
         // Animation fertig → Element zurück in Pool, aus Liste entfernen
         pool.release(anim.el);
-        activeAnimations.splice(i, 1);
+        activeAnimations[i] = activeAnimations[activeAnimations.length - 1];
+        activeAnimations.pop();
         continue;
       }
 

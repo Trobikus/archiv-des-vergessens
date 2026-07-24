@@ -50,6 +50,9 @@ function shallowEqual(a, b) {
  * Custom Hook: Abonniert State-Änderungen (mit Selector).
  */
 function useStateSelector(stateManager, selector) {
+  const selectorRef = useRef(selector);
+  selectorRef.current = selector;
+
   const [value, setValue] = useState(() => {
     if (!stateManager || !stateManager.isInitialized()) {
       return selector ? selector({}) : null;
@@ -64,13 +67,14 @@ function useStateSelector(stateManager, selector) {
   useEffect(() => {
     if (!stateManager) return;
     const id = stateManager.subscribe((state) => {
-      const newValue = selector ? selector(state) : state;
+      const currentSelector = selectorRef.current;
+      const newValue = currentSelector ? currentSelector(state) : state;
       if (!shallowEqual(lastValueRef.current, newValue)) {
         setValue(newValue);
       }
     });
     return () => stateManager.unsubscribe(id);
-  }, [stateManager, selector]);
+  }, [stateManager]);
 
   return value;
 }
