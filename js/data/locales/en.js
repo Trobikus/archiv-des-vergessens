@@ -76,7 +76,9 @@ export const EN = {
     'auth.error.password_short': 'Password must be at least 6 characters.',
     'auth.error.username_taken': 'This username is already taken.',
     'auth.error.email_taken': 'This email address is already in use.',
-    'auth.success.registered': 'Account created and signed in successfully!',
+    'auth.success.registered': 'Account created successfully!',
+    'auth.success.registeredPopup': 'Your account was created successfully! You are now being redirected to the login form.',
+    'auth.success.registeredTitle': 'REGISTRATION SUCCESSFUL',
     'auth.success.login': 'Welcome back, Keeper!',
     'auth.success.guestConverted': 'Guest account successfully registered!',
 

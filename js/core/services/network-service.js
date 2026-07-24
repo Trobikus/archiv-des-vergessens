@@ -6,8 +6,8 @@
  * VERANTWORTUNG:
  * - WebSocket-Verbindung zum Server aufbauen & verwalten
  * - Automatischer Reconnect-Loop bei Verbindungsabbruch (alle 5s)
- * - Automatische Authentifizierung (Handshake) nach Verbindungsaufbau
- * - Routing von Server-Paketen an die zuständigen Services
+ * - Automatischer Session-Check / Handshake nach Verbindungsaufbau
+ * - Routing von Server-Paketen an die zuständigen Services (Chat, Leaderboard, Cloud, Auth)
  * ============================================================
  */
 
@@ -28,16 +28,31 @@ export class NetworkService {
     this._maxConsecutiveLogs = 2;
     this._userId = this._getUserId();
 
-    // Live Server-URL auf deiner Google Cloud VM
-    this._serverUrl = 'wss://grimoireinteractive.duckdns.org';
+    // Live Server-URL oder lokaler WebSocket Backend Port 8080 bei Entwicklungs-Server
+    this._serverUrl = this._getServerUrl();
 
-    // Registrierte Services, an die Nachrichten weitergeleitet werden
+    // Registrierte Services
     this._chatService = null;
     this._leaderboardService = null;
     this._cloudManager = null;
+    this._authService = null;
 
     // Verbindung beim Start aufbauen
     this.connect();
+  }
+
+  _getServerUrl() {
+    const customUrl = localStorage.getItem('archiv_server_url');
+    if (customUrl) return customUrl;
+
+    if (typeof window !== 'undefined' && window.location) {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'ws://localhost:8080';
+      }
+    }
+
+    return 'wss://grimoireinteractive.duckdns.org';
   }
 
   _getUserId() {
@@ -49,10 +64,11 @@ export class NetworkService {
     return id;
   }
 
-  setServices(chatService, leaderboardService, cloudManager) {
+  setServices(chatService, leaderboardService, cloudManager, authService = null) {
     this._chatService = chatService;
     this._leaderboardService = leaderboardService;
     this._cloudManager = cloudManager;
+    this._authService = authService;
   }
 
   /**
@@ -78,7 +94,7 @@ export class NetworkService {
       this._connected = true;
       this._reconnectAttempts = 0;
       console.log('[Network] Verbindung hergestellt! Starte Handshake...');
-      this._startReconnectTimer(); // Falls vorher einer lief, aufräumen
+      this._startReconnectTimer();
       this._authenticate();
       this._eventBus.publish('network:connected', { url: this._serverUrl });
     };
@@ -107,12 +123,21 @@ export class NetworkService {
    * Authentifiziert den Client beim Server.
    */
   _authenticate() {
-    const state = this._stateManager.getState();
-    const username = state && state.hero ? state.hero.name : 'Unbekannter Held';
+    if (this._authService) {
+      const user = this._authService.getCurrentUser();
+      const token = this._authService.getToken();
+      if (user && !user.isGuest && token) {
+        this.send('auth:verifyToken', { userId: user.id, token });
+        return;
+      }
+    }
+
+    const state = this._stateManager ? this._stateManager.getState() : null;
+    const username = state && state.hero ? state.hero.name : 'Gast-Hüter';
     const guildId = state && state.guild ? state.guild.id : null;
 
     this.send('auth', {
-      userId: this._userId,
+      userId: this._getUserId(),
       username: username,
       guildId: guildId
     });
@@ -142,6 +167,7 @@ export class NetworkService {
       const { type, payload } = JSON.parse(rawData);
 
       switch (type) {
+        // --- AUTH RESPONSES ---
         case 'auth:success':
           console.log(`[Network] Handshake erfolgreich! Registriert als '${payload.username}'`);
           this._eventBus.publish('network:auth:success', payload);
@@ -152,6 +178,21 @@ export class NetworkService {
           this._eventBus.publish('ui:showToast', { message: `⚠️ Server-Auth: ${payload.message}`, type: 'error' });
           break;
 
+        case 'auth:register:success':
+        case 'auth:register:error':
+        case 'auth:login:success':
+        case 'auth:login:error':
+        case 'auth:verifyToken:success':
+        case 'auth:verifyToken:error':
+        case 'auth:convertGuest:success':
+        case 'auth:convertGuest:error':
+          if (this._authService && typeof this._authService.handleServerAuthResponse === 'function') {
+            this._authService.handleServerAuthResponse(type, payload);
+          }
+          this._eventBus.publish(`network:${type}`, payload);
+          break;
+
+        // --- CHAT RESPONSES ---
         case 'chat:globalMessage':
           if (this._chatService) {
             this._chatService.addReceivedGlobalMessage(payload);
@@ -164,12 +205,14 @@ export class NetworkService {
           }
           break;
 
+        // --- LEADERBOARD RESPONSES ---
         case 'leaderboard:update':
           if (this._leaderboardService) {
             this._leaderboardService.addReceivedGlobalEntries(payload);
           }
           break;
 
+        // --- CLOUD SAVE RESPONSES ---
         case 'cloud:save:success':
           if (this._cloudManager) {
             this._cloudManager.onCloudSaveSuccess(payload.timestamp);

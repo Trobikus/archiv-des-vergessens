@@ -76,7 +76,9 @@ export const DE = {
     'auth.error.password_short': 'Das Passwort muss mindestens 6 Zeichen lang sein.',
     'auth.error.username_taken': 'Dieser Benutzername ist bereits vergeben.',
     'auth.error.email_taken': 'Diese E-Mail-Adresse wird bereits verwendet.',
-    'auth.success.registered': 'Konto erfolgreich erstellt und angemeldet!',
+    'auth.success.registered': 'Konto erfolgreich erstellt!',
+    'auth.success.registeredPopup': 'Dein Konto wurde erfolgreich erstellt! Du wirst jetzt zum Login weitergeleitet.',
+    'auth.success.registeredTitle': 'REGISTRIERUNG ERFOLGREICH',
     'auth.success.login': 'Willkommen zurück, Hüter!',
     'auth.success.guestConverted': 'Gast-Konto erfolgreich umgewandelt!',
 

@@ -1,6 +1,6 @@
 {
   "name": "archiv-des-vergessens",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Archiv des Vergessens – Ein episches Idle-RPG über Erinnerung, Vergessen und die Macht der Mneme.",
   "private": true,
   "type": "module",
@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:build:local": "powershell -Command \"$env:TAURI_SIGNING_PRIVATE_KEY=(Get-Content updater.key -Raw); $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD=''; tauri build\""
   },
   "dependencies": {
     "htm": "^3.1.1",

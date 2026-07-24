@@ -73,12 +73,22 @@ export function LoginView({ eventBus, services }) {
     setSuccessMessage('');
 
     try {
+      const regUsername = username;
       const res = await authService.register(username, email, password);
       if (res.success) {
-        setSuccessMessage(t('auth.success.registered', 'Konto erfolgreich erstellt!'));
-        setTimeout(() => {
-          handleProceedToMenu();
-        }, 800);
+        authService.logout();
+
+        if (window.gameAlert) {
+          await window.gameAlert(
+            t('auth.success.registeredPopup', 'Dein Konto wurde erfolgreich erstellt! Du wirst jetzt zum Login weitergeleitet.'),
+            t('auth.success.registeredTitle', 'REGISTRIERUNG ERFOLGREICH')
+          );
+        }
+
+        setUsername(regUsername);
+        setPassword('');
+        setActiveTab('login');
+        setSuccessMessage(t('auth.success.registered', 'Konto erfolgreich erstellt! Bitte melde dich jetzt an.'));
       } else {
         setErrorMessage(t(res.error || 'auth.error.missing_fields', 'Fehler bei der Registrierung'));
       }
@@ -87,7 +97,7 @@ export function LoginView({ eventBus, services }) {
     } finally {
       setLoading(false);
     }
-  }, [authService, username, email, password, handleProceedToMenu, t]);
+  }, [authService, username, email, password, t]);
 
   const handleGuestContinue = useCallback(() => {
     handleProceedToMenu();
@@ -101,44 +111,93 @@ export function LoginView({ eventBus, services }) {
     }
   }, [authService]);
 
+  const handleQuit = useCallback(() => {
+    if (eventBus) {
+      eventBus.publish('menu:quit');
+    }
+  }, [eventBus]);
+
   const toggleLanguage = (langKey) => {
     if (eventBus) {
       eventBus.publish('options:setLanguage', { value: langKey });
     }
   };
 
+  const currentLang = i18nService ? i18nService.getLanguage() : 'de';
+
   return html`
     <section id="login-container" class="center-layout fade-in" role="main" aria-label="Login-Portal" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; position: relative; width: 100%; z-index: 10; pointer-events: auto;">
       
+      <!-- PORTAL DER ERINNERUNGEN: SPEZIELLER HINTERGRUND VFX -->
+      <div class="login-bg-portal" aria-hidden="true">
+        <div class="login-god-rays"></div>
+        <div class="login-portal-core"></div>
+        <div class="login-rune-ring">
+          <svg viewBox="0 0 500 500" style="width: 100%; height: 100%;">
+            <!-- Äußerer Runenkreis -->
+            <circle cx="250" cy="250" r="230" fill="none" stroke="rgba(197,160,89,0.2)" stroke-width="1.5" stroke-dasharray="8 6" />
+            <circle cx="250" cy="250" r="215" fill="none" stroke="rgba(197,160,89,0.12)" stroke-width="1" />
+            
+            <!-- Innere Geometrie -->
+            <polygon points="250,35 436,357 64,357" fill="none" stroke="rgba(197,160,89,0.1)" stroke-width="1" />
+            <polygon points="250,465 64,143 436,143" fill="none" stroke="rgba(197,160,89,0.1)" stroke-width="1" />
+            <circle cx="250" cy="250" r="160" fill="none" stroke="rgba(197,160,89,0.25)" stroke-width="1" stroke-dasharray="12 12" />
+
+            <!-- Runen-Glyphen -->
+            <text x="250" y="28" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚠ</text>
+            <text x="440" y="98" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚢ</text>
+            <text x="480" y="255" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚦ</text>
+            <text x="430" y="415" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚨ</text>
+            <text x="250" y="488" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚱ</text>
+            <text x="70" y="415" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚲ</text>
+            <text x="20" y="255" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚷ</text>
+            <text x="60" y="98" text-anchor="middle" fill="rgba(197,160,89,0.6)" font-size="14" font-family="Cinzel, serif">ᚹ</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Bottom Left Exit Button -->
+      <div style="position: absolute; bottom: 24px; left: 24px; z-index: 20; pointer-events: auto;">
+        <button 
+          class="glass-btn btn-small" 
+          onClick=${handleQuit}
+          style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.82rem; border-color: rgba(197, 160, 89, 0.3); opacity: 0.85; transition: all var(--transition-default);"
+          title=${t('menu.quit', 'Beenden')}
+        >
+          <span>🚪</span>
+          <span class="cinzel" style="letter-spacing: 1px;">${t('menu.quit', 'Beenden')}</span>
+        </button>
+      </div>
+
       <!-- Title Header -->
-      <div style="text-align: center; margin-bottom: 24px;">
-        <h1 class="glow-text" style="font-size: clamp(2rem, 4.5vw, 3.2rem); text-transform: uppercase; margin-bottom: 6px; background: linear-gradient(to bottom, #ffffff, #c5a059); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+      <div style="text-align: center; margin-bottom: 24px; position: relative; z-index: 10;">
+        <h1 class="glow-text text-gold cinzel" style="font-size: clamp(2.2rem, 4.8vw, 3.4rem); text-transform: uppercase; margin-bottom: 6px;">
           ${t('menu.title', 'ARCHIV DES VERGESSENS')}
         </h1>
-        <p class="subtitle" style="font-size: 0.95rem; letter-spacing: 4px; color: #a78bfa; margin: 0; text-transform: uppercase;">
-          🛡️ LOGIN PORTAL
+        <p class="subtitle cinzel text-gold" style="font-size: 0.95rem; letter-spacing: 5px; margin: 0; text-transform: uppercase; text-shadow: 0 0 10px var(--color-gold-glow);">
+          ✦ LOGIN PORTAL ✦
         </p>
       </div>
 
       <!-- Main Login Card -->
-      <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 28px 32px; border-radius: 16px; border: 1px solid rgba(197, 160, 89, 0.35); background: rgba(12, 12, 22, 0.88); backdrop-filter: blur(12px); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+      <div class="glass-panel login-card">
         
         ${isLoggedIn ? html`
           <!-- BEREITS ANGEMELDET -->
           <div style="display: flex; flex-direction: column; gap: 20px; text-align: center;">
-            <div style="font-size: 3rem; background: rgba(167, 139, 250, 0.15); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 1px solid rgba(167, 139, 250, 0.4);">
+            <div style="font-size: 3rem; background: rgba(197, 160, 89, 0.1); width: 84px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 2px solid var(--color-gold); box-shadow: 0 0 18px var(--color-gold-glow);">
               ${currentUser.avatar || '⚔️'}
             </div>
             <div>
-              <div style="font-size: 1.3rem; font-weight: 700; color: #f8fafc;">${currentUser.username}</div>
-              <div style="font-size: 0.85rem; color: #a78bfa; margin-top: 4px;">${currentUser.email || 'Hüter des Archivs'}</div>
+              <div class="cinzel text-gold" style="font-size: 1.35rem; font-weight: 700; letter-spacing: 1px;">${currentUser.username}</div>
+              <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${currentUser.email || 'Hüter des Archivs'}</div>
             </div>
 
-            <button class="glass-btn primary" onClick=${handleProceedToMenu} style="padding: 14px; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(124, 58, 237, 0.5);">
-              🚀 ${t('menu.continue', 'Weiter zum Hauptmenü')} »
+            <button class="glass-btn primary w-100" onClick=${handleProceedToMenu} style="padding: 13px; font-size: 0.95rem; font-weight: 700;">
+              🚀 ${t('menu.continueToCharSelect', 'Weiter zur Charakterauswahl')} »
             </button>
 
-            <button onClick=${handleLogout} style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
+            <button class="glass-btn btn-danger w-100" onClick=${handleLogout} style="padding: 10px; font-size: 0.85rem;">
               🚪 ${t('auth.logout', 'Abmelden')}
             </button>
           </div>
@@ -146,15 +205,15 @@ export function LoginView({ eventBus, services }) {
           <!-- LOGIN / REGISTRIERUNG FORM -->
           
           <!-- Tab Navigation -->
-          <div style="display: flex; gap: 8px; margin-bottom: 22px; background: rgba(0,0,0,0.4); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+          <div class="form-tabs">
             <button 
-              style=${`flex: 1; padding: 10px; border-radius: 7px; border: none; background: ${activeTab === 'login' ? '#7c3aed' : 'transparent'}; color: ${activeTab === 'login' ? '#fff' : '#94a3b8'}; font-weight: 600; cursor: pointer; transition: all 0.2s;`}
+              class=${`form-tab-btn ${activeTab === 'login' ? 'active' : ''}`}
               onClick=${() => setActiveTab('login')}
             >
               🔑 ${t('auth.login', 'Anmelden')}
             </button>
             <button 
-              style=${`flex: 1; padding: 10px; border-radius: 7px; border: none; background: ${activeTab === 'register' ? '#7c3aed' : 'transparent'}; color: ${activeTab === 'register' ? '#fff' : '#94a3b8'}; font-weight: 600; cursor: pointer; transition: all 0.2s;`}
+              class=${`form-tab-btn ${activeTab === 'register' ? 'active' : ''}`}
               onClick=${() => setActiveTab('register')}
             >
               ✨ ${t('auth.register', 'Registrieren')}
@@ -163,13 +222,13 @@ export function LoginView({ eventBus, services }) {
 
           <!-- Banners -->
           ${errorMessage && html`
-            <div style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px;">
-              ⚠️ ${errorMessage}
+            <div class="form-banner-error">
+              <span>⚠️</span> <span>${errorMessage}</span>
             </div>
           `}
           ${successMessage && html`
-            <div style="background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #86efac; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px;">
-              ✓ ${successMessage}
+            <div class="form-banner-success">
+              <span>✓</span> <span>${successMessage}</span>
             </div>
           `}
 
@@ -177,15 +236,15 @@ export function LoginView({ eventBus, services }) {
           ${activeTab === 'login' && html`
             <form onSubmit=${handleLogin} style="display: flex; flex-direction: column; gap: 14px;">
               <div>
-                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 5px;">${t('auth.username', 'Benutzername')} / ${t('auth.email', 'E-Mail')}</label>
-                <input type="text" required value=${username} onInput=${(e) => setUsername(e.target.value)} style=${inputStyle} placeholder="z. B. MnemeHüter" />
+                <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username', 'Benutzername')} / ${t('auth.email', 'E-Mail')}</label>
+                <input type="text" class="form-input" required value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="z. B. MnemeHüter" />
               </div>
               <div>
-                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 5px;">${t('auth.password', 'Passwort')}</label>
-                <input type="password" required value=${password} onInput=${(e) => setPassword(e.target.value)} style=${inputStyle} placeholder="••••••••" />
+                <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password', 'Passwort')}</label>
+                <input type="password" class="form-input" required value=${password} onInput=${(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </div>
 
-              <button type="submit" disabled=${loading} style=${primaryButtonStyle}>
+              <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px;">
                 ${loading ? 'Anmelden...' : `🔑 ${t('auth.login', 'Anmelden')}`}
               </button>
             </form>
@@ -195,96 +254,45 @@ export function LoginView({ eventBus, services }) {
           ${activeTab === 'register' && html`
             <form onSubmit=${handleRegister} style="display: flex; flex-direction: column; gap: 14px;">
               <div>
-                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 5px;">${t('auth.username', 'Benutzername')}</label>
-                <input type="text" required minlength="3" value=${username} onInput=${(e) => setUsername(e.target.value)} style=${inputStyle} placeholder="Dein Spielername" />
+                <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.username', 'Benutzername')}</label>
+                <input type="text" class="form-input" required minlength="3" value=${username} onInput=${(e) => setUsername(e.target.value)} placeholder="Dein Spielername" />
               </div>
               <div>
-                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 5px;">${t('auth.email', 'E-Mail-Adresse')}</label>
-                <input type="email" required value=${email} onInput=${(e) => setEmail(e.target.value)} style=${inputStyle} placeholder="name@beispiel.de" />
+                <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.email', 'E-Mail-Adresse')}</label>
+                <input type="email" class="form-input" required value=${email} onInput=${(e) => setEmail(e.target.value)} placeholder="name@beispiel.de" />
               </div>
               <div>
-                <label style="display: block; font-size: 0.82rem; color: #94a3b8; margin-bottom: 5px;">${t('auth.password', 'Passwort')}</label>
-                <input type="password" required minlength="6" value=${password} onInput=${(e) => setPassword(e.target.value)} style=${inputStyle} placeholder="Mindestens 6 Zeichen" />
+                <label class="cinzel text-gold" style="display: block; font-size: 0.8rem; margin-bottom: 6px; letter-spacing: 0.5px;">${t('auth.password', 'Passwort')}</label>
+                <input type="password" class="form-input" required minlength="6" value=${password} onInput=${(e) => setPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
               </div>
 
-              <button type="submit" disabled=${loading} style=${primaryButtonStyle}>
+              <button type="submit" disabled=${loading} class="glass-btn primary w-100" style="margin-top: 6px; padding: 12px;">
                 ${loading ? 'Erstelle Konto...' : `✨ ${t('auth.register', 'Konto erstellen')}`}
               </button>
             </form>
           `}
 
           <!-- DIVIDER -->
-          <div style="display: flex; align-items: center; margin: 20px 0 16px 0;">
-            <div style="flex: 1; border-bottom: 1px solid rgba(255,255,255,0.1);"></div>
-            <span style="padding: 0 10px; font-size: 0.75rem; color: #64748b; text-transform: uppercase;">ODER</span>
-            <div style="flex: 1; border-bottom: 1px solid rgba(255,255,255,0.1);"></div>
+          <div class="form-divider">
+            <span class="form-divider-text">✦ ODER ✦</span>
           </div>
 
           <!-- GUEST MODE BUTTON -->
-          <button type="button" onClick=${handleGuestContinue} style=${guestButtonStyle}>
+          <button type="button" class="glass-btn w-100" onClick=${handleGuestContinue} style="border-color: rgba(197, 160, 89, 0.4); color: var(--color-gold);">
             🛡️ ${t('auth.guest', 'Als Gast fortfahren')}
           </button>
         `}
       </div>
 
       <!-- Footer Language Selector & Info -->
-      <div style="margin-top: 24px; display: flex; align-items: center; gap: 16px; font-size: 0.8rem; color: #64748b;">
-        <button onClick=${() => toggleLanguage('de')} style=${langBtnStyle(i18nService?.getLanguage() === 'de')}>🇩🇪 Deutsch</button>
-        <span>|</span>
-        <button onClick=${() => toggleLanguage('en')} style=${langBtnStyle(i18nService?.getLanguage() === 'en')}>🇬🇧 English</button>
+      <div style="margin-top: 24px; display: flex; align-items: center; gap: 12px; font-size: 0.8rem; position: relative; z-index: 10;">
+        <button class=${`glass-btn btn-small ${currentLang === 'de' ? 'primary' : ''}`} onClick=${() => toggleLanguage('de')}>🇩🇪 Deutsch</button>
+        <span class="text-gold" style="opacity: 0.4;">|</span>
+        <button class=${`glass-btn btn-small ${currentLang === 'en' ? 'primary' : ''}`} onClick=${() => toggleLanguage('en')}>🇬🇧 English</button>
       </div>
 
     </section>
   `;
 }
-
-const inputStyle = `
-  width: 100%;
-  padding: 11px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(0, 0, 0, 0.4);
-  color: #f8fafc;
-  font-size: 0.92rem;
-  outline: none;
-  box-sizing: border-box;
-`;
-
-const primaryButtonStyle = `
-  margin-top: 6px;
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  color: #ffffff;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.45);
-  transition: all 0.2s ease;
-`;
-
-const guestButtonStyle = `
-  width: 100%;
-  padding: 11px;
-  border-radius: 8px;
-  border: 1px solid rgba(234, 179, 8, 0.4);
-  background: rgba(234, 179, 8, 0.08);
-  color: #fef08a;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-`;
-
-const langBtnStyle = (isActive) => `
-  background: transparent;
-  border: none;
-  color: ${isActive ? '#c5a059' : '#64748b'};
-  font-weight: ${isActive ? '700' : '400'};
-  cursor: pointer;
-  font-size: 0.8rem;
-`;
 
 export default LoginView;
