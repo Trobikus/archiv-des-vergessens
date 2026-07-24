@@ -464,11 +464,7 @@ export class NavigationController {
     if (await window.gameConfirm('Möchtest du das Spiel wirklich beenden?')) {
       this._eventBus.publish('save:started');
       this._saveManager.save(this._stateManager.getState()).then(() => {
-        if (window.electronAPI && typeof window.electronAPI.sendQuitReady === 'function') {
-          window.electronAPI.sendQuitReady();
-        } else {
-          window.close();
-        }
+        window.close();
       });
     }
   }

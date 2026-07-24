@@ -392,42 +392,8 @@ export async function bootGame() {
 
   let cleanupDone = false;
 
-  // --- A. Electron Safe-Quit (Desktop) ---
-  if (window.electronAPI && typeof window.electronAPI.onQuitRequested === 'function') {
-    window.electronAPI.onQuitRequested(async () => {
-      if (cleanupDone) return;
-      cleanupDone = true;
-
-      console.log('[GameBoot] Beenden angefordert. Speichere Spielstand lokal und online...');
-      try {
-        // Spielstand sichern
-        await SaveManager.save(stateManager.getState());
-        // Cloud-Sync durchführen
-        if (settingsManager.get('cloudEnabled')) {
-          await cloudManager.sync(stateManager.getState());
-        }
-      } catch (error) {
-        console.error('[GameBoot] Fehler beim Speichern vor Beenden:', error);
-      } finally {
-        console.log('[GameBoot] Speichern abgeschlossen. Beende Electron...');
-        
-        // Timer und Loop sauber stoppen
-        gameLoop.stop();
-        if (autosaveTimer) {
-          clearInterval(autosaveTimer);
-          autosaveTimer = null;
-        }
-        eventBus.clear();
-
-        window.electronAPI.sendQuitReady();
-      }
-    });
-  }
-
-  // --- B. Browser Safe-Quit (Web-Modus) ---
+  // Safe-Quit (Browser / Desktop)
   window.addEventListener('beforeunload', (e) => {
-    // Falls wir in Electron sind, wird das Beenden exklusiv oben über 'onQuitRequested' abgewickelt
-    if (window.electronAPI) return;
 
     if (cleanupDone) return;
     cleanupDone = true;
@@ -805,10 +771,6 @@ export async function bootGame() {
       if (introFinished || introStarted) return;
       introStarted = true;
 
-      // Smoothly reveal main window after rendering is completed
-      if (window.electronAPI && typeof window.electronAPI.showMainWindow === 'function') {
-        window.electronAPI.showMainWindow();
-      }
 
       // Sicherstellen, dass der Intro-Container sichtbar ist
       introContainer.style.display = 'flex';
@@ -878,15 +840,6 @@ export async function bootGame() {
 
     let gameLaunched = false;
 
-    // --- LAUNCHER INTEGRATION: Intro erst starten, wenn das Vollbild-Fenster vollständig geöffnet ist ---
-    if (window.electronAPI && typeof window.electronAPI.onGameLaunched === 'function') {
-      window.electronAPI.onGameLaunched(() => {
-        if (gameLaunched) return;
-        gameLaunched = true;
-        logger.info('[GameBoot] Event launcher:game-launched empfangen. Starte Intro...');
-        setTimeout(startIntroSequence, 150);
-      });
-    }
 
     // Fallback: Für Browser-Betrieb ohne Launcher
     if (!window['__TAURI__']) {
@@ -913,140 +866,7 @@ export async function bootGame() {
       }, 5000);
     }
 
-    // ============================================================
-    // ELECTRON AUTO-UPDATER INTEGRATION (IN-GAME UI)
-    // ============================================================
-    /** @type {HTMLElement} */
-    const updateOverlay = (/** @type {any} */ (document.getElementById('update-overlay')));
-    /** @type {HTMLElement} */
-    const updateTitle = (/** @type {any} */ (document.getElementById('update-title')));
-    /** @type {HTMLElement} */
-    const updateMessage = (/** @type {any} */ (document.getElementById('update-message')));
-    /** @type {HTMLElement} */
-    const updateConfirmBtn = (/** @type {any} */ (document.getElementById('update-confirm-btn')));
-    /** @type {HTMLElement} */
-    const updateCancelBtn = (/** @type {any} */ (document.getElementById('update-cancel-btn')));
-    /** @type {HTMLElement} */
-    const loadingBar = (/** @type {any} */ (document.querySelector('.intro-loading-bar')));
-    /** @type {HTMLElement} */
-    const loadingText = (/** @type {any} */ (document.getElementById('intro-loading-text')));
 
-    if (window.electronAPI) {
-      // 1. Wenn ein Update verfügbar ist
-      window.electronAPI.onUpdateEvent('update:available', (info) => {
-        logger.info(`[Update] Neue Version ${info.version} verfügbar.`);
-        
-        // Intro-Beendigungstimer stoppen, damit das Spiel auf der Intro-Page wartet
-        if (introTimeoutId) {
-          clearTimeout(introTimeoutId);
-          introTimeoutId = null;
-        }
-
-        // Custom Modal mit Grimoire-Spieldesign anzeigen
-        updateTitle.innerText = "Neue Offenbarung";
-        updateMessage.innerText = `Eine neue Version (${info.version}) wurde im Archiv gesichtet. Möchtest du die neuen Fragmente jetzt herunterladen?`;
-        updateConfirmBtn.innerText = "Herunterladen";
-        updateCancelBtn.innerText = "Später";
-        updateOverlay.style.display = 'flex';
-
-        // Download starten bei Klick
-        updateConfirmBtn.onclick = () => {
-          updateOverlay.style.display = 'none';
-
-          // Intro-Ladebalken pausieren und für echten Download-Fortschritt vorbereiten
-          if (loadingBar) {
-            loadingBar.classList.add('manual-progress');
-            loadingBar.style.width = '0%';
-          }
-          if (loadingText) {
-            loadingText.style.opacity = '1';
-            loadingText.innerText = "Lade Archiv-Fragmente herunter (0%)...";
-          }
-
-          // IPC-Signal zum Starten des Downloads senden
-          window.electronAPI.startDownload();
-        };
-
-        // Überspringen (Später updaten)
-        updateCancelBtn.onclick = () => {
-          updateOverlay.style.display = 'none';
-          finishIntro();
-        };
-      });
-
-      // 2. Download-Fortschritt visualisieren
-      window.electronAPI.onUpdateEvent('update:progress', (progress) => {
-        const percent = progress.percent || 0;
-        if (loadingBar) {
-          loadingBar.style.width = `${percent}%`;
-        }
-        if (loadingText) {
-          loadingText.innerText = `Lade Archiv-Fragmente herunter (${percent}%)...`;
-        }
-      });
-
-      // 3. Download fertiggestellt
-      window.electronAPI.onUpdateEvent('update:downloaded', (info) => {
-        logger.info(`[Update] Version ${info.version} vollständig heruntergeladen.`);
-
-        // Bestätigung für die direkte Installation und den Neustart
-        updateTitle.innerText = "Download Abgeschlossen";
-        updateMessage.innerText = `Das Update für Version ${info.version} ist bereit. Soll die Installation durchgeführt und das Spiel neu gestartet werden?`;
-        updateConfirmBtn.innerText = "Jetzt installieren";
-        updateCancelBtn.innerText = "Später";
-        updateOverlay.style.display = 'flex';
-
-        updateConfirmBtn.onclick = () => {
-          updateOverlay.style.display = 'none';
-          window.electronAPI.quitAndInstall();
-        };
-
-        updateCancelBtn.onclick = () => {
-          updateOverlay.style.display = 'none';
-          finishIntro();
-        };
-      });
-
-      // 4. Update-Fehler abfangen
-      window.electronAPI.onUpdateEvent('update:error', (err) => {
-        logger.error('[Update-Fehler]', err.message);
-        
-        if (introTimeoutId) {
-          clearTimeout(introTimeoutId);
-          introTimeoutId = null;
-        }
-
-        if (loadingText) {
-          loadingText.style.opacity = '1';
-          loadingText.innerText = "Update-Prüfung fehlgeschlagen. Starte Spiel...";
-        }
-        
-        // Nach kurzer Anzeige der Fehlermeldung normal fortfahren
-        setTimeout(() => {
-          finishIntro();
-        }, 2000);
-      });
-
-      // 5. Wenn kein Update verfügbar ist (Spiel ist aktuell)
-      window.electronAPI.onUpdateEvent('update:not-available', () => {
-        logger.info('[Update] Das Spiel ist auf dem neuesten Stand.');
-        
-        if (introTimeoutId) {
-          clearTimeout(introTimeoutId);
-          introTimeoutId = null;
-        }
-
-        if (loadingText) {
-          loadingText.style.opacity = '1';
-          loadingText.innerText = "Das Archiv ist auf dem neuesten Stand.";
-        }
-
-        // Nach einer kurzen Verzögerung normal fortfahren
-        setTimeout(() => {
-          finishIntro();
-        }, 1500);
-      });
-    }
   } else {
     // Fallback falls kein Intro-Container existiert
     navigation.showMenu();

@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-07-24
+
+### 🚀 Performance & Cleanup
+- **Electron API-Entfernung**: Sämtliche verbliebenen legacy `window.electronAPI`-Codeblöcke (`onQuitRequested`, `showMainWindow`, `onGameLaunched`, Auto-Updater IPC) aus `js/controllers/game-boot.js` und `js/controllers/navigation.js` entfernt. Die Anwendung nutzt nun ausschließlich standardmäßige Web-APIs (`beforeunload`, `window.close`) bzw. Tauri Native-Bindings.
+- **Server Migrations-Optimierung**: Implementierung einer `migration_done.flag`-Datei in `server/server.js`. Sobald die Datenmigration von JSON zu SQLite einmalig abgeschlossen ist, verhindert das Flag bei jedem weiteren Serverstart unnötige Dateisystem-Checks (`fs.access`) und reduziert Server-I/O beim Hochfahren auf ein Minimum.
+
+---
+
 ## [1.0.10] - 2026-07-24
 
 ### 🛡️ Sicherheit & XSS-Prävention (Server & Client)
