@@ -126,4 +126,37 @@ describe('AuthService', () => {
     expect(loginRes.success).toBe(true);
     expect(authService.getToken()).toBe('tok_server_xyz');
   });
+
+  it('should fall back to local offline account when server returns user_not_found or fails', async () => {
+    // 1. Create account offline
+    const regRes = await authService.register('OfflineHero', 'offline@archiv.de', 'geheim123');
+    expect(regRes.success).toBe(true);
+    authService.logout();
+
+    // 2. Connect mock network service that returns user_not_found
+    const mockNetworkService = {
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn((type, payload) => {
+        if (type === 'auth:login') {
+          setTimeout(() => {
+            authService.handleServerAuthResponse('auth:login:error', {
+              error: 'auth.error.user_not_found'
+            });
+          }, 10);
+        }
+        return true;
+      })
+    };
+
+    authService.setNetworkService(mockNetworkService);
+
+    // 3. Login should succeed via local fallback and trigger background register on server
+    const loginRes = await authService.login('OfflineHero', 'geheim123');
+    expect(loginRes.success).toBe(true);
+    expect(authService.isLoggedIn()).toBe(true);
+    expect(authService.getCurrentUser().username).toBe('OfflineHero');
+    expect(mockNetworkService.send).toHaveBeenCalledWith('auth:register', expect.objectContaining({
+      username: 'OfflineHero'
+    }));
+  });
 });

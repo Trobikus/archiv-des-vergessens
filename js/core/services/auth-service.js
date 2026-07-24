@@ -84,8 +84,20 @@ export class AuthService {
         }
       }
     } else if (type === 'auth:verifyToken:error') {
-      console.warn('[AuthService] Token ungültig laut Server. Zurückschalten auf Gast.');
-      this.logout();
+      console.warn('[AuthService] Token ungültig laut Server. Versuche lokalen Fallback...');
+      const accounts = this._getAccounts();
+      if (this._currentUser && !this._currentUser.isGuest && accounts[this._currentUser.id]) {
+        console.log('[AuthService] Lokales Konto vorhanden. Behalte Session bei und registriere im Hintergrund neu...');
+        if (this._networkService && this._networkService.isConnected()) {
+          this._networkService.send('auth:register', {
+            username: this._currentUser.username,
+            email: this._currentUser.email || `${this._currentUser.username}@local.archiv`,
+            password: 'restored_session_' + (this._sessionToken || 'token')
+          });
+        }
+      } else {
+        this.logout();
+      }
     }
 
     if (this._pendingAuthResolves[type]) {
@@ -250,7 +262,7 @@ export class AuthService {
 
       if (sent) {
         const res = await pendingPromise;
-        if (!res.timeout) {
+        if (!res.timeout && res) {
           if (res.user && res.token) {
             this._currentUser = res.user;
             this._sessionToken = res.token;
@@ -274,10 +286,10 @@ export class AuthService {
 
             return { success: true, user: this._currentUser };
           } else if (res.error) {
-            return { success: false, error: res.error };
+            if (res.error === 'auth.error.username_taken' || res.error === 'auth.error.email_taken') {
+              return { success: false, error: res.error };
+            }
           }
-        } else {
-          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
     }
@@ -286,7 +298,7 @@ export class AuthService {
     const accounts = this._getAccounts();
     for (const key in accounts) {
       const acc = accounts[key];
-      if (acc.username.toLowerCase() === cleanUsername.toLowerCase()) {
+      if (acc.username && acc.username.toLowerCase() === cleanUsername.toLowerCase()) {
         return { success: false, error: 'auth.error.username_taken' };
       }
       if (acc.email && acc.email.toLowerCase() === cleanEmail) {
@@ -348,7 +360,7 @@ export class AuthService {
 
       if (sent) {
         const res = await pendingPromise;
-        if (!res.timeout) {
+        if (!res.timeout && res) {
           if (res.user && res.token) {
             this._currentUser = res.user;
             this._sessionToken = res.token;
@@ -371,11 +383,9 @@ export class AuthService {
             }
 
             return { success: true, user: this._currentUser };
-          } else if (res.error) {
+          } else if (res.error === 'auth.error.wrong_password') {
             return { success: false, error: res.error };
           }
-        } else {
-          return { success: false, error: 'auth.error.server_timeout' };
         }
       }
     }
@@ -386,7 +396,7 @@ export class AuthService {
 
     for (const key in accounts) {
       const acc = accounts[key];
-      if (acc.username.toLowerCase() === query || (acc.email && acc.email.toLowerCase() === query)) {
+      if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
         targetAcc = acc;
         break;
       }
@@ -419,8 +429,17 @@ export class AuthService {
       lastLogin: targetAcc.lastLogin
     };
 
-    this._sessionToken = this._generateToken();
+    this._sessionToken = targetAcc.sessionToken || this._generateToken();
     this._persistSession();
+
+    // Falls jetzt Server verbunden ist, registriere das bisher nur lokal existierende Konto auf dem Server nach
+    if (this._networkService && this._networkService.isConnected()) {
+      this._networkService.send('auth:register', {
+        username: targetAcc.username,
+        email: targetAcc.email || `${targetAcc.username}@local.archiv`,
+        password: password
+      });
+    }
 
     if (this._eventBus) {
       this._eventBus.publish('auth:login', { user: this._currentUser });

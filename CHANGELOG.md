@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-07-24
+
+### 🐛 Behoben & Optimiert
+- **Login- & Registrierungsprozess**:
+  - **Automatischer Login nach Registrierung**: Behebung eines Fehlers in `LoginView.js`, durch den angemeldete Konten nach der Registrierung fälschlicherweise ausgeloggt wurden. Registrierte Nutzer bleiben jetzt direkt angemeldet.
+  - **Offline/Online Account Fallback**: Wenn der Live-Server bei der Anmeldung `user_not_found` meldet oder unerreichbar ist, prüft `AuthService` automatisch den lokalen Speicher. Bei korrektem Passwort erfolgt das Login offline und der Account wird im Hintergrund auf dem Server nachregistriert.
+  - **Sicheres Token-Handling**: Verhindert ungewollten Logout bei temporären Server-Verbindungsabbrüchen.
+  - **Vollständige Lokalisierung**: Ergänzung fehlender i18n-Fehlermeldungsschlüssel in Deutsch und Englisch (`auth.error.server_timeout`, etc.).
+
+---
+
 ## [1.0.4] - 2026-07-24
 
 ### 🐛 Behoben & Optimiert

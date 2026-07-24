@@ -73,22 +73,12 @@ export function LoginView({ eventBus, services }) {
     setSuccessMessage('');
 
     try {
-      const regUsername = username;
       const res = await authService.register(username, email, password);
       if (res.success) {
-        authService.logout();
-
-        if (window.gameAlert) {
-          await window.gameAlert(
-            t('auth.success.registeredPopup', 'Dein Konto wurde erfolgreich erstellt! Du wirst jetzt zum Login weitergeleitet.'),
-            t('auth.success.registeredTitle', 'REGISTRIERUNG ERFOLGREICH')
-          );
-        }
-
-        setUsername(regUsername);
-        setPassword('');
-        setActiveTab('login');
-        setSuccessMessage(t('auth.success.registered', 'Konto erfolgreich erstellt! Bitte melde dich jetzt an.'));
+        setSuccessMessage(t('auth.success.registered', 'Konto erfolgreich erstellt! Willkommen im Archiv.'));
+        setTimeout(() => {
+          handleProceedToMenu();
+        }, 800);
       } else {
         setErrorMessage(t(res.error || 'auth.error.missing_fields', 'Fehler bei der Registrierung'));
       }
@@ -97,7 +87,7 @@ export function LoginView({ eventBus, services }) {
     } finally {
       setLoading(false);
     }
-  }, [authService, username, email, password, t]);
+  }, [authService, username, email, password, handleProceedToMenu, t]);
 
   const handleGuestContinue = useCallback(() => {
     handleProceedToMenu();
