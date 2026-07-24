@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-07-24
+
+### 🐛 Behoben & Tiefgehendes Audit
+- **Ganzheitliches Login- & Registrierungs-Audit**:
+  - **Backend-Sicherheit**: PBKDF2 Iterationen auf 100.000 erhöht, Timing-Safe-Passwortvergleiche (`timingSafeEqual`), SQLite-Indizes & `COLLATE NOCASE` für Case-Insensitive Suche, Passwortlängenbegrenzung (max. 128 Zeichen gegen Hash-DoS) und Absicherung gegen unvollständige WS-Payloads.
+  - **Client-Authentifizierung**: `_isAuthenticating` Lock gegen Klick-Races, Entfernen doppelter Cloud-Save-Triggers (`loadFromCloud`), Behebung des fehlerhaften Token-Fallbacks und leckfreies Promise-Handling in `_pendingAuthResolves`.
+  - **UI/UX & Lokalisierung**: `autofocus` für flüssige Formulareingabe, Lade-Spinner (`⏳`) in Absende-Buttons, vollständige i18n Fallback-Texte in `AccountModal.js` und optimierte Modal-Skalierung.
+
+---
+
 ## [1.0.5] - 2026-07-24
 
 ### 🐛 Behoben & Optimiert
