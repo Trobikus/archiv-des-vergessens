@@ -64,6 +64,14 @@ jobs:
         run: |
           Compress-Archive -Path src-tauri/target/release/archiv-des-vergessens.exe -DestinationPath src-tauri/target/release/archiv-des-vergessens.zip -Force
 
+      - name: Sign Game Archive
+        run: |
+          [IO.File]::WriteAllText("private.key", $env:ED25519_PRIVATE_KEY)
+          node scripts/sign_release.cjs src-tauri/target/release/archiv-des-vergessens.zip
+          Remove-Item private.key -Force
+        env:
+          ED25519_PRIVATE_KEY: ${{ secrets.ED25519_PRIVATE_KEY }}
+
       - name: Build Standalone Launcher Executable
         run: npm run launcher:build
         env:
@@ -79,6 +87,7 @@ jobs:
         with:
           files: |
             src-tauri/target/release/archiv-des-vergessens.zip
+            src-tauri/target/release/archiv-des-vergessens.zip.sig
             launcher/src-tauri/target/release/ArchivDesVergessens-Launcher.exe
           name: Archiv des Vergessens ${{ github.ref_name }}
           body: |

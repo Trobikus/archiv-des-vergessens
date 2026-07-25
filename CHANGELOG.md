@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.31] - 2026-07-25
+
+### 🔐 Cryptographic Release Signature & Ed25519 Launcher Verification
+- **Automatisierte Ed25519 Release-Signierung (`.github/workflows/release.yml`, `scripts/`)**:
+  - CI-Workflow signiert `archiv-des-vergessens.zip` automatisch mit privatem Schlüssel und lädt `archiv-des-vergessens.zip.sig` als Release-Asset hoch.
+- **Launcher Signaturprüfung (`launcher/src-tauri/src/main.rs`)**:
+  - Der Standalone-Launcher verifiziert vor dem Entpacken die Ed25519-Signatur des heruntergeladenen ZIP-Archivs gegen den eingebetteten Public Key. Abbruch bei Manipulationsverdacht.
+- **Server IP-Schutz & E-Mail-Validierung (`server/server.js`)**:
+  - Konfigurierbarer `TRUST_PROXY` Support gegen IP-Spoofing.
+  - Korrigierte Reihenfolge von E-Mail-Formatvalidierung und Sanitization beim Registrieren.
+
+---
+
 ## [1.0.30] - 2026-07-25
 
 ### ⚔️ Combat Events, Custom Icons & Production Logging Cleanup

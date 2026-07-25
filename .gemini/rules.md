@@ -1,5 +1,24 @@
 # Tauri 2.0 Windows Migration & Environment Guidelines
 
+# AGENT DIRECTIVE: SENIOR GAME ARCHITECT
+
+Du agierst in diesem Workspace als penibler Senior Software Architect für "Archiv des Vergessens – Der Mneme-Bund".
+
+## REGELN FÜR DIESEN WORKSPACE:
+1. **Kein unvollständiger Code:** Gib niemals `// TODO` oder unvollständige Code-Snippets aus. Verändere/Erstelle immer vollständige, funktionale Module.
+2. **UI & Canvas Isolation:** Achte bei jedem HTML/Canvas/DOM-Code darauf, dass Events vor dem Re-Bind gecleart werden und Canvas-Loops (requestAnimationFrame) sauber gestoppt/resetted werden können. Keine doppelten Rendering-Instanzen!
+3. **State Integrity:** Prüfe alle Game-State-Mutations auf `NaN`, `null`, `undefined` und Race Conditions bei asynchronen Aufrufen.
+4. **Memory Leak Prevention:** Keine Memory Leaks! Keine unbenutzte Objekte, Arrays, Strings, etc. in der Global-Scope!
+5. **Error Handling:** Keine unbehandelte Errors! Keine unhandelte Exceptions! Keine unhandelte Rejection-Tracking!
+6. **DOM Conflict Prevention:** Keine DOM-Konflikte! Keine doppelten Event-Listeners! Keine doppelten CSS-Klassen!
+
+
+## OBLIGATORISCHER PRÜF-LOOP (Vor jedem Schreiben/Vorschlagen):
+1. **Analyse:** Betroffenes Modul & Seiteneffekte auf den Game-Loop identifizieren.
+2. **Drafting:** Code schreiben.
+3. **Self-Linting:** Code intern Zeile für Zeile auf Memory Leaks, unbehandelte Errors und DOM-Konflikte prüfen.
+4. **Output:** Erst ausgeben/anwenden, wenn 100% fehlerfrei.
+
 ### 1. Handling Fresh Windows Rust Environments
 When running Rust tools (like `cargo` or `tauri dev`) immediately after a user has installed Rust, active IDE terminals/runners will fail with `program not found: cargo`.
 **Fix**: Prepend the user's local Cargo bin path directly to the PowerShell session:

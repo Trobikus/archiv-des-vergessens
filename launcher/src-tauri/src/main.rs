@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use futures_util::StreamExt;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
 use serde::{Deserialize, Serialize};
@@ -167,7 +168,7 @@ async fn download_and_extract_game(
 
     let response = client
         .get(&download_url)
-        .headers(headers)
+        .headers(headers.clone())
         .send()
         .await
         .map_err(|e| format!("Download-Anfrage fehlgeschlagen: {}", e))?;
@@ -209,6 +210,65 @@ async fn download_and_extract_game(
     }
 
     drop(file);
+
+    // SIGNATURPRÜFUNG
+    let _ = app.emit(
+        "download_progress",
+        ProgressPayload {
+            percent: 100,
+            downloaded,
+            total: total_size,
+            status: "Verifiziere Signatur...".to_string(),
+        },
+    );
+
+    let sig_url = format!("{}.sig", download_url);
+    let sig_response = client
+        .get(&sig_url)
+        .headers(headers.clone())
+        .send()
+        .await
+        .map_err(|e| format!("Konnte Signatur nicht herunterladen: {}", e))?;
+
+    if !sig_response.status().is_success() {
+        let _ = fs::remove_file(&temp_zip_path);
+        return Err(format!(
+            "Signatur nicht gefunden HTTP: {}. Sicherheitsabbruch!",
+            sig_response.status()
+        ));
+    }
+
+    let sig_hex_str = sig_response
+        .text()
+        .await
+        .map_err(|e| format!("Fehler beim Lesen der Signatur: {}", e))?
+        .trim()
+        .to_string();
+
+    let sig_bytes = hex::decode(&sig_hex_str)
+        .map_err(|e| format!("Ungültiges Signatur-Format (kein Hex): {}", e))?;
+    let pub_bytes =
+        hex::decode("8894761a4e3b7bbe5896bf6ef15ae2f13c1610b7248b992425ffb712a2adab08").unwrap();
+
+    if sig_bytes.len() != 64 {
+        let _ = fs::remove_file(&temp_zip_path);
+        return Err("Ungültige Signaturlänge.".to_string());
+    }
+
+    let verifying_key = VerifyingKey::from_bytes(pub_bytes.as_slice().try_into().unwrap())
+        .map_err(|e| format!("Interner Fehler mit Public Key: {}", e))?;
+
+    let mut signature_bytes = [0u8; 64];
+    signature_bytes.copy_from_slice(&sig_bytes);
+    let signature = Signature::from_bytes(&signature_bytes);
+
+    let zip_content = std::fs::read(&temp_zip_path)
+        .map_err(|e| format!("Konnte ZIP für Verifizierung nicht lesen: {}", e))?;
+
+    if let Err(e) = verifying_key.verify(&zip_content, &signature) {
+        let _ = fs::remove_file(&temp_zip_path);
+        return Err(format!("Sicherheitswarnung: Signatur ungültig! Die Datei wurde möglicherweise manipuliert. ({})", e));
+    }
 
     // Emit extraction status
     let _ = app.emit(

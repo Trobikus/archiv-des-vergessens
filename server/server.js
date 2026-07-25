@@ -570,7 +570,9 @@ wss.on('connection', (ws, req) => {
   
   // [Sicherheit] IP-Erkennung hinter Proxy
   const forwarded = req?.headers['x-forwarded-for'];
-  const clientIp = (forwarded ? forwarded.split(',')[0].trim() : null) || req?.headers['x-real-ip'] || ws._socket.remoteAddress || 'unknown';
+  const clientIp = process.env.TRUST_PROXY === 'true' 
+    ? ((forwarded ? forwarded.split(',')[0].trim() : null) || req?.headers['x-real-ip'] || ws._socket.remoteAddress || 'unknown')
+    : (ws._socket.remoteAddress || 'unknown');
 
   ws.isAlive = true;
   ws.on('pong', () => {
@@ -612,7 +614,7 @@ wss.on('connection', (ws, req) => {
         case 'auth:register': {
           try {
             const cleanUsername = sanitize(payload.username, 25);
-            const cleanEmail = sanitize(payload.email, 100).toLowerCase();
+            const rawEmail = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
             const password = typeof payload.password === 'string' ? payload.password : '';
             const clientIp = clientInfo.clientIp || 'unknown';
             
@@ -635,13 +637,14 @@ wss.on('connection', (ws, req) => {
             }
             
             // Email-Format-Validierung
-            if (!validateEmailFormat(cleanEmail)) {
+            if (!validateEmailFormat(rawEmail)) {
               send(ws, 'auth:register:error', { 
                 error: 'auth.error.email_invalid',
                 message: 'Ungültiges E-Mail-Format.'
               });
               return;
             }
+            const cleanEmail = rawEmail.substring(0, 100);
             
             if (!password || password.length < 6 || password.length > MAX_PASSWORD_LENGTH) {
               send(ws, 'auth:register:error', { 
