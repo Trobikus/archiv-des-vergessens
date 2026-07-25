@@ -156,14 +156,7 @@ export function HubView({ stateManager, eventBus, services }) {
                 <span class="label">${lang === 'de' ? 'Kapitel & Kämpfe' : 'Chapters & Battles'}</span>
                 <span class="hub-btn-glow"></span>
               </button>
-              ${prestigeLevel > 0 ? html`
-                <button class="hub-btn" id="hub-skills" onClick=${() => handleAction('ui:openSkillTree')} type="button">
-                  <img src="icons/Talentbaum (Prestige)-Photoroom.png" class="hub-btn-img" aria-hidden="true" alt="Talentbaum" />
-                  <span class="cinzel text-lg">${t('hub.skilltree')}</span>
-                  <span class="label">${lang === 'de' ? 'Prestige-Punkte nutzen' : 'Spend Prestige Points'}</span>
-                  <span class="hub-btn-glow"></span>
-                </button>
-              ` : null}
+
             </div>
           </div>
         ` : null}

@@ -2,6 +2,7 @@
 // FILE: js/core/settings.js – Einstellungen (Persistenz-Layer)
 // ============================================================
 import { EVENTS } from './events/definitions.js';
+import { logger } from './logger.js';
 
 export default class SettingsManager {
     /**
@@ -41,7 +42,7 @@ export default class SettingsManager {
                 return { ...this.defaultSettings, ...JSON.parse(data) };
             }
         } catch (error) {
-            console.error('[Settings] Fehler beim Laden aus localStorage:', error);
+            logger.error('[Settings] Fehler beim Laden aus localStorage:', error);
         }
         return { ...this.defaultSettings };
     }
@@ -60,7 +61,7 @@ export default class SettingsManager {
                 }
             }
         } catch (error) {
-            console.error('[Settings] Fehler beim Speichern in localStorage:', error);
+            logger.error('[Settings] Fehler beim Speichern in localStorage:', error);
         }
     }
 
@@ -102,7 +103,7 @@ export default class SettingsManager {
                     this.eventBus.publish(EVENTS.SETTINGS_UPDATED, current);
                 }
             } catch (error) {
-                console.error('[Settings] Fehler beim direkten Setzen im localStorage:', error);
+                logger.error('[Settings] Fehler beim direkten Setzen im localStorage:', error);
             }
         }
     }

@@ -1,11 +1,4 @@
-/**
- * ============================================================
- * FILE: core/state/middleware/validation.js – Validierungs-Middleware
- * ============================================================
- * 
- * Prüft den State auf Integrität nach jeder Änderung.
- * ============================================================
- */
+import { logger } from '../../logger.js';
 
 /**
  * Erstellt eine Validierungs-Middleware.
@@ -20,13 +13,13 @@ export function validationMiddleware(validators = [], throwOnError = false) {
         try {
           const result = validator(state);
           if (result === false) {
-            console.warn(`[StateMiddleware] Validierung fehlgeschlagen für Aktion: ${name}`);
+            logger.warn(`[StateMiddleware] Validierung fehlgeschlagen für Aktion: ${name}`);
             if (throwOnError) {
               throw new Error(`State-Validierung fehlgeschlagen: ${name}`);
             }
           }
         } catch (e) {
-          console.error('[StateMiddleware] Validator-Fehler:', e);
+          logger.error('[StateMiddleware] Validator-Fehler:', e);
           if (throwOnError) throw e;
         }
       }
@@ -46,7 +39,7 @@ export function validateResourcesNonNegative(state) {
   const check = (key) => {
     const val = Number(res[key] || '0');
     if (val < 0) {
-      console.warn(`[Validation] Ressource ${key} ist negativ: ${val}`);
+      logger.warn(`[Validation] Ressource ${key} ist negativ: ${val}`);
       return false;
     }
     return true;
@@ -77,7 +70,7 @@ export function validateStatPoints(state) {
   const total = (hero.unspentStatPoints || 0) + spent;
   
   if (Math.abs(total - expected) > 5) {
-    console.warn(`[Validation] Stat-Punkte inkonsistent: erwartet ${expected}, aktuell ${total}`);
+    logger.warn(`[Validation] Stat-Punkte inkonsistent: erwartet ${expected}, aktuell ${total}`);
     return false;
   }
   return true;

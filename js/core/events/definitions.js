@@ -14,6 +14,11 @@ export const EVENTS = {
   GAME_SLOW_TICK: 'game:slowTick',
   GAME_STATE_CHANGED: 'game:stateChanged',
   GAME_BOOTED: 'game:booted',
+  GAME_RESET: 'game:reset',
+  GAME_MANUAL_GATHER: 'game:manualGather',
+  GAME_UPGRADE_CLICK_POWER: 'game:upgradeClickPower',
+  GAME_OPEN_ACHIEVEMENTS: 'game:openAchievements',
+  GAME_BACK_TO_HUB: 'game:backToHub',
 
   // ==================== HERO ====================
   HERO_UPDATED: 'hero:updated',
@@ -81,9 +86,6 @@ export const EVENTS = {
   LIBRARY_UPGRADED: 'library:upgraded',
   UI_OPEN_LIBRARY: 'ui:openLibrary',
 
-  // ==================== SKILLTREE ====================
-  SKILLTREE_UNLOCKED: 'skilltree:unlocked',
-  UI_OPEN_SKILLTREE: 'ui:openSkillTree',
 
   // ==================== CHALLENGES ====================
   CHALLENGE_STARTED: 'challenge:started',
@@ -118,6 +120,39 @@ export const EVENTS = {
   // ==================== DIALOG ====================
   UI_OPEN_DIALOG: 'ui:openDialog',
 
+  // ==================== NETWORK ====================
+  NETWORK_CONNECTED: 'network:connected',
+  NETWORK_DISCONNECTED: 'network:disconnected',
+
+  // ==================== CHARACTER & MENU ====================
+  CHARACTER_SELECT: 'character:select',
+  CHARACTER_CREATE: 'character:create',
+  MENU_NEW_GAME: 'menu:newGame',
+  MENU_START_NEW_GAME: 'menu:startNewGame',
+  MENU_CONTINUE: 'menu:continue',
+  MENU_OPTIONS: 'menu:options',
+  MENU_QUIT: 'menu:quit',
+  HUB_BACK_TO_MENU: 'hub:backToMenu',
+  HUB_ENTER_GAME: 'hub:enterGame',
+
+  // ==================== OPTIONS ====================
+  OPTIONS_SET_LANGUAGE: 'options:setLanguage',
+  OPTIONS_SET_PARTICLES: 'options:setParticles',
+  OPTIONS_SET_FLOATING: 'options:setFloating',
+  OPTIONS_TOGGLE_AUDIO: 'options:toggleAudio',
+  OPTIONS_SET_MUSIC_VOLUME: 'options:setMusicVolume',
+  OPTIONS_SET_SFX_VOLUME: 'options:setSfxVolume',
+  OPTIONS_SET_AUTOSAVE: 'options:setAutosave',
+  OPTIONS_SET_CLOUD_ENABLED: 'options:setCloudEnabled',
+  OPTIONS_SYNC_CLOUD: 'options:syncCloud',
+  OPTIONS_HARD_RESET: 'options:hardReset',
+  OPTIONS_BACK: 'options:back',
+
+  // ==================== AUTH ====================
+  AUTH_STATE_CHANGED: 'auth:stateChanged',
+  AUTH_PROCEED_TO_MENU: 'auth:proceedToMenu',
+  AUTH_SHOW_LOGIN: 'auth:showLogin',
+
   // ==================== LEADERBOARD ====================
   LEADERBOARD_UPDATED: 'leaderboard:updated',
   LEADERBOARD_CLEARED: 'leaderboard:cleared',
@@ -129,6 +164,16 @@ export const EVENTS = {
   UI_ENTER_GAME: 'ui:enterGame',
   UI_ENTER_HUB: 'ui:enterHub',
   UI_CLOSE_ALL_MODALS: 'ui:closeAllModals',
+  UI_SHOW_NEW_GAME_MODAL: 'ui:showNewGameModal',
+  UI_HIDE_NEW_GAME_MODAL: 'ui:hideNewGameModal',
+  UI_OPEN_ACCOUNT_MODAL: 'ui:openAccountModal',
+  UI_CLOSE_ACCOUNT_MODAL: 'ui:closeAccountModal',
+  UI_OPEN_SHARED_VAULT: 'ui:openSharedVault',
+  UI_OPEN_CONFIRM: 'ui:openConfirm',
+  UI_SHOW_TOAST: 'ui:showToast',
+  BOOT_PROGRESS: 'boot:progress',
+  UI_SHOW_OFFLINE_PROGRESS: 'ui:showOfflineProgress',
+  UI_SHOW_UPDATE: 'ui:showUpdate',
 
   // ==================== SETTINGS ====================
   SETTINGS_UPDATED: 'settings:updated',

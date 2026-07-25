@@ -245,8 +245,13 @@ async fn download_and_extract_game(
         .trim()
         .to_string();
 
-    let sig_bytes = hex::decode(&sig_hex_str)
-        .map_err(|e| format!("Ungültiges Signatur-Format (kein Hex): {}", e))?;
+    let sig_bytes = match hex::decode(&sig_hex_str) {
+        Ok(b) => b,
+        Err(e) => {
+            let _ = fs::remove_file(&temp_zip_path);
+            return Err(format!("Ungültiges Signatur-Format (kein Hex): {}", e));
+        }
+    };
     let pub_bytes =
         hex::decode("8894761a4e3b7bbe5896bf6ef15ae2f13c1610b7248b992425ffb712a2adab08").unwrap();
 
@@ -255,15 +260,25 @@ async fn download_and_extract_game(
         return Err("Ungültige Signaturlänge.".to_string());
     }
 
-    let verifying_key = VerifyingKey::from_bytes(pub_bytes.as_slice().try_into().unwrap())
-        .map_err(|e| format!("Interner Fehler mit Public Key: {}", e))?;
+    let verifying_key = match VerifyingKey::from_bytes(pub_bytes.as_slice().try_into().unwrap()) {
+        Ok(k) => k,
+        Err(e) => {
+            let _ = fs::remove_file(&temp_zip_path);
+            return Err(format!("Interner Fehler mit Public Key: {}", e));
+        }
+    };
 
     let mut signature_bytes = [0u8; 64];
     signature_bytes.copy_from_slice(&sig_bytes);
     let signature = Signature::from_bytes(&signature_bytes);
 
-    let zip_content = std::fs::read(&temp_zip_path)
-        .map_err(|e| format!("Konnte ZIP für Verifizierung nicht lesen: {}", e))?;
+    let zip_content = match std::fs::read(&temp_zip_path) {
+        Ok(c) => c,
+        Err(e) => {
+            let _ = fs::remove_file(&temp_zip_path);
+            return Err(format!("Konnte ZIP für Verifizierung nicht lesen: {}", e));
+        }
+    };
 
     if let Err(e) = verifying_key.verify(&zip_content, &signature) {
         let _ = fs::remove_file(&temp_zip_path);

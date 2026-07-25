@@ -7,6 +7,8 @@
  * ============================================================
  */
 
+import { logger } from '../../logger.js';
+
 /**
  * Erstellt eine Persistenz-Middleware.
  * @param {Function} saveFunction – Funktion zum Speichern (async)
@@ -41,7 +43,7 @@ export function persistenceMiddleware(saveFunction, debounceMs = 1000, excludeAc
             saveFunction(state);
             lastSaveTime = Date.now();
           } catch (e) {
-            console.error('[StateMiddleware] Persistenz fehlgeschlagen:', e);
+            logger.error('[StateMiddleware] Persistenz fehlgeschlagen:', e);
           }
           pendingSave = false;
         }

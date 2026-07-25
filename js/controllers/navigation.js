@@ -14,7 +14,7 @@
 import { EVENTS } from '../core/events/definitions.js';
 import { setCurrentView } from '../core/state/actions.js';
 import { CONFIG } from '../data/config.js';
-import IdleService from '../core/services/idle-service.js';
+import { logger } from '../core/logger.js';
 
 /** @typedef {import('../core/events/bus.js').default} EventBus */
 /** @typedef {import('../core/state/manager.js').default} StateManager */
@@ -55,42 +55,42 @@ export class NavigationController {
 
   _bindEvents() {
     // --- Auth / Login-Events ---
-    this._eventBus.subscribe('auth:proceedToMenu', () => this.showCharacterSelect());
-    this._eventBus.subscribe('auth:showLogin', () => this.showLogin());
+    this._eventBus.subscribe(EVENTS.AUTH_PROCEED_TO_MENU, () => this.showCharacterSelect());
+    this._eventBus.subscribe(EVENTS.AUTH_SHOW_LOGIN, () => this.showLogin());
 
     // --- Character-Events ---
-    this._eventBus.subscribe('character:select', (data) => this._selectCharacterSlot(data.slotId));
-    this._eventBus.subscribe('character:create', (data) => this._createCharacterSlot(data));
+    this._eventBus.subscribe(EVENTS.CHARACTER_SELECT, (data) => this._selectCharacterSlot(data.slotId));
+    this._eventBus.subscribe(EVENTS.CHARACTER_CREATE, (data) => this._createCharacterSlot(data));
 
     // --- Menü-Events ---
-    this._eventBus.subscribe('menu:newGame', () => this._showNewGameModal());
-    this._eventBus.subscribe('menu:continue', () => this._loadGame());
-    this._eventBus.subscribe('menu:options', () => this.showOptions());
-    this._eventBus.subscribe('menu:quit', () => this._quitGame());
-    this._eventBus.subscribe('menu:startNewGame', (data) => this._startNewGame(data.name));
+    this._eventBus.subscribe(EVENTS.MENU_NEW_GAME, () => this._showNewGameModal());
+    this._eventBus.subscribe(EVENTS.MENU_CONTINUE, () => this._loadGame());
+    this._eventBus.subscribe(EVENTS.MENU_OPTIONS, () => this.showOptions());
+    this._eventBus.subscribe(EVENTS.MENU_QUIT, () => this._quitGame());
+    this._eventBus.subscribe(EVENTS.MENU_START_NEW_GAME, (data) => this._startNewGame(data.name));
 
     // --- Options-Events ---
-    this._eventBus.subscribe('options:setLanguage', (data) => this._setLanguage(data.value));
-    this._eventBus.subscribe('options:setParticles', (data) => this._setParticles(data.value));
-    this._eventBus.subscribe('options:setFloating', (data) => this._setFloating(data.value));
-    this._eventBus.subscribe('options:toggleAudio', () => this._toggleAudio());
-    this._eventBus.subscribe('options:setMusicVolume', (data) => this._setMusicVolume(data.value));
-    this._eventBus.subscribe('options:setSfxVolume', (data) => this._setSfxVolume(data.value));
-    this._eventBus.subscribe('options:setAutosave', (data) => this._setAutosave(data.value));
-    this._eventBus.subscribe('options:setCloudEnabled', (data) => this._setCloudEnabled(data.value));
-    this._eventBus.subscribe('options:syncCloud', () => this._syncCloud());
-    this._eventBus.subscribe('options:hardReset', () => this._hardReset());
-    this._eventBus.subscribe('options:back', () => this._saveAndExitOptions());
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_LANGUAGE, (data) => this._setLanguage(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_PARTICLES, (data) => this._setParticles(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_FLOATING, (data) => this._setFloating(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_TOGGLE_AUDIO, () => this._toggleAudio());
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_MUSIC_VOLUME, (data) => this._setMusicVolume(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_SFX_VOLUME, (data) => this._setSfxVolume(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_AUTOSAVE, (data) => this._setAutosave(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_SET_CLOUD_ENABLED, (data) => this._setCloudEnabled(data.value));
+    this._eventBus.subscribe(EVENTS.OPTIONS_SYNC_CLOUD, () => this._syncCloud());
+    this._eventBus.subscribe(EVENTS.OPTIONS_HARD_RESET, () => this._hardReset());
+    this._eventBus.subscribe(EVENTS.OPTIONS_BACK, () => this._saveAndExitOptions());
 
     // --- Hub-Events ---
-    this._eventBus.subscribe('hub:backToMenu', () => this.showCharacterSelect());
-    this._eventBus.subscribe('hub:enterGame', () => this.showGame());
+    this._eventBus.subscribe(EVENTS.HUB_BACK_TO_MENU, () => this.showCharacterSelect());
+    this._eventBus.subscribe(EVENTS.HUB_ENTER_GAME, () => this.showGame());
 
     // --- In-Game-Events ---
-    this._eventBus.subscribe('game:manualGather', (data) => this._manualGather(data.clientX, data.clientY));
-    this._eventBus.subscribe('game:upgradeClickPower', () => this._upgradeClickPower());
-    this._eventBus.subscribe('game:openAchievements', () => this._eventBus.publish(EVENTS.UI_OPEN_ACHIEVEMENTS));
-    this._eventBus.subscribe('game:backToHub', () => this.showHub());
+    this._eventBus.subscribe(EVENTS.GAME_MANUAL_GATHER, (data) => this._manualGather(data.clientX, data.clientY));
+    this._eventBus.subscribe(EVENTS.GAME_UPGRADE_CLICK_POWER, () => this._upgradeClickPower());
+    this._eventBus.subscribe(EVENTS.GAME_OPEN_ACHIEVEMENTS, () => this._eventBus.publish(EVENTS.UI_OPEN_ACHIEVEMENTS));
+    this._eventBus.subscribe(EVENTS.GAME_BACK_TO_HUB, () => this.showHub());
 
     // In-Game Loop Status & Ticks abhören
     let logicTickCount = 0;
@@ -119,15 +119,7 @@ export class NavigationController {
       }
     });
 
-    // Offline-Modal Schließen (falls DOM offline modal noch besteht, wir behalten die DB-Aktion hier)
-    if (typeof document !== 'undefined') {
-      const offlineCloseBtn = document.getElementById('offline-close-btn');
-      offlineCloseBtn?.addEventListener('click', () => {
-        const modal = document.getElementById('offline-modal-overlay');
-        if (modal) modal.style.display = 'none';
-        this._resourceService?.setTimeBank(0);
-      });
-    }
+    // Offline modal logic moved to Preact
   }
 
   // ---- VIEW-WECHSEL ----
@@ -195,11 +187,11 @@ export class NavigationController {
   // ---- NEUES SPIEL LOGIK ----
 
   _showNewGameModal() {
-    this._eventBus.publish('ui:showNewGameModal');
+    this._eventBus.publish(EVENTS.UI_SHOW_NEW_GAME_MODAL);
   }
 
   _hideNewGameModal() {
-    this._eventBus.publish('ui:hideNewGameModal');
+    this._eventBus.publish(EVENTS.UI_HIDE_NEW_GAME_MODAL);
   }
 
   async _startNewGame(name) {
@@ -221,14 +213,14 @@ export class NavigationController {
 
     // Lokale Service-Zustände zurücksetzen
     this._clanService.reset();
-    this._eventBus.publish('game:reset');
+    this._eventBus.publish(EVENTS.GAME_RESET);
 
     // Zum Hub navigieren
     this.showHub();
-    this._eventBus.publish('hero:updated', {});
-    this._eventBus.publish('resources:updated', {});
-    this._eventBus.publish('clan:membersUpdated', {});
-    this._eventBus.publish('ui:showToast', {
+    this._eventBus.publish(EVENTS.HERO_UPDATED, {});
+    this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
+    this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, {});
+    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
       message: `🌅 Willkommen, ${name}! Deine Reise beginnt.`,
       type: 'success',
       duration: 4000
@@ -372,7 +364,7 @@ export class NavigationController {
           const prestigeMult = 1.0 + (ewigeMneme * 0.10);
           const upgradeBonus = gen.upgrades?.focusBonus || 0;
           const yieldPerSec = IdleService.calculateYieldPerSecond(gen.baseYield, gen.level, upgradeBonus, prestigeMult);
-          const idleOffline = IdleService.calculateOfflineProgress(lastSave, now, yieldPerSec, 12 * 3600);
+          const idleOffline = IdleService.calculateOfflineProgress(lastSave, now, yieldPerSec, CONFIG.SYSTEM.MAX_OFFLINE_MS / 1000);
           offlineMneme = idleOffline.totalYield;
         }
 
@@ -407,35 +399,25 @@ export class NavigationController {
         }, 'game/offlineProgress');
         
         // Offline-Modal einblenden & Werte aktualisieren
-        const offlineModal = document.getElementById('offline-modal-overlay');
-        if (offlineModal) offlineModal.style.display = 'flex';
-        
-        const offlineTimeVal = document.getElementById('offline-time-val');
-        if (offlineTimeVal) offlineTimeVal.textContent = this._formatTime(clampedOffline);
-        
-        const offlineParticlesVal = document.getElementById('offline-particles-val');
-        if (offlineParticlesVal) offlineParticlesVal.textContent = totalParticles.toLocaleString();
-        
-        const offlineRelicsVal = document.getElementById('offline-relics-val');
-        if (offlineRelicsVal) offlineRelicsVal.textContent = totalRelics.toLocaleString();
-        
-        const offlineArtifactsVal = document.getElementById('offline-artifacts-val');
-        if (offlineArtifactsVal) offlineArtifactsVal.textContent = totalArtifacts.toLocaleString();
-        
-        const offlineLevelsVal = document.getElementById('offline-levels-val');
-        if (offlineLevelsVal) offlineLevelsVal.textContent = totalLevels.toLocaleString();
+        this._eventBus.publish(EVENTS.UI_SHOW_OFFLINE_PROGRESS, {
+          timeStr: this._formatTime(clampedOffline),
+          particles: totalParticles,
+          relics: totalRelics,
+          artifacts: totalArtifacts,
+          levels: totalLevels
+        });
         
         // Event-Bus benachrichtigen, um alle Views und Overlays zu aktualisieren
-        this._eventBus.publish('resources:updated', {});
-        this._eventBus.publish('clan:membersUpdated', { members: this._clanService.getMembers() });
+        this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
+        this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, { members: this._clanService.getMembers() });
       }
-      this._eventBus.publish('ui:showToast', {
+      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: '💾 Spielstand geladen!',
         type: 'success',
         duration: 2000
       });
     } else {
-      this._eventBus.publish('ui:showToast', {
+      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: '❌ Kein Spielstand vorhanden.',
         type: 'warning',
         duration: 2000
@@ -481,7 +463,7 @@ export class NavigationController {
 
   async _quitGame() {
     if (await window.gameConfirm('Möchtest du das Spiel wirklich beenden?')) {
-      this._eventBus.publish('save:started');
+      this._eventBus.publish(EVENTS.SAVE_STARTED);
       this._saveManager.save(this._stateManager.getState()).then(() => {
         window.close();
       });
@@ -564,7 +546,7 @@ export class NavigationController {
 
   async _syncCloud() {
     if (!this._cloudManager.isEnabled()) {
-      this._eventBus.publish('ui:showToast', {
+      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: '⚠️ Cloud-Sync ist deaktiviert. Bitte zuerst aktivieren.',
         type: 'warning',
         duration: 3000
@@ -572,7 +554,7 @@ export class NavigationController {
       return;
     }
     
-    this._eventBus.publish('ui:showToast', {
+    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
       message: '☁️ Synchronisiere mit Cloud...',
       type: 'info',
       duration: 1500
@@ -580,13 +562,13 @@ export class NavigationController {
     
     const success = await this._cloudManager.sync(this._stateManager.getState());
     if (success) {
-      this._eventBus.publish('ui:showToast', {
+      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: '💾 Cloud-Sync erfolgreich abgeschlossen!',
         type: 'success',
         duration: 3000
       });
     } else {
-      this._eventBus.publish('ui:showToast', {
+      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: '❌ Cloud-Sync fehlgeschlagen.',
         type: 'error',
         duration: 3000
@@ -595,12 +577,12 @@ export class NavigationController {
   }
 
   _saveAndExitOptions() {
-    this._eventBus.publish('save:started');
+    this._eventBus.publish(EVENTS.SAVE_STARTED);
     const state = this._stateManager.getState();
     this._saveManager.save(state).then(() => {
-      console.log('[Settings] Einstellungen erfolgreich persistent gespeichert.');
+      logger.info('[Settings] Einstellungen erfolgreich persistent gespeichert.');
     }).catch((err) => {
-      console.error('[Settings] Fehler beim automatischen Speichern der Einstellungen:', err);
+      logger.error('[Settings] Fehler beim automatischen Speichern der Einstellungen:', err);
     });
 
     const targetView = this._previousView && this._previousView !== 'options' && this._previousView !== 'menu'
@@ -625,14 +607,14 @@ export class NavigationController {
     this._cloudManager.clearCloudData();
     this._stateManager.reset();
     this._clanService.reset();
-    this._eventBus.publish('game:reset');
+    this._eventBus.publish(EVENTS.GAME_RESET);
     
     await this.showMenu();
-    this._eventBus.publish('hero:updated', {});
-    this._eventBus.publish('resources:updated', {});
-    this._eventBus.publish('clan:membersUpdated', {});
+    this._eventBus.publish(EVENTS.HERO_UPDATED, {});
+    this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
+    this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, {});
     
-    this._eventBus.publish('ui:showToast', {
+    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
       message: '🗑️ Spielstand wurde erfolgreich gelöscht.',
       type: 'success',
       duration: 4000
@@ -694,7 +676,7 @@ export class NavigationController {
     const currentParticles = BigInt(state.resources.particles || '0');
 
     if (currentParticles < BigInt(cost)) {
-      this._eventBus.publish('ui:showToast', {
+      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: '❌ Nicht genügend Partikel!',
         type: 'warning',
         duration: 2000
@@ -718,14 +700,14 @@ export class NavigationController {
       };
     }, 'hero/upgradeClickPower');
 
-    this._eventBus.publish('ui:showToast', {
+    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
       message: '⚡ Klick-Stärke erfolgreich verbessert!',
       type: 'success',
       duration: 2000
     });
     
-    this._eventBus.publish('resources:updated', { type: 'particles' });
-    this._eventBus.publish('hero:updated', {});
+    this._eventBus.publish(EVENTS.RESOURCES_UPDATED, { type: 'particles' });
+    this._eventBus.publish(EVENTS.HERO_UPDATED, {});
   }
 
   _updateGameLoopStatus() {

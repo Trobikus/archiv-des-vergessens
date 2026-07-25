@@ -11,6 +11,8 @@
  * ============================================================
  */
 
+import { logger } from '../logger.js';
+
 export class AuthService {
   /**
    * @param {import('../events/bus.js').default} eventBus
@@ -65,7 +67,7 @@ export class AuthService {
         }
       }
     } catch (e) {
-      console.error('[AuthService] Fehler beim Laden der Session:', e);
+      logger.error('[AuthService] Fehler beim Laden der Session:', e);
       this._currentUser = null;
       this._sessionToken = null;
     }
@@ -89,10 +91,10 @@ export class AuthService {
         }
       }
     } else if (type === 'auth:verifyToken:error') {
-      console.warn('[AuthService] Token ungültig oder abgelaufen laut Server.');
+      logger.warn('[AuthService] Token ungültig oder abgelaufen laut Server.');
       const accounts = this._getAccounts();
       if (this._currentUser && !this._currentUser.isGuest && accounts[this._currentUser.id]) {
-        console.log('[AuthService] Lokales Konto vorhanden, behalte Offline-Session bei.');
+        logger.info('[AuthService] Lokales Konto vorhanden, behalte Offline-Session bei.');
       } else {
         this._sessionToken = null;
         if (this._eventBus) {
@@ -163,7 +165,7 @@ export class AuthService {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       } catch (e) {
-        console.warn('[AuthService] Fallback für Hashing genutzt:', e);
+        logger.warn('[AuthService] Fallback für Hashing genutzt:', e);
       }
     }
     let hash = 0;

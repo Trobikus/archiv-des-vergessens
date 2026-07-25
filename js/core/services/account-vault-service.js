@@ -12,6 +12,7 @@
 
 import SaveManager from '../persistence/save-manager.js';
 import { sanitizeNumber } from '../../utils/sanitizer.js';
+import { logger } from '../logger.js';
 
 export class AccountVaultService {
   constructor(eventBus, authService) {
@@ -52,7 +53,7 @@ export class AccountVaultService {
         this._eventBus.publish('vault:updated', { vault: this.getVaultResources(), items: this.getSharedVaultItems() });
       }
     } catch (e) {
-      console.error('[AccountVaultService] Fehler bei der Initialisierung:', e);
+      logger.error('[AccountVaultService] Fehler bei der Initialisierung:', e);
     }
   }
 

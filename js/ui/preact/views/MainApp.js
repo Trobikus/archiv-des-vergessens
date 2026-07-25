@@ -1,4 +1,5 @@
 import { h, html, useStateSelector, useState, useEffect } from '../setup.js';
+import { EVENTS } from '../../core/events/definitions.js';
 import { IntroView } from './IntroView.js';
 import { MenuView } from './MenuView.js';
 import { OptionsView } from './OptionsView.js';
@@ -17,7 +18,6 @@ import { ChatUI } from '../chat/ChatUI.js';
 import { DialogUI } from '../dialog/DialogUI.js';
 import { CodexUI } from '../codex/CodexUI.js';
 import { LibraryUI } from '../library/LibraryUI.js';
-import { SkillTreeUI } from '../skilltree/SkillTreeUI.js';
 import { ChallengeUI } from '../challenges/ChallengeUI.js';
 import { RelicHuntUI } from '../relic/RelicHuntUI.js';
 import { LeaderboardUI } from '../leaderboard/LeaderboardUI.js';
@@ -28,6 +28,8 @@ import { LoginView } from './LoginView.js';
 import { CharacterSelectView } from './CharacterSelectView.js';
 import { AccountModal } from '../account/AccountModal.js';
 import { SharedVaultModal } from '../shared/SharedVaultModal.js';
+import { OfflineProgressModal } from '../shared/OfflineProgressModal.js';
+import { UpdateModal } from '../shared/UpdateModal.js';
 
 export function MainApp({ stateManager, eventBus, services }) {
   const { i18nService } = services;
@@ -72,12 +74,12 @@ export function MainApp({ stateManager, eventBus, services }) {
       });
     };
 
-    const sub1 = eventBus.subscribe('ui:showNewGameModal', showNewGame);
-    const sub2 = eventBus.subscribe('ui:hideNewGameModal', hideNewGame);
-    const sub3 = eventBus.subscribe('ui:openAccountModal', openAccount);
-    const sub4 = eventBus.subscribe('ui:closeAccountModal', closeAccount);
-    const sub5 = eventBus.subscribe('ui:openConfirm', openConfirm);
-    const sub6 = eventBus.subscribe('ui:openSharedVault', () => setVaultModalOpen(true));
+    const sub1 = eventBus.subscribe(EVENTS.UI_SHOW_NEW_GAME_MODAL, showNewGame);
+    const sub2 = eventBus.subscribe(EVENTS.UI_HIDE_NEW_GAME_MODAL, hideNewGame);
+    const sub3 = eventBus.subscribe(EVENTS.UI_OPEN_ACCOUNT_MODAL, openAccount);
+    const sub4 = eventBus.subscribe(EVENTS.UI_CLOSE_ACCOUNT_MODAL, closeAccount);
+    const sub5 = eventBus.subscribe(EVENTS.UI_OPEN_CONFIRM, openConfirm);
+    const sub6 = eventBus.subscribe(EVENTS.UI_OPEN_SHARED_VAULT, () => setVaultModalOpen(true));
 
     return () => {
       eventBus.unsubscribe(sub1);
@@ -102,7 +104,7 @@ export function MainApp({ stateManager, eventBus, services }) {
         } else if (accountModalOpen) {
           setAccountModalOpen(false);
         } else {
-          eventBus.publish('ui:closeAllModals');
+          eventBus.publish(EVENTS.UI_CLOSE_ALL_MODALS);
         }
       }
     };
@@ -115,7 +117,7 @@ export function MainApp({ stateManager, eventBus, services }) {
   };
 
   const handleNewGameStart = () => {
-    eventBus.publish('menu:startNewGame', { name: newGameName.trim() });
+    eventBus.publish(EVENTS.MENU_START_NEW_GAME, { name: newGameName.trim() });
     setNewGameModalOpen(false);
   };
 
@@ -157,7 +159,6 @@ export function MainApp({ stateManager, eventBus, services }) {
       <${DialogUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${CodexUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${LibraryUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
-      <${SkillTreeUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${ChallengeUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${RelicHuntUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${LeaderboardUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
@@ -169,6 +170,12 @@ export function MainApp({ stateManager, eventBus, services }) {
 
       <!-- SHARED ACCOUNT VAULT MODAL -->
       <${SharedVaultModal} isOpen=${vaultModalOpen} onClose=${() => setVaultModalOpen(false)} eventBus=${eventBus} services=${services} />
+
+      <!-- OFFLINE PROGRESS MODAL -->
+      <${OfflineProgressModal} eventBus=${eventBus} services=${services} />
+
+      <!-- UPDATE MODAL -->
+      <${UpdateModal} eventBus=${eventBus} services=${services} />
 
       <!-- NEUES SPIEL DIALOG -->
       ${newGameModalOpen ? html`

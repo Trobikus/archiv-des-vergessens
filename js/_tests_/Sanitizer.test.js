@@ -24,8 +24,11 @@ describe('Sanitizer Utility', () => {
       expect(sanitizeNumber('abc', 0)).toBe(0);
       expect(sanitizeNumber(null, 10)).toBe(10);
       expect(sanitizeNumber(undefined, 5)).toBe(5);
+      expect(sanitizeNumber(true, 0)).toBe(0);
+      expect(sanitizeNumber(false, 0)).toBe(0);
       expect(sanitizeNumber(Infinity, 0)).toBe(0);
       expect(sanitizeNumber(-Infinity, -1)).toBe(-1);
+      expect(sanitizeNumber(Infinity, Infinity)).toBe(0);
     });
   });
 

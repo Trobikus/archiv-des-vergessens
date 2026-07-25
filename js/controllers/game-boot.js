@@ -24,17 +24,18 @@ import { bootPreactUI } from '../ui/preact/index.js';
 import { initDOMUI } from '../ui/dom/index.js';
 import SaveManager from '../core/persistence/save-manager.js';
 import CloudManager from '../core/persistence/cloud-manager.js';
-import { Logger } from '../core/logger.js';
+import Logger, { logger } from '../core/logger.js';
 import { APP_VERSION } from '../utils/version.js';
 import SettingsManager from '../core/settings.js';
 import { EVENTS } from '../core/events/definitions.js';
 import { CONFIG } from '../data/config.js';
+import { escapeHtml } from '../utils/sanitizer.js';
 
 /**
  * Bootet das Spiel.
  */
 export async function bootGame() {
-  console.log('[GameBoot] Initialisiere Spiel (AAA-Architektur v2.0)...');
+  logger.info('[GameBoot] Initialisiere Spiel (AAA-Architektur v2.0)...');
 
   const updateBootProgress = async (percent, statusText) => {
     const bar = document.getElementById('intro-loading-bar') || document.querySelector('.intro-loading-bar');
@@ -55,7 +56,6 @@ export async function bootGame() {
   // ============================================================
   await updateBootProgress(10, 'Lade Konfiguration & EventBus...');
 
-  const logger = new Logger();
   logger.level = 'info';
 
   const eventBus = new EventBus();
@@ -66,22 +66,22 @@ export async function bootGame() {
     if (eventBus.countListeners(eventName) === 0) {
       switch (eventName) {
         case EVENTS.HERO_LEVEL_UP:
-        case 'hero:levelUp':
-          eventBus.publish('ui:showToast', {
+        case EVENTS.HERO_LEVEL_UP:
+          eventBus.publish(EVENTS.UI_SHOW_TOAST, {
             message: `🌟 Level Up! Du bist nun Level ${data?.level || '!'}!`,
             type: 'success',
             duration: 4000
           });
           break;
-        case 'network:connected':
-          eventBus.publish('ui:showToast', {
+        case EVENTS.NETWORK_CONNECTED:
+          eventBus.publish(EVENTS.UI_SHOW_TOAST, {
             message: '🌐 Netzwerk verbunden',
             type: 'info',
             duration: 3000
           });
           break;
-        case 'network:disconnected':
-          eventBus.publish('ui:showToast', {
+        case EVENTS.NETWORK_DISCONNECTED:
+          eventBus.publish(EVENTS.UI_SHOW_TOAST, {
             message: '⚠️ Netzwerkverbindung unterbrochen!',
             type: 'warning',
             duration: 4000
@@ -94,7 +94,7 @@ export async function bootGame() {
   // Registriere globale Helper-Funktionen für spieleigene, wunderschöne Popups
   window.gameConfirm = (message, title = 'BESTÄTIGUNG') => {
     return new Promise((resolve) => {
-      eventBus.publish('ui:openConfirm', {
+      eventBus.publish(EVENTS.UI_OPEN_CONFIRM, {
         title,
         message,
         isAlert: false,
@@ -106,7 +106,7 @@ export async function bootGame() {
 
   window.gameAlert = (message, title = 'HINWEIS') => {
     return new Promise((resolve) => {
-      eventBus.publish('ui:openConfirm', {
+      eventBus.publish(EVENTS.UI_OPEN_CONFIRM, {
         title,
         message,
         isAlert: true,
@@ -119,7 +119,7 @@ export async function bootGame() {
   // Globale Fehlerbehandlung
   window.addEventListener('error', (e) => {
     logger.error(`[Global Error] ${e.message}`, e.error?.stack);
-    eventBus.publish('ui:showToast', {
+    eventBus.publish(EVENTS.UI_SHOW_TOAST, {
       message: `⚠️ ${e.message}`,
       type: 'error',
       duration: 6000
@@ -128,7 +128,7 @@ export async function bootGame() {
 
   window.addEventListener('unhandledrejection', (e) => {
     logger.error(`[Unhandled Promise] ${e.reason?.message || 'Unbekannter Fehler'}`, e.reason?.stack);
-    eventBus.publish('ui:showToast', {
+    eventBus.publish(EVENTS.UI_SHOW_TOAST, {
       message: `⚠️ ${e.reason?.message || 'Unbekannter Fehler'}`,
       type: 'error',
       duration: 6000
@@ -191,7 +191,6 @@ export async function bootGame() {
   const dailyRewardService = container.get('dailyRewardService');
   const leaderboardService = container.get('leaderboardService');
   const storyBranchService = container.get('storyBranchService');
-  const skillTreeService = container.get('skillTreeService');
   const challengeService = container.get('challengeService');
   const libraryService = container.get('libraryService');
   const settingsManager = container.get('settingsManager');
@@ -207,7 +206,7 @@ export async function bootGame() {
   await SaveManager.clearGuestSaves();
 
   // Bei Login oder Umwandlung direkt speichern
-  eventBus.subscribe('auth:stateChanged', (data) => {
+  eventBus.subscribe(EVENTS.AUTH_STATE_CHANGED, (data) => {
     if (data && data.user && !data.user.isGuest && data.isLoggedIn) {
       SaveManager.save(stateManager.getState());
     }
@@ -314,7 +313,6 @@ export async function bootGame() {
     dailyRewardService,
     leaderboardService,
     storyBranchService,
-    skillTreeService,
     challengeService,
     libraryService,
     tutorialService,
@@ -370,7 +368,7 @@ export async function bootGame() {
   }
 
   // Autosave-Intervall bei Einstellungs-Änderung anpassen
-  eventBus.subscribe('settings:updated', (newSettings) => {
+  eventBus.subscribe(EVENTS.SETTINGS_UPDATED, (newSettings) => {
     if (autosaveTimer) {
       clearInterval(autosaveTimer);
       autosaveTimer = null;
@@ -399,7 +397,7 @@ export async function bootGame() {
           await cloudManager.sync(stateManager.getState());
         }
       } catch (error) {
-        console.warn('[GameBoot] Safe-Quit-Speichern fehlgeschlagen:', error);
+        logger.warn('[GameBoot] Safe-Quit-Speichern fehlgeschlagen:', error);
       } finally {
         if (typeof window.electronAPI.sendQuitReady === 'function') {
           window.electronAPI.sendQuitReady();
@@ -429,7 +427,7 @@ export async function bootGame() {
         cloudManager.sync(stateManager.getState());
       }
     } catch (error) {
-      console.warn('[GameBoot] Browser-Cleanup-Save fehlgeschlagen:', error);
+      logger.warn('[GameBoot] Browser-Cleanup-Save fehlgeschlagen:', error);
     }
 
     // Timer und Loop sauber stoppen
@@ -454,433 +452,18 @@ export async function bootGame() {
   // Step 5 (100%): "Starte Game Loop & Partikel-System..."
   await updateBootProgress(100, 'Starte Game Loop & Partikel-System...');
 
-  if (typeof window !== 'undefined' && window['__TAURI__']) {
-    const bar = document.getElementById('intro-loading-bar') || document.querySelector('.intro-loading-bar');
-    if (bar) bar.style.width = '0%';
-  }
+  // Start the game loop immediately. The IntroView (Preact) will handle the 
+  // visual intro and publish EVENTS.AUTH_SHOW_LOGIN when it's done.
+  gameLoop.start();
 
-  const introContainer = document.getElementById('intro-container');
-  if (introContainer) {
-    let introFinished = false;
-    let handleIntroClick = null;
+  eventBus.publish(EVENTS.GAME_BOOTED, {
+    timestamp: Date.now(),
+    version: APP_VERSION,
+    services: Array.from(container.getKeys())
+  });
 
-    // ----------------------------------------------------------
-    // MYSTISCHES CANVAS-PARTIKELSYSTEM
-    // Elegantes, gut lesbares Canvas-2D-Partikelsystem (Standard-JS-Objekte)
-    // ----------------------------------------------------------
-    const _startIntroParticles = () => {
-      /** @type {HTMLCanvasElement} */
-      const canvas = (/** @type {any} */ (document.getElementById('intro-particle-canvas')));
-      if (!canvas) return null;
-
-      const ctx = canvas.getContext('2d', { alpha: true });
-      if (!ctx) return null;
-
-      let animFrameId = null;
-      let stopped = false;
-      let lastTS = -1;
-
-      const resize = () => {
-        const targetW = (introContainer && introContainer.clientWidth > 0) ? introContainer.clientWidth : window.innerWidth;
-        const targetH = (introContainer && introContainer.clientHeight > 0) ? introContainer.clientHeight : window.innerHeight;
-        canvas.width = targetW;
-        canvas.height = targetH;
-        ctx.globalCompositeOperation = 'screen';
-      };
-      resize();
-      window.addEventListener('resize', resize, { passive: true });
-
-      const RUNE_GLYPHS = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᛁ', 'ᛃ', 'ᛇ', 'ᛈ', 'ᛉ', 'ᛊ', 'ᛏ'];
-      const MAX_PARTICLES = 90;
-
-      /**
-       * Erstellt ein neues Partikel-Objekt basierend auf seinem Typ.
-       */
-      const createParticle = (type, isInit = false) => {
-        const W = canvas.width;
-        const H = canvas.height;
-        const cx = W * 0.5;
-        const cy = H * 0.5;
-
-        const p = {
-          type, // 'ember' | 'dust' | 'rune' | 'spark' | 'orb'
-          x: 0,
-          y: 0,
-          vx: 0,
-          vy: 0,
-          scale: 1,
-          alpha: 0,
-          maxAlpha: 0.5,
-          life: 0,
-          maxLife: 100,
-          wobble: Math.random() * Math.PI * 2,
-          wobbleSpeed: 0.01,
-          colorType: Math.random() > 0.5 ? 'gold' : 'purple',
-          rune: RUNE_GLYPHS[Math.floor(Math.random() * RUNE_GLYPHS.length)],
-          prevX: 0,
-          prevY: 0
-        };
-
-        if (type === 'ember') {
-          const a = Math.random() * Math.PI * 2;
-          const d = 50 + Math.random() * 110;
-          p.x = cx + Math.cos(a) * d;
-          p.y = isInit ? cy + Math.random() * H * 0.5 : cy + 20 + Math.random() * 70;
-          p.vx = (Math.random() - 0.5) * 0.5;
-          p.vy = -(0.35 + Math.random() * 0.7);
-          p.scale = 0.5 + Math.random() * 0.9;
-          p.maxAlpha = 0.4 + Math.random() * 0.5;
-          p.maxLife = 110 + Math.random() * 160;
-          p.wobbleSpeed = 0.022 + Math.random() * 0.025;
-          p.colorType = Math.random() > 0.4 ? 'gold' : 'bright';
-        } else if (type === 'dust') {
-          p.x = Math.random() * W;
-          p.y = isInit ? Math.random() * H : H + 5;
-          p.vx = (Math.random() - 0.5) * 0.2;
-          p.vy = -(0.07 + Math.random() * 0.17);
-          p.scale = 0.4 + Math.random() * 0.75;
-          p.maxAlpha = 0.08 + Math.random() * 0.18;
-          p.maxLife = 280 + Math.random() * 320;
-          p.wobbleSpeed = 0.007 + Math.random() * 0.012;
-          p.colorType = Math.random() > 0.55 ? 'purple' : 'gold';
-        } else if (type === 'rune') {
-          const a = Math.random() * Math.PI * 2;
-          const d = 75 + Math.random() * (Math.min(W, H) * 0.28);
-          p.x = cx + Math.cos(a) * d;
-          p.y = cy + Math.sin(a) * d;
-          p.vx = Math.cos(a) * 0.1;
-          p.vy = Math.sin(a) * 0.1;
-          p.scale = Math.random() > 0.5 ? 1 : 0.7;
-          p.maxAlpha = 0.12 + Math.random() * 0.22;
-          p.maxLife = 170 + Math.random() * 200;
-          p.wobbleSpeed = 0.012;
-        } else if (type === 'spark') {
-          const a = Math.random() * Math.PI * 2;
-          p.x = cx + (Math.random() - 0.5) * 55;
-          p.y = cy + (Math.random() - 0.5) * 55;
-          p.prevX = p.x;
-          p.prevY = p.y;
-          p.vx = Math.cos(a) * (1.4 + Math.random() * 1.9);
-          p.vy = Math.sin(a) * (1.4 + Math.random() * 1.9);
-          p.scale = 0.7 + Math.random() * 0.7;
-          p.maxAlpha = 0.7 + Math.random() * 0.3;
-          p.maxLife = 22 + Math.random() * 38;
-          p.wobbleSpeed = 0;
-        } else if (type === 'orb') {
-          p.x = cx + (Math.random() - 0.5) * W * 0.5;
-          p.y = cy + (Math.random() - 0.5) * H * 0.5;
-          p.vx = (Math.random() - 0.5) * 0.15;
-          p.vy = (Math.random() - 0.5) * 0.15;
-          p.scale = 0.6 + Math.random() * 0.9;
-          p.maxAlpha = 0.12 + Math.random() * 0.18;
-          p.maxLife = 340 + Math.random() * 400;
-          p.wobbleSpeed = 0.004 + Math.random() * 0.005;
-          p.colorType = Math.random() > 0.5 ? 'gold' : 'purple';
-        }
-
-        if (isInit) {
-          p.life = Math.random() * p.maxLife;
-        }
-
-        return p;
-      };
-
-      // Partikel-Array initialisieren
-      const particles = [];
-      const initTypes = [
-        ...Array(5).fill('orb'),
-        ...Array(22).fill('dust'),
-        ...Array(32).fill('ember'),
-        ...Array(8).fill('rune')
-      ];
-
-      for (const t of initTypes) {
-        particles.push(createParticle(t, true));
-      }
-
-      ctx.globalCompositeOperation = 'screen';
-      let sparkCooldown = 65;
-
-      const tick = (now) => {
-        if (stopped) return;
-        animFrameId = requestAnimationFrame(tick);
-        if (lastTS < 0) {
-          lastTS = now;
-          return;
-        }
-        const dt = Math.min((now - lastTS) / 16.667, 2.5);
-        lastTS = now;
-
-        const W = canvas.width;
-        const H = canvas.height;
-        ctx.clearRect(0, 0, W, H);
-
-        // Gelegentlich neue Funken erzeugen
-        sparkCooldown -= dt;
-        if (sparkCooldown <= 0 && particles.length < MAX_PARTICLES - 6) {
-          const count = 2 + Math.floor(Math.random() * 4);
-          for (let b = 0; b < count && particles.length < MAX_PARTICLES; b++) {
-            particles.push(createParticle('spark', false));
-          }
-          sparkCooldown = 65 + Math.random() * 75;
-        }
-
-        // Partikel aktualisieren & zeichnen
-        for (let i = particles.length - 1; i >= 0; i--) {
-          const p = particles[i];
-          p.life += dt;
-          p.wobble += p.wobbleSpeed * dt;
-
-          const lt = p.life / p.maxLife;
-          p.alpha = lt < 0.2 ? (lt / 0.2) * p.maxAlpha : lt > 0.7 ? ((1 - lt) / 0.3) * p.maxAlpha : p.maxAlpha;
-
-          if (p.type === 'orb') {
-            p.x += (p.vx + Math.cos(p.wobble) * 0.28) * dt;
-            p.y += (p.vy + Math.sin(p.wobble * 0.7) * 0.22) * dt;
-            if (p.alpha > 0.004) {
-              const radius = 25 * p.scale;
-              const grad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, radius);
-              const color = p.colorType === 'purple' ? '130,80,200' : '197,160,89';
-              grad.addColorStop(0, `rgba(${color}, ${p.alpha * 0.6})`);
-              grad.addColorStop(1, 'rgba(0,0,0,0)');
-              ctx.fillStyle = grad;
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          } else if (p.type === 'dust') {
-            p.x += (p.vx + Math.sin(p.wobble) * 0.22) * dt;
-            p.y += p.vy * dt;
-            if (p.alpha > 0.004) {
-              ctx.globalAlpha = p.alpha;
-              ctx.fillStyle = p.colorType === 'purple' ? 'rgba(130,80,200,0.9)' : 'rgba(197,160,89,0.9)';
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, 1.2 * p.scale, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          } else if (p.type === 'ember') {
-            p.x += (p.vx + Math.sin(p.wobble) * 0.28) * dt;
-            p.y += p.vy * dt;
-            if (p.alpha > 0.004) {
-              ctx.globalAlpha = p.alpha;
-              ctx.fillStyle = p.colorType === 'bright' ? '#fff8c0' : '#ebd576';
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, 1.8 * p.scale, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          } else if (p.type === 'rune') {
-            p.x += p.vx * dt;
-            p.y += (p.vy + Math.sin(p.wobble) * 0.18) * dt;
-            if (p.alpha > 0.004) {
-              ctx.globalAlpha = p.alpha;
-              ctx.font = `${p.scale > 0.8 ? 14 : 9}px serif`;
-              ctx.fillStyle = '#c5a059';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(p.rune, p.x, p.y);
-            }
-          } else if (p.type === 'spark') {
-            p.prevX = p.x;
-            p.prevY = p.y;
-            p.x += p.vx * dt;
-            p.y += p.vy * dt;
-            if (p.alpha > 0.02) {
-              ctx.globalAlpha = p.alpha;
-              ctx.strokeStyle = '#ebd576';
-              ctx.lineWidth = p.scale;
-              ctx.lineCap = 'round';
-              ctx.beginPath();
-              ctx.moveTo(p.prevX, p.prevY);
-              ctx.lineTo(p.x, p.y);
-              ctx.stroke();
-            }
-          }
-
-          // Lebensdauer abgelaufen?
-          if (p.life >= p.maxLife) {
-            if (p.type === 'spark') {
-              particles.splice(i, 1);
-            } else {
-              particles[i] = createParticle(p.type, false);
-            }
-          }
-        }
-
-        ctx.globalAlpha = 1;
-      };
-
-      requestAnimationFrame(() => {
-        lastTS = performance.now();
-        requestAnimationFrame(tick);
-      });
-
-      return () => {
-        stopped = true;
-        if (animFrameId) cancelAnimationFrame(animFrameId);
-        window.removeEventListener('resize', resize);
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      };
-    };
-
-
-
-    let stopParticles = null;
-    let introTimeoutId = null;
-    let introStarted = false;
-
-    const finishIntro = () => {
-      if (introFinished) return;
-      introFinished = true;
-
-      // Klick-Event-Listener sauber entfernen
-      if (handleIntroClick) {
-        introContainer.removeEventListener('click', handleIntroClick);
-        introContainer.style.cursor = 'default';
-      }
-
-      // Partikel stoppen
-      if (stopParticles) stopParticles();
-
-      // Intro ausblenden (800ms CSS-Transition)
-      introContainer.style.opacity = '0';
-
-      setTimeout(() => {
-        introContainer.style.display = 'none';
-
-        // Login-Portal anzeigen (zwischen Intro und Hauptmenü)
-        navigation.showLogin();
-
-        // GameLoop starten
-        gameLoop.start();
-
-        // Event veröffentlichen
-        eventBus.publish(EVENTS.GAME_BOOTED, {
-          timestamp: Date.now(),
-          version: APP_VERSION,
-          services: Array.from(container.getKeys())
-        });
-
-        logger.info('[GameBoot] Spiel bereit! 🏛️✨');
-        console.log('[GameBoot] Bootstrapping abgeschlossen.');
-      }, 800);
-    };
-
-    const startIntroSequence = () => {
-      if (introFinished || introStarted) return;
-      introStarted = true;
-
-
-      // Sicherstellen, dass der Intro-Container sichtbar ist
-      introContainer.style.display = 'flex';
-      introContainer.style.opacity = '1';
-
-
-      logger.info('[GameBoot] Starte Intro-Sequenz nach Vollbild-Fensteröffnung...');
-      stopParticles = _startIntroParticles();
-
-      // Ladebalken zurücksetzen und dynamisch füllen
-      const loadingBar = document.getElementById('intro-loading-bar') || document.querySelector('.intro-loading-bar');
-      const loadingText = document.getElementById('intro-loading-text');
-
-      if (loadingBar) {
-        loadingBar.classList.add('manual-progress');
-        loadingBar.style.width = '0%';
-      }
-
-      // Animierte Ladebalken-Fortschritts-Sequenz während des Intros
-      const steps = [
-        { pct: 15, text: 'Initialisiere Archiv-Kern...', delay: 200 },
-        { pct: 35, text: 'Sammle Mneme-Partikel...', delay: 600 },
-        { pct: 60, text: 'Lade Chroniken & Relikte...', delay: 1200 },
-        { pct: 85, text: 'Entsiegele Weltenzustand...', delay: 1800 },
-        { pct: 100, text: 'Das Archiv ist bereit.', delay: 2400 }
-      ];
-
-      steps.forEach(({ pct, text, delay }) => {
-        setTimeout(() => {
-          if (introFinished) return;
-          if (loadingBar) loadingBar.style.width = `${pct}%`;
-          if (loadingText) {
-            loadingText.style.opacity = '1';
-            loadingText.innerText = text;
-          }
-        }, delay);
-      });
-
-      // Timer für das automatische Beenden des Intros (7 Sekunden)
-      introTimeoutId = setTimeout(finishIntro, 7000);
-    };
-
-    // Wenn ein Spielstand existiert, kann das Intro per Klick übersprungen werden
-    if (savedState) {
-      // Optischen Hinweis geben (Zeiger wird zur Hand)
-      introContainer.style.cursor = 'pointer';
-
-      handleIntroClick = (e) => {
-        // Nicht überspringen, wenn das Update-Overlay gerade aktiv ist
-        const updateOverlay = document.getElementById('update-overlay');
-        if (updateOverlay && updateOverlay.style.display === 'flex') {
-          return;
-        }
-
-        logger.info('[GameBoot] Intro vom Benutzer per Klick übersprungen.');
-        
-        if (introTimeoutId) {
-          clearTimeout(introTimeoutId);
-          introTimeoutId = null;
-        }
-        
-        finishIntro();
-      };
-
-      introContainer.addEventListener('click', handleIntroClick);
-    }
-
-    let gameLaunched = false;
-
-
-    // Fallback: Für Browser-Betrieb ohne Launcher
-    if (!window['__TAURI__']) {
-      gameLaunched = true;
-      if (!document.hidden) {
-        setTimeout(startIntroSequence, 100);
-      } else {
-        const handleBrowserVisibility = () => {
-          if (!document.hidden && !introStarted) {
-            document.removeEventListener('visibilitychange', handleBrowserVisibility);
-            setTimeout(startIntroSequence, 100);
-          }
-        };
-        document.addEventListener('visibilitychange', handleBrowserVisibility);
-      }
-    } else {
-      // Sicherheits-Fallback für Tauri falls launcher:game-launched nicht empfangen wurde
-      setTimeout(() => {
-        if (!gameLaunched && !introStarted && !introFinished) {
-          logger.info('[GameBoot] Sicherheits-Fallback: Starte Intro in Tauri-Umgebung...');
-          gameLaunched = true;
-          startIntroSequence();
-        }
-      }, 5000);
-    }
-
-
-  } else {
-    // Fallback falls kein Intro-Container existiert
-    navigation.showMenu();
-    gameLoop.start();
-
-    eventBus.publish(EVENTS.GAME_BOOTED, {
-      timestamp: Date.now(),
-      version: APP_VERSION,
-      services: Array.from(container.getKeys())
-    });
-
-    logger.info('[GameBoot] Spiel bereit! 🏛️✨');
-    console.log('[GameBoot] Bootstrapping abgeschlossen.');
-  }
+  logger.info('[GameBoot] Spiel bereit! 🏛️✨');
+  logger.info('[GameBoot] Bootstrapping abgeschlossen.');
 
 
   // Return für Debugging
@@ -906,7 +489,6 @@ export async function bootGame() {
       dailyRewardService,
       leaderboardService,
       storyBranchService,
-      skillTreeService,
       challengeService,
       libraryService
     }
@@ -920,17 +502,10 @@ export async function bootGame() {
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     bootGame().catch((error) => {
-      console.error('[GameBoot] Boot fehlgeschlagen:', error);
+      logger.error('[GameBoot] Boot fehlgeschlagen:', error);
       
-      // HTML Escape Funktion
-      const escapeHTML = (str) => {
-        const p = document.createElement('p');
-        p.textContent = str;
-        return p.innerHTML;
-      };
-
-      const safeMessage = escapeHTML(error.message || 'Unbekannter Fehler');
-      const safeStack = escapeHTML(error.stack || error.message || '');
+      const safeMessage = escapeHtml(error?.message || 'Unbekannter Fehler');
+      const safeStack = escapeHtml(error?.stack || error?.message || '');
 
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#050507;color:#d1d1d6;font-family:monospace;padding:2rem;text-align:center;">

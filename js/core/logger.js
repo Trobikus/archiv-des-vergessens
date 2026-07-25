@@ -62,9 +62,9 @@ export class Logger {
     const entry = {
       level,
       message,
-      data: data || null,
+      data: data !== undefined ? data : null,
       timestamp: Date.now(),
-      stack: level === 'error' ? new Error().stack : null
+      stack: level === 'error' ? (data instanceof Error ? data.stack : new Error().stack) : null
     };
 
     this.logs.push(entry);
@@ -75,11 +75,11 @@ export class Logger {
     // Console-Ausgabe
     const prefix = `[${level.toUpperCase()}] ${new Date(entry.timestamp).toISOString()}`;
     if (level === 'error') {
-      console.error(prefix, message, data || '');
+      console.error(prefix, message, data !== null && data !== undefined ? data : '');
     } else if (level === 'warn') {
-      console.warn(prefix, message, data || '');
+      console.warn(prefix, message, data !== null && data !== undefined ? data : '');
     } else {
-      console.log(prefix, message, data || '');
+      console.log(prefix, message, data !== null && data !== undefined ? data : '');
     }
 
     // Event-Bus
@@ -152,7 +152,8 @@ export class Logger {
 }
 
 // ============================================================
-// DEFAULT-EXPORT (für Importe wie: import Logger from './logger.js')
+// SINGLETON & EXPORTE
 // ============================================================
 
-export default Logger;
+export const logger = new Logger();
+export default Logger;

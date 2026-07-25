@@ -13,6 +13,7 @@
  */
 
 import { deepFreeze, isPlainObject, getNestedValue } from '../../utils/object-utils.js';
+import { logger } from '../logger.js';
 import { EVENTS } from '../events/definitions.js';
 import { APP_VERSION } from '../../utils/version.js';
 
@@ -316,7 +317,7 @@ export class StateManager {
    */
   getState() {
     if (!this._initialized) {
-      console.warn('[StateManager] getState aufgerufen, bevor init() ausgeführt wurde.');
+      logger.warn('[StateManager] getState aufgerufen, bevor init() ausgeführt wurde.');
       return null;
     }
     return this._state;
@@ -335,11 +336,11 @@ export class StateManager {
    */
   dispatch(reducer, name = 'anonymous') {
     if (!this._initialized) {
-      console.warn('[StateManager] dispatch aufgerufen, bevor init() ausgeführt wurde.');
+      logger.warn('[StateManager] dispatch aufgerufen, bevor init() ausgeführt wurde.');
       return null;
     }
     if (this._isDispatching) {
-      console.warn('[StateManager] Rekursive Dispatch erkannt – ignoriert');
+      logger.warn('[StateManager] Rekursive Dispatch erkannt – ignoriert');
       return this._state;
     }
 
@@ -395,7 +396,7 @@ export class StateManager {
       return frozenState;
 
     } catch (error) {
-      console.error(`[StateManager] Dispatch-Fehler in "${name}":`, error);
+      logger.error(`[StateManager] Dispatch-Fehler in "${name}":`, error);
       this._eventBus.publish('ui:showToast', {
         message: `⚠️ State-Fehler: ${error.message}`,
         type: 'error',
@@ -425,7 +426,7 @@ export class StateManager {
         const state = path ? this.getSlice(path) : this.getState();
         callback(state);
       } catch (e) {
-        console.error('[StateManager] Subscriber-Initial-Fehler:', e);
+        logger.error('[StateManager] Subscriber-Initial-Fehler:', e);
       }
     }
 
@@ -573,7 +574,7 @@ export class StateManager {
           callback(state);
         }
       } catch (e) {
-        console.error(`[StateManager] Subscriber ${id} Fehler:`, e);
+        logger.error(`[StateManager] Subscriber ${id} Fehler:`, e);
       }
     }
   }
@@ -601,7 +602,7 @@ export class StateManager {
 
     while (this._idleTasks.length > 0 && deadline.timeRemaining() > 1) {
       const { task } = this._idleTasks.shift();
-      try { task(); } catch (e) { console.error('[StateManager] Idle-Task-Fehler:', e); }
+      try { task(); } catch (e) { logger.error('[StateManager] Idle-Task-Fehler:', e); }
     }
 
     if (this._idleTasks.length > 0) {

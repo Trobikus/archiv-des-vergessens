@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.32] - 2026-07-25
+
+### ⚡ Refactoring & Stabilization
+- **Vollständige Entfernung der veralteten Offline-Auth-Infrastruktur (`src-tauri/`)**:
+  - `AuthService.rs` und `CryptoService.rs` sowie ungenutzte Krypto-Abhängigkeiten (`argon2`, `jsonwebtoken`) vollständig aus dem Rust-Backend entfernt.
+- **Robustes Persistence & Queue Refactoring (`js/core/persistence/save-manager.js`)**:
+  - Behebung von Race-Conditions und Verriegelungsfehlern (`_saveLock`/`_loadLock`) im IndexedDB SaveManager.
+  - Gast-Account Sicherheitsprüfung korrigiert, um ungewolltes Überschreiben von Daten zu verhindern.
+- **DI Container & Architecture SSOT (`js/core/di/`)**:
+  - Zentralisierung der Service-Injektion und Einstellungen (SSOT) via `DIContainer`.
+- **100% Test-Grün**:
+  - 116 Vitest Frontend-Tests (17 Test-Suites) und sämtliche Rust-Integrationstests erfolgreich bestanden.
+
+---
+
 ## [1.0.31] - 2026-07-25
 
 ### 🔐 Cryptographic Release Signature & Ed25519 Launcher Verification

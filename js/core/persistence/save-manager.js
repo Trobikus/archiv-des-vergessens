@@ -14,6 +14,7 @@
 import { Checksum } from '../security.js';
 import RNG from '../../utils/rng.js';
 import { APP_VERSION } from '../../utils/version.js';
+import { logger } from '../logger.js';
 
 const DB_NAME = 'ArchivDB';
 const STORE_NAME = 'saves';
@@ -51,11 +52,21 @@ export class SaveManager {
     return this._activeSlotId;
   }
 
+  static _isGuest() {
+    if (!this._services?.authService) return false;
+    if (typeof this._services.authService.isGuest === 'function') {
+      return this._services.authService.isGuest();
+    }
+    const u = typeof this._services.authService.getCurrentUser === 'function'
+      ? this._services.authService.getCurrentUser()
+      : null;
+    return !!u?.isGuest;
+  }
+
   static _isRegisteredUser(userId = null) {
     if (userId) return true;
     if (this._services?.authService) {
-      const u = this._services.authService.getCurrentUser();
-      return !!(u && !u.isGuest);
+      return !this._isGuest();
     }
     return true;
   }
@@ -70,7 +81,7 @@ export class SaveManager {
       }
       store.delete('vault_guest');
     } catch (e) {
-      console.warn('[SaveManager] Fehler beim Bereinigen der Gast-Sicherungen:', e);
+      logger.warn('[SaveManager] Fehler beim Bereinigen der Gast-Sicherungen:', e);
     }
   }
 
@@ -89,25 +100,32 @@ export class SaveManager {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, 2);
       
-      request.onupgradeneeded = () => {
-        const db = request.result;
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME);
+          db.createObjectStore(STORE_NAME, { keyPath: 'key' });
         }
-        console.log('[SaveManager] Datenbank aktualisiert');
+        logger.info('[SaveManager] Datenbank aktualisiert');
+      };
+
+      request.onblocked = (event) => {
+        logger.warn('[SaveManager] Datenbank-Öffnen blockiert.');
+        if (event.target && event.target.result) {
+          try { event.target.result.close(); } catch (e) {}
+        }
       };
       
-      request.onsuccess = () => {
-        this._db = request.result;
+      request.onsuccess = (event) => {
+        this._db = event.target.result;
         this._dbReady = true;
         this._db.onerror = (event) => {
-          console.error('[SaveManager] Datenbank-Fehler:', event.target.error);
+          logger.error('[SaveManager] Datenbank-Fehler:', event.target.error);
         };
         resolve(this._db);
       };
       
       request.onerror = () => {
-        console.error('[SaveManager] Datenbank-Öffnen fehlgeschlagen:', request.error);
+        logger.error('[SaveManager] Datenbank-Öffnen fehlgeschlagen:', request.error);
         reject(request.error);
       };
     });
@@ -138,7 +156,6 @@ export class SaveManager {
         req.onerror = () => resolve(null);
       });
 
-
       if (storedData && storedData.state) {
         const st = storedData.state;
         slots.push({
@@ -165,15 +182,15 @@ export class SaveManager {
    * Speichert den State in den aktiven Slot.
    */
   static async save(state, slotId = this._activeSlotId) {
-    if (!this._isRegisteredUser()) {
-      console.log('[SaveManager] Speichern übersprungen: Gast-Accounts sind nur temporär für die aktuelle Sitzung.');
+    if (this._isGuest()) {
+      logger.info('[SaveManager] Speichern übersprungen: Gast-Accounts sind nur temporär für die aktuelle Sitzung.');
       return false;
     }
 
     if (this._saveLock) {
-      this._pendingState = state;
-      this._pendingSlotId = slotId;
-      return new Promise((resolve) => this._saveQueue.push(resolve));
+      return new Promise((resolve, reject) => {
+        this._saveQueue.push({ state, slotId, resolve, reject });
+      });
     }
     this._saveLock = true;
     this.setActiveSlot(slotId);
@@ -194,6 +211,7 @@ export class SaveManager {
       };
 
       const saveData = {
+        key: slotKey,
         timestamp: saveTime,
         version: LATEST_VERSION,
         rngSeed: RNG.getSeed(),
@@ -215,7 +233,7 @@ export class SaveManager {
       await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.put(saveData, slotKey);
+        const req = store.put(saveData);
         req.onsuccess = () => resolve(true);
         req.onerror = () => reject(req.error);
       });
@@ -234,27 +252,18 @@ export class SaveManager {
       result = true;
 
     } catch (error) {
-      console.error('[SaveManager] Save fehlgeschlagen:', error);
+      logger.error('[SaveManager] Save fehlgeschlagen:', error);
       result = false;
     } finally {
       this._saveLock = false;
-    }
-
-    if (this._pendingState !== null) {
-      const pending = this._pendingState;
-      const pendingSlot = this._pendingSlotId || slotId;
-      this._pendingState = null;
-      this._pendingSlotId = null;
-
-      const queue = [...this._saveQueue];
-      this._saveQueue = [];
-
-      const pendingResult = await this.save(pending, pendingSlot);
-      for (const resolve of queue) resolve(pendingResult);
-    } else {
-      const queue = [...this._saveQueue];
-      this._saveQueue = [];
-      for (const resolve of queue) resolve(result);
+      if (this._saveQueue.length > 0) {
+        const next = this._saveQueue.shift();
+        if (next) {
+          this.save(next.state, next.slotId)
+            .then(next.resolve)
+            .catch(next.reject);
+        }
+      }
     }
 
     return result;
@@ -264,8 +273,8 @@ export class SaveManager {
    * Lädt den State aus einem Slot.
    */
   static async load(slotId = this._activeSlotId) {
-    if (!this._isRegisteredUser()) {
-      console.log('[SaveManager] Laden übersprungen: Gast-Accounts besitzen keine dauerhaften Speicherstände.');
+    if (this._isGuest()) {
+      logger.info('[SaveManager] Laden übersprungen: Gast-Accounts besitzen keine dauerhaften Speicherstände.');
       return null;
     }
 
@@ -275,6 +284,7 @@ export class SaveManager {
     this._loadLock = true;
     this.setActiveSlot(slotId);
 
+    let state = null;
     try {
       const db = await this._getDB();
       const slotKey = this._getSlotKey(slotId);
@@ -287,56 +297,49 @@ export class SaveManager {
         req.onerror = () => reject(req.error);
       });
 
+      if (storedData) {
+        if (storedData._checksum) {
+          const expectedChecksum = storedData._checksum;
+          delete storedData._checksum;
 
-      if (!storedData) {
-        this._loadQueue = [];
-        return null;
-      }
-
-      if (storedData._checksum) {
-        const expectedChecksum = storedData._checksum;
-        delete storedData._checksum;
-
-        let valid = false;
-        if (this._workerManager && this._workerManager.isAvailable()) {
-          try {
-            const calculated = await this._workerManager.execute('checksum:calculate', storedData);
-            valid = calculated === expectedChecksum;
-          } catch (e) {
+          let valid = false;
+          if (this._workerManager && this._workerManager.isAvailable()) {
+            try {
+              const calculated = await this._workerManager.execute('checksum:calculate', storedData);
+              valid = calculated === expectedChecksum;
+            } catch (e) {
+              valid = Checksum.calculate(storedData) === expectedChecksum;
+            }
+          } else {
             valid = Checksum.calculate(storedData) === expectedChecksum;
           }
-        } else {
-          valid = Checksum.calculate(storedData) === expectedChecksum;
+
+          if (!valid && this._services?.eventBus) {
+            this._services.eventBus.publish('ui:showToast', {
+              message: '⚠️ Spielstand-Checksumme fehlerhaft – wurde trotzdem geladen.',
+              type: 'warning',
+              duration: 5000
+            });
+          }
         }
 
-        if (!valid && this._services?.eventBus) {
-          this._services.eventBus.publish('ui:showToast', {
-            message: '⚠️ Spielstand-Checksumme fehlerhaft – wurde trotzdem geladen.',
-            type: 'warning',
-            duration: 5000
-          });
+        if (storedData.rngSeed !== undefined) {
+          RNG.setSeed(storedData.rngSeed);
         }
+
+        state = storedData.state || null;
       }
-
-      if (storedData.rngSeed !== undefined) {
-        RNG.setSeed(storedData.rngSeed);
-      }
-
-      const state = storedData.state || null;
-
+    } catch (error) {
+      logger.error('[SaveManager] Load fehlgeschlagen:', error);
+      state = null;
+    } finally {
+      this._loadLock = false;
       const queue = [...this._loadQueue];
       this._loadQueue = [];
       for (const resolve of queue) resolve(state);
-
-      return state;
-
-    } catch (error) {
-      console.error('[SaveManager] Load fehlgeschlagen:', error);
-      this._loadQueue = [];
-      return null;
-    } finally {
-      this._loadLock = false;
     }
+
+    return state;
   }
 
   /**
@@ -385,13 +388,6 @@ export class SaveManager {
         req.onerror = () => resolve(false);
       });
 
-      if (slotId === 1) {
-        try {
-          const tx2 = db.transaction(STORE_NAME, 'readwrite');
-          tx2.objectStore(STORE_NAME).delete(SAVE_KEY);
-        } catch (e) {}
-      }
-
       return true;
     } catch {
       return false;
@@ -422,35 +418,32 @@ export class SaveManager {
       await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.put({ timestamp: Date.now(), data: vaultData }, vaultKey);
+        const req = store.put({ key: vaultKey, timestamp: Date.now(), vaultData: vaultData });
         req.onsuccess = () => resolve(true);
         req.onerror = () => reject(req.error);
       });
       return true;
     } catch (e) {
-      console.error('[SaveManager] Fehler beim Speichern des Account-Lagers:', e);
-      return false;
+      logger.error('[SaveManager] Fehler beim Speichern des Account-Lagers:', e);
     }
   }
 
-  static async loadAccountVault(userId = null) {
-    if (!this._isRegisteredUser(userId)) {
-      return null;
-    }
-
+  /**
+   * Lädt die geteilten Account-Vault Daten aus der IndexedDB.
+   */
+  static async loadAccountVault() {
     try {
       const db = await this._getDB();
-      const vaultKey = this._getVaultKey(userId);
-      const res = await new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.get(vaultKey);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => resolve(null);
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+
+      return new Promise((resolve) => {
+        const request = store.get('account_vault');
+        request.onsuccess = () => resolve(request.result ? request.result.vaultData : null);
+        request.onerror = () => resolve(null);
       });
-      return res ? res.data : null;
     } catch (e) {
-      console.error('[SaveManager] Fehler beim Laden des Account-Lagers:', e);
+      logger.error('[SaveManager] Fehler beim Laden des Account-Lagers:', e);
       return null;
     }
   }

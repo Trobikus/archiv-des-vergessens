@@ -7,6 +7,8 @@
  * ============================================================
  */
 
+import { logger } from '../../logger.js';
+
 /**
  * Erstellt eine Performance-Middleware.
  * @param {number} [thresholdMs=50] - Schwellwert in Millisekunden
@@ -22,7 +24,7 @@ export function performanceMiddleware(thresholdMs = 50) {
     onAfter(state, { name }) {
       const duration = performance.now() - startTime;
       if (duration > thresholdMs) {
-        console.warn(
+        logger.warn(
           `[Performance] Aktion "${name}" dauerte ${duration.toFixed(1)}ms (Threshold: ${thresholdMs}ms)`
         );
       }

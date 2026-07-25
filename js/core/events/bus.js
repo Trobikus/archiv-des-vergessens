@@ -1,6 +1,4 @@
-// ============================================================
-// FILE: core/EventBus.js – Enhanced EventBus (mit Prioritäten)
-// ============================================================
+import { logger } from '../logger.js';
 
 export default class EventBus {
     constructor() {
@@ -97,7 +95,7 @@ export default class EventBus {
                 try {
                     sub.callback(data);
                 } catch (error) {
-                    console.error(`[EventBus] Fehler in Subscriber ${sub.id} für '${event}':`, error);
+                    logger.error(`[EventBus] Fehler in Subscriber ${sub.id} für '${event}':`, error);
                 }
             }
         }
@@ -108,7 +106,7 @@ export default class EventBus {
                 try {
                     sub.callback(event, data);
                 } catch (error) {
-                    console.error(`[EventBus] Fehler in globalem Subscriber ${sub.id}:`, error);
+                    logger.error(`[EventBus] Fehler in globalem Subscriber ${sub.id}:`, error);
                 }
             }
         }
@@ -135,7 +133,7 @@ export default class EventBus {
                 try {
                     sub.callback(data);
                 } catch (error) {
-                    console.error(`[EventBus] Fehler in Subscriber ${sub.id} für '${event}':`, error);
+                    logger.error(`[EventBus] Fehler in Subscriber ${sub.id} für '${event}':`, error);
                 }
             }
         }

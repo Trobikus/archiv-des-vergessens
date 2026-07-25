@@ -13,6 +13,7 @@
 
 import { EVENTS } from '../events/definitions.js';
 import { CONFIG } from '../../data/config.js';
+import { logger } from '../logger.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 /** @typedef {import('../state/manager.js').default} StateManager */
@@ -82,7 +83,7 @@ export class GameLoop {
     if (delta > this._maxDelta) {
       delta = this._maxDelta;
       if (!this._speedWarned) {
-        console.warn('[GameLoop] Speed-Hack erkannt – Delta gekappt');
+        logger.warn('[GameLoop] Speed-Hack erkannt – Delta gekappt');
         this._speedWarned = true;
         setTimeout(() => { this._speedWarned = false; }, 10000);
       }

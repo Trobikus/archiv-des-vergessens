@@ -10,6 +10,8 @@
  * ============================================================
  */
 
+import { logger } from '../logger.js';
+
 export class DIContainer {
   constructor() {
     this._factories = new Map();  // key → factory function
@@ -24,7 +26,7 @@ export class DIContainer {
    */
   register(key, factory) {
     if (this._factories.has(key)) {
-      console.warn(`[DI] Dienst "${key}" wird überschrieben.`);
+      logger.warn(`[DI] Dienst "${key}" wird überschrieben.`);
     }
     this._factories.set(key, factory);
     return this;

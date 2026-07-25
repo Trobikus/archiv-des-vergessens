@@ -11,6 +11,8 @@
  * ============================================================
  */
 
+import { logger } from '../logger.js';
+
 export class NetworkService {
   /**
    * @param {import('../state/manager.js').StateManager} stateManager
@@ -132,7 +134,7 @@ export class NetworkService {
     this._clearConnectTimeout();
 
     if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
-      console.log(`[Network] Verbinde mit Multiplayer-Server unter ${this._serverUrl}...`);
+      logger.info(`[Network] Verbinde mit Multiplayer-Server unter ${this._serverUrl}...`);
     }
 
     try {
@@ -146,7 +148,7 @@ export class NetworkService {
     this._connectTimeout = setTimeout(() => {
       if (this._ws && this._ws.readyState !== WebSocket.OPEN) {
         if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
-          console.warn('[Network] Verbindungsaufbau fehlgeschlagen (Timeout). Starte Reconnect...');
+          logger.warn('[Network] Verbindungsaufbau fehlgeschlagen (Timeout). Starte Reconnect...');
         }
         try { this._ws.close(); } catch {}
         this._ws = null;
@@ -159,7 +161,7 @@ export class NetworkService {
       this._clearConnectTimeout();
       this._connected = true;
       this._reconnectAttempts = 0;
-      console.log('[Network] Verbindung hergestellt! Starte Handshake...');
+      logger.info('[Network] Verbindung hergestellt! Starte Handshake...');
       this._startReconnectTimer();
       this._authenticate();
       this._eventBus.publish('network:connected', { url: this._serverUrl });
@@ -173,7 +175,7 @@ export class NetworkService {
       this._clearConnectTimeout();
       if (this._connected) {
         this._connected = false;
-        console.log('[Network] Verbindung zum Server verloren.');
+        logger.info('[Network] Verbindung zum Server verloren.');
         this._eventBus.publish('network:disconnected', {});
       }
       this._triggerReconnect();
@@ -181,9 +183,9 @@ export class NetworkService {
 
     this._ws.onerror = (err) => {
       this._clearConnectTimeout();
-      if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
-        console.warn('[Network] Multiplayer-Server offline oder nicht erreichbar.');
-      }
+        if (this._reconnectAttempts === 1) {
+          logger.warn('[Network] Multiplayer-Server offline oder nicht erreichbar.');
+        }
     };
   }
 
@@ -223,7 +225,7 @@ export class NetworkService {
       this._ws.send(JSON.stringify({ type, payload }));
       return true;
     } catch (err) {
-      console.error('[Network] Fehler beim Senden:', err);
+      logger.error('[Network] Fehler beim Senden:', err);
       return false;
     }
   }
@@ -238,12 +240,12 @@ export class NetworkService {
       switch (type) {
         // --- AUTH RESPONSES ---
         case 'auth:success':
-          console.log(`[Network] Handshake erfolgreich! Registriert als '${payload.username}'`);
+          logger.info(`[Network] Handshake erfolgreich! Registriert als '${payload.username}'`);
           this._eventBus.publish('network:auth:success', payload);
           break;
 
         case 'auth:error':
-          console.error('[Network] Handshake fehlgeschlagen:', payload.message);
+          logger.error('[Network] Handshake fehlgeschlagen:', payload.message);
           this._eventBus.publish('ui:showToast', { message: `⚠️ Server-Auth: ${payload.message}`, type: 'error' });
           break;
 
@@ -331,10 +333,10 @@ export class NetworkService {
           break;
 
         default:
-          console.warn(`[Network] Unbekannter Server-Pakettyp: ${type}`);
+          logger.warn(`[Network] Unbekannter Server-Pakettyp: ${type}`);
       }
     } catch (err) {
-      console.error('[Network] Fehler beim Parsen der Server-Nachricht:', err);
+      logger.error('[Network] Fehler beim Parsen der Server-Nachricht:', err);
     }
   }
 
@@ -352,7 +354,7 @@ export class NetworkService {
     );
 
     if (this._reconnectAttempts <= this._maxConsecutiveLogs) {
-      console.log(`[Network] Offline - Naechster Verbindungsversuch in ${Math.round(nextInterval / 1000)}s...`);
+      logger.info(`[Network] Offline - Naechster Verbindungsversuch in ${Math.round(nextInterval / 1000)}s...`);
     }
 
     this._reconnectTimer = setTimeout(() => {

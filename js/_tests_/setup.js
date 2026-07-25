@@ -54,7 +54,10 @@ if (!globalThis.indexedDB) {
                   put(value, key) {
                     const req = { onsuccess: null, onerror: null };
                     setTimeout(() => {
-                      globalThis.__indexedDB_store[key] = JSON.parse(JSON.stringify(value));
+                      const actualKey = key !== undefined ? key : (value && (value.key || value.id));
+                      if (actualKey !== undefined) {
+                        globalThis.__indexedDB_store[actualKey] = JSON.parse(JSON.stringify(value));
+                      }
                       if (req.onsuccess) req.onsuccess({ target: req });
                     }, 0);
                     return req;

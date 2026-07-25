@@ -1,5 +1,6 @@
 import { h, html, useState, useEffect, useCallback } from '../setup.js';
 import { AccountBadge } from '../account/AccountBadge.js';
+import { logger } from '../../../core/logger.js';
 
 export function CharacterSelectView({ eventBus, services }) {
   const { saveManager, authService, i18nService } = services || {};
@@ -31,7 +32,7 @@ export function CharacterSelectView({ eventBus, services }) {
       const list = await saveManager.listSlots(userId);
       setSlots(list);
     } catch (e) {
-      console.error('[CharacterSelect] Fehler beim Laden der Slots:', e);
+      logger.error('[CharacterSelect] Fehler beim Laden der Slots:', e);
     } finally {
       setLoading(false);
     }

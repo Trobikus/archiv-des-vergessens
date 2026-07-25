@@ -1,6 +1,6 @@
 [package]
 name = "archiv-des-vergessens"
-version = "1.0.31"
+version = "1.0.32"
 description = "Archiv des Vergessens – Ein episches Idle-RPG über Erinnerung, Vergessen und die Macht der Mneme."
 authors = ["Grimoire Interactive"]
 edition = "2021"
@@ -12,10 +12,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "archiv-des-vergessens"
 path = "src/main.rs"
-
-[[test]]
-name = "auth_tests"
-path = "tests/integration/auth_tests.rs"
 
 [[test]]
 name = "db_tests"
@@ -41,16 +37,10 @@ tauri-plugin-updater = "2.3.1"
 tauri-plugin-opener = "2.2.6"
 tokio = { version = "1.38", features = ["full"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
-pbkdf2 = { version = "0.12", features = ["simple"] }
-sha2 = "0.10"
 thiserror = "1.0"
 rand = "0.8"
 tempfile = "3.10"
 toml = "0.8"
-aes-gcm = "0.10"
-argon2 = "0.5"
-jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_crypto"] }
-base64 = "0.22"
 
 [dev-dependencies]
 mockall = "0.13"

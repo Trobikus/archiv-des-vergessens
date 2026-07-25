@@ -24,7 +24,6 @@ import RelicHuntService from '../services/relic-hunt-service.js';
 import DailyRewardService from '../services/daily-reward-service.js';
 import LeaderboardService from '../services/leaderboard-service.js';
 import StoryBranchService from '../services/story-branch-service.js';
-import SkillTreeService from '../services/skilltree-service.js';
 import ChallengeService from '../services/challenge-service.js';
 import LibraryService from '../services/library-service.js';
 import TutorialService from '../services/tutorial-service.js';
@@ -82,7 +81,6 @@ export function registerServices(container) {
   container.register('dailyRewardService', (c) => new DailyRewardService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
   container.register('leaderboardService', (c) => new LeaderboardService(c.get('stateManager'), c.get('eventBus'), c.get('networkService')));
   container.register('storyBranchService', (c) => new StoryBranchService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
-  container.register('skillTreeService', (c) => new SkillTreeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('talentService', (c) => new TalentService(c.get('stateManager'), c.get('eventBus')));
   container.register('combatAnalyticsService', (c) => new CombatAnalyticsService(c.get('eventBus')));
   container.register('challengeService', (c) => new ChallengeService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
@@ -113,7 +111,6 @@ export function registerServices(container) {
       dailyRewardService: c.get('dailyRewardService'),
       leaderboardService: c.get('leaderboardService'),
       storyBranchService: c.get('storyBranchService'),
-      skillTreeService: c.get('skillTreeService'),
       challengeService: c.get('challengeService'),
       libraryService: c.get('libraryService'),
       idleService: c.get('idleService'),

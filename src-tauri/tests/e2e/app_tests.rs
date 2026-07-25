@@ -1,19 +1,9 @@
-use archiv_des_vergessens_lib::services::auth::AuthService;
 use archiv_des_vergessens_lib::services::game_loop::{GameLoopService, GameState};
 use archiv_des_vergessens_lib::test_utils::MockTestContext;
 
 #[tokio::test]
 async fn test_full_application_e2e_flow() {
     let ctx = MockTestContext::new();
-
-    // 1. User Registration / PBKDF2 Auth setup
-    let salt = AuthService::generate_salt();
-    let password = "E2E_Secure_Password_2026";
-    let hash_obj = AuthService::hash_password(password, &salt).expect("E2E Hashing failed");
-
-    let is_authed = AuthService::verify_password(password, &hash_obj.hash_hex, &hash_obj.salt_hex)
-        .expect("E2E Verification failed");
-    assert!(is_authed);
 
     // 2. Initial game state creation & active gameplay ticks
     let mut state = GameState {

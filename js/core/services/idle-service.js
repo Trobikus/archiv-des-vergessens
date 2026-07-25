@@ -20,6 +20,7 @@ import * as Actions from '../state/actions.js';
 import { selectGedankenArchiv, selectMnemeFragmenteBigInt, selectTotalMnemeFragmenteBigInt, selectEwigeMneme } from '../state/selectors.js';
 import { sanitizeNumber } from '../../utils/sanitizer.js';
 import { EVENTS } from '../events/definitions.js';
+import { CONFIG } from '../../data/config.js';
 import {
   calculateBuildingCost,
   calculateBulkBuildingCost,
@@ -79,7 +80,7 @@ export class IdleService {
     return calculateYieldPerSecond(baseYield, level, upgradeBonusesSum, prestigeMultiplier);
   }
 
-  static calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds = 43200) {
+  static calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds = CONFIG.SYSTEM.MAX_OFFLINE_MS / 1000) {
     return calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds);
   }
 

@@ -224,14 +224,20 @@ async function initStorage() {
         player TEXT,
         message TEXT,
         timestamp INTEGER,
-        type TEXT
+        type TEXT,
+        guildId TEXT
       )
     `).run();
 
-    db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_type_timestamp ON chats(type, timestamp DESC)`).run();
+    try {
+      db.prepare(`ALTER TABLE chats ADD COLUMN guildId TEXT`).run();
+    } catch (_) {}
 
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_type_timestamp ON chats(type, timestamp DESC)`).run();
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_guild_timestamp ON chats(type, guildId, timestamp DESC)`).run();
 
     console.log('[Storage] SQLite-Datenbank erfolgreich initialisiert.');
+    initPreparedStatements();
 
     // Integritätsprüfung
     if (!verifyDatabaseIntegrity()) {
@@ -502,7 +508,59 @@ function validateEmailFormat(email) {
   return emailRegex.test(email) && email.length >= 6 && email.length <= 254;
 }
 
-function checkUsernameSimilarity(newUsername, db) {
+let stmts = {};
+
+function initPreparedStatements() {
+  if (!db) return;
+  try {
+    stmts = {
+      checkUsername: db.prepare('SELECT id FROM users WHERE LOWER(username) = ? LIMIT 1'),
+      checkEmail: db.prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1'),
+      insertUser: db.prepare('INSERT INTO users (id, username, email, passwordHash, salt, createdAt, lastLogin) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+      getUserByUsername: db.prepare('SELECT * FROM users WHERE LOWER(username) = ?'),
+      getUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
+      updateLastLogin: db.prepare('UPDATE users SET lastLogin = ? WHERE id = ?'),
+      updateSessionToken: db.prepare('UPDATE users SET sessionToken = ? WHERE id = ?'),
+      getSave: db.prepare('SELECT saveData, version, timestamp FROM saves WHERE userId = ?'),
+      upsertSave: db.prepare(`
+        INSERT INTO saves (userId, username, saveData, version, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(userId) DO UPDATE SET
+          username = excluded.username,
+          saveData = excluded.saveData,
+          version = excluded.version,
+          timestamp = excluded.timestamp
+      `),
+      getLeaderboardUser: db.prepare('SELECT prestige, bosses, level FROM leaderboard WHERE userId = ?'),
+      getLeaderboardTop: db.prepare('SELECT username, prestige, bosses, level, timestamp FROM leaderboard ORDER BY prestige DESC, bosses DESC, level DESC LIMIT ?'),
+      upsertLeaderboard: db.prepare(`
+        INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(userId) DO UPDATE SET
+          username = excluded.username,
+          prestige = MAX(leaderboard.prestige, excluded.prestige),
+          bosses = MAX(leaderboard.bosses, excluded.bosses),
+          level = MAX(leaderboard.level, excluded.level),
+          timestamp = CASE 
+            WHEN excluded.prestige > leaderboard.prestige 
+                 OR excluded.bosses > leaderboard.bosses 
+                 OR excluded.level > leaderboard.level 
+            THEN excluded.timestamp 
+            ELSE leaderboard.timestamp 
+          END
+      `),
+      insertChat: db.prepare('INSERT INTO chats (id, player, message, timestamp, type, guildId) VALUES (?, ?, ?, ?, ?, ?)'),
+      getGlobalChatHistory: db.prepare('SELECT id, player, message, timestamp, type FROM chats WHERE type = "global" ORDER BY timestamp DESC LIMIT ?'),
+      getGuildChatHistory: db.prepare('SELECT id, player, message, timestamp, type, guildId FROM chats WHERE type = "guild" AND guildId = ? ORDER BY timestamp DESC LIMIT ?'),
+      pruneChats: db.prepare('DELETE FROM chats WHERE id NOT IN (SELECT id FROM chats ORDER BY timestamp DESC LIMIT ?)')
+    };
+    console.log('[Storage] Prepared Statements erfolgreich kompiliert.');
+  } catch (err) {
+    console.error('[Storage] Fehler beim Erstellen der Prepared Statements:', err);
+  }
+}
+
+function checkUsernameSimilarity(newUsername, database) {
   const normalized = newUsername.toLowerCase();
   
   // Blacklist-Check
@@ -510,8 +568,8 @@ function checkUsernameSimilarity(newUsername, db) {
     return { isDuplicate: true, reason: 'auth.error.username_blacklisted' };
   }
   
-  // O(1) statt O(n) durch direkte Datenbankabfrage
-  const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? LIMIT 1').get(normalized);
+  // O(1) Wiederverwendung vorbereitetes Statement
+  const existingUser = stmts.checkUsername ? stmts.checkUsername.get(normalized) : (database || db).prepare('SELECT id FROM users WHERE LOWER(username) = ? LIMIT 1').get(normalized);
   
   if (existingUser) {
     return { isDuplicate: true, reason: 'auth.error.username_taken' };
@@ -522,6 +580,7 @@ function checkUsernameSimilarity(newUsername, db) {
 
 // Rate Limiting Map (IP -> {count, resetTime})
 const rateLimitMap = new Map();
+const MAX_RATE_LIMIT_ENTRIES = 10000;
 
 // Verhindert Memory-Leak: Alle 15 Minuten veraltete Einträge löschen
 setInterval(() => {
@@ -540,6 +599,11 @@ function checkRateLimit(ip) {
   let record = rateLimitMap.get(ip);
   
   if (!record || now > record.resetTime) {
+    if (!record && rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES) {
+      // Evict oldest entry to prevent memory growth under flood
+      const oldestKey = rateLimitMap.keys().next().value;
+      if (oldestKey) rateLimitMap.delete(oldestKey);
+    }
     record = { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
     rateLimitMap.set(ip, record);
   }
@@ -1027,10 +1091,14 @@ wss.on('connection', (ws, req) => {
           };
 
           try {
-            db.prepare(`
-              INSERT INTO chats (id, player, message, timestamp, type, guildId)
-              VALUES (?, ?, ?, ?, 'global', NULL)
-            `).run(msg.id, msg.player, msg.message, msg.timestamp);
+            if (stmts.insertChat) {
+              stmts.insertChat.run(msg.id, msg.player, msg.message, msg.timestamp, 'global', null);
+            } else {
+              db.prepare(`
+                INSERT INTO chats (id, player, message, timestamp, type, guildId)
+                VALUES (?, ?, ?, ?, 'global', NULL)
+              `).run(msg.id, msg.player, msg.message, msg.timestamp);
+            }
             pruneChatHistory(500);
           } catch (err) {
             console.error('[Chat] Fehler beim Speichern der globalen Nachricht:', err);
@@ -1038,6 +1106,64 @@ wss.on('connection', (ws, req) => {
 
           console.log(`[Chat:Global] ${clientInfo.username}: ${text}`);
           broadcast('chat:globalMessage', msg);
+          break;
+        }
+
+        case 'chat:guild': {
+          if (!clientInfo.userId) return;
+          const rawGuildId = typeof payload?.guildId === 'string' ? payload.guildId : '';
+          const cleanGuildId = sanitize(rawGuildId, 64);
+          if (!cleanGuildId) return;
+
+          const rawText = typeof payload?.message === 'string' ? payload.message : '';
+          const text = sanitize(rawText, 200);
+          if (!text) return;
+
+          const msg = {
+            id: Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
+            player: clientInfo.username,
+            message: text,
+            timestamp: Date.now(),
+            type: 'guild',
+            guildId: cleanGuildId
+          };
+
+          try {
+            if (stmts.insertChat) {
+              stmts.insertChat.run(msg.id, msg.player, msg.message, msg.timestamp, 'guild', msg.guildId);
+            } else {
+              db.prepare(`
+                INSERT INTO chats (id, player, message, timestamp, type, guildId)
+                VALUES (?, ?, ?, ?, 'guild', ?)
+              `).run(msg.id, msg.player, msg.message, msg.timestamp, msg.guildId);
+            }
+            pruneChatHistory(500);
+          } catch (err) {
+            console.error('[Chat] Fehler beim Speichern der Gilden-Nachricht:', err);
+          }
+
+          console.log(`[Chat:Guild:${cleanGuildId}] ${clientInfo.username}: ${text}`);
+          broadcast('chat:guildMessage', msg);
+          break;
+        }
+
+        case 'chat:getHistory': {
+          try {
+            const rawGuildId = typeof payload?.guildId === 'string' ? payload.guildId : null;
+            const guildId = rawGuildId ? sanitize(rawGuildId, 64) : null;
+            let rows;
+            if (guildId && stmts.getGuildChatHistory) {
+              rows = stmts.getGuildChatHistory.all(guildId, 50);
+            } else if (stmts.getGlobalChatHistory) {
+              rows = stmts.getGlobalChatHistory.all(50);
+            } else {
+              rows = db.prepare('SELECT id, player, message, timestamp, type FROM chats WHERE type = "global" ORDER BY timestamp DESC LIMIT 50').all();
+            }
+            send(ws, 'chat:history', rows.reverse());
+          } catch (err) {
+            console.error('[Chat] Fehler beim Laden des Chat-Verlaufs:', err);
+            send(ws, 'chat:history', []);
+          }
           break;
         }
 
@@ -1055,23 +1181,26 @@ wss.on('connection', (ws, req) => {
               : JSON.stringify(payload.saveData);
             const version = payload.version || '1.6';
 
-            // [Sicherheit] Payload Limit für Spielstände
-            if (saveDataStr.length > 300_000) {
+            // [Sicherheit] Payload Limit für Spielstände (250 KB)
+            if (saveDataStr.length > 250_000) {
               send(ws, 'cloud:save:error', { error: 'Speicherstand zu groß.' });
               return;
             }
 
-            const stmt = db.prepare(`
-              INSERT INTO saves (userId, username, saveData, version, timestamp)
-              VALUES (?, ?, ?, ?, ?)
-              ON CONFLICT(userId) DO UPDATE SET
-                username = excluded.username,
-                saveData = excluded.saveData,
-                version = excluded.version,
-                timestamp = excluded.timestamp
-            `);
+            if (stmts.upsertSave) {
+              stmts.upsertSave.run(clientInfo.userId, clientInfo.username, saveDataStr, version, timestamp);
+            } else {
+              db.prepare(`
+                INSERT INTO saves (userId, username, saveData, version, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(userId) DO UPDATE SET
+                  username = excluded.username,
+                  saveData = excluded.saveData,
+                  version = excluded.version,
+                  timestamp = excluded.timestamp
+              `).run(clientInfo.userId, clientInfo.username, saveDataStr, version, timestamp);
+            }
 
-            stmt.run(clientInfo.userId, clientInfo.username, saveDataStr, version, timestamp);
             console.log(`[CloudSave] Spielstand für ${clientInfo.username} in SQLite gespeichert.`);
             send(ws, 'cloud:save:success', { timestamp });
           } catch (err) {
@@ -1088,7 +1217,7 @@ wss.on('connection', (ws, req) => {
           }
 
           try {
-            const row = db.prepare('SELECT saveData, version, timestamp FROM saves WHERE userId = ?').get(clientInfo.userId);
+            const row = stmts.getSave ? stmts.getSave.get(clientInfo.userId) : db.prepare('SELECT saveData, version, timestamp FROM saves WHERE userId = ?').get(clientInfo.userId);
             
             if (row) {
               const fileData = {
@@ -1114,7 +1243,6 @@ wss.on('connection', (ws, req) => {
           if (!clientInfo.userId) return;
 
           try {
-            // Plausibilitätsgrenzen definieren (anpassen je nach Game-Design)
             const MAX_PRESTIGE = 99999; 
             const MAX_BOSSES = 999999;
             const MAX_LEVEL = 100000;
@@ -1124,31 +1252,44 @@ wss.on('connection', (ws, req) => {
             const level = Math.min(MAX_LEVEL, Math.max(1, parseInt(payload.level) || 1));
             const timestamp = Date.now();
 
-            // [Sicherheit] Leaderboard-Validierung auf plausible Prestige-Werte
-            const existing = db.prepare('SELECT prestige FROM leaderboard WHERE userId = ?').get(clientInfo.userId);
-            if (existing && prestige > existing.prestige + 50) {
-              console.warn(`[Security] Plausibilitätsprüfung fehlgeschlagen für Benutzer ${clientInfo.userId}: Prestige ${prestige} > ${existing.prestige} + 50`);
-              return; // Anfrage still verwerfen
+            // [Sicherheit] Leaderboard-Validierung auf plausible Werte & Sprünge
+            const existing = stmts.getLeaderboardUser ? stmts.getLeaderboardUser.get(clientInfo.userId) : db.prepare('SELECT prestige, bosses, level FROM leaderboard WHERE userId = ?').get(clientInfo.userId);
+            if (existing) {
+              if (prestige > existing.prestige + 50 || bosses > existing.bosses + 200 || level > existing.level + 1000) {
+                console.warn(`[Security] Plausibilitätsprüfung fehlgeschlagen für Benutzer ${clientInfo.userId}: Prestige ${prestige} (vorher ${existing.prestige}), Bosses ${bosses} (vorher ${existing.bosses}), Level ${level} (vorher ${existing.level})`);
+                return;
+              }
+            } else {
+              if (prestige > 50 || bosses > 200 || level > 1000) {
+                const saveRow = stmts.getSave ? stmts.getSave.get(clientInfo.userId) : db.prepare('SELECT saveData FROM saves WHERE userId = ?').get(clientInfo.userId);
+                if (!saveRow) {
+                  console.warn(`[Security] Erstübertragung ohne Speicherstand verweigert für Benutzer ${clientInfo.userId}`);
+                  return;
+                }
+              }
             }
 
-            const stmt = db.prepare(`
-              INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
-              VALUES (?, ?, ?, ?, ?, ?)
-              ON CONFLICT(userId) DO UPDATE SET
-                username = excluded.username,
-                prestige = MAX(leaderboard.prestige, excluded.prestige),
-                bosses = MAX(leaderboard.bosses, excluded.bosses),
-                level = MAX(leaderboard.level, excluded.level),
-                timestamp = CASE 
-                  WHEN excluded.prestige > leaderboard.prestige 
-                       OR excluded.bosses > leaderboard.bosses 
-                       OR excluded.level > leaderboard.level 
-                  THEN excluded.timestamp 
-                  ELSE leaderboard.timestamp 
-                END
-            `);
+            if (stmts.upsertLeaderboard) {
+              stmts.upsertLeaderboard.run(clientInfo.userId, clientInfo.username, prestige, bosses, level, timestamp);
+            } else {
+              db.prepare(`
+                INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(userId) DO UPDATE SET
+                  username = excluded.username,
+                  prestige = MAX(leaderboard.prestige, excluded.prestige),
+                  bosses = MAX(leaderboard.bosses, excluded.bosses),
+                  level = MAX(leaderboard.level, excluded.level),
+                  timestamp = CASE 
+                    WHEN excluded.prestige > leaderboard.prestige 
+                         OR excluded.bosses > leaderboard.bosses 
+                         OR excluded.level > leaderboard.level 
+                    THEN excluded.timestamp 
+                    ELSE leaderboard.timestamp 
+                  END
+              `).run(clientInfo.userId, clientInfo.username, prestige, bosses, level, timestamp);
+            }
 
-            stmt.run(clientInfo.userId, clientInfo.username, prestige, bosses, level, timestamp);
             console.log(`[Leaderboard] Highscore in SQLite aktualisiert für ${clientInfo.username}`);
             
             broadcast('leaderboard:update', getTop10());

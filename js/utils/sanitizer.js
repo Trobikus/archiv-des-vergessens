@@ -15,9 +15,10 @@ export function clamp(value, min, max) {
  * Sanitisiert einen Number-Wert.
  */
 export function sanitizeNumber(value, fallback = 0) {
-  if (value === null || value === undefined) return fallback;
+  const safeFallback = Number.isFinite(Number(fallback)) ? Number(fallback) : 0;
+  if (value === null || value === undefined || typeof value === 'boolean') return safeFallback;
   const num = Number(value);
-  return Number.isFinite(num) ? num : fallback;
+  return Number.isFinite(num) ? num : safeFallback;
 }
 
 /**

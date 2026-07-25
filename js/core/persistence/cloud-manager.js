@@ -14,6 +14,7 @@
 import { sanitizeString, sanitizeNumber } from '../../utils/sanitizer.js';
 import { SaveManager } from './save-manager.js';
 import { APP_VERSION } from '../../utils/version.js';
+import { logger } from '../logger.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -130,7 +131,7 @@ export class CloudManager {
           data = await SaveManager.load();
           if (!data) data = { timestamp: Date.now(), version: APP_VERSION };
         } catch (e) {
-          console.warn('[CloudManager] SaveManager nicht verfügbar, verwende leeres Objekt:', e);
+          logger.warn('[CloudManager] SaveManager nicht verfügbar, verwende leeres Objekt:', e);
           data = { timestamp: Date.now(), version: APP_VERSION };
         }
       }
@@ -153,7 +154,7 @@ export class CloudManager {
           // Timeout nach 4s
           this._saveTimeout = setTimeout(() => {
             if (this._pendingSaveResolve === resolve) {
-              console.warn('[CloudManager] Cloud-Sichern Zeitüberschreitung, nutze lokales Backup.');
+              logger.warn('[CloudManager] Cloud-Sichern Zeitüberschreitung, nutze lokales Backup.');
               this._pendingSaveResolve = null;
               this._lastSync = Date.now();
               this._isSynced = true;
@@ -179,7 +180,7 @@ export class CloudManager {
 
       return true;
     } catch (error) {
-      console.error('[CloudManager] Sync fehlgeschlagen:', error);
+      logger.error('[CloudManager] Sync fehlgeschlagen:', error);
       this._eventBus.publish('cloud:syncFailed', { error: error.message });
       return false;
     }
@@ -194,7 +195,7 @@ export class CloudManager {
         // Timeout nach 4s
         this._loadTimeout = setTimeout(() => {
           if (this._pendingLoadResolve === resolve) {
-            console.warn('[CloudManager] Cloud-Laden Zeitüberschreitung, lade lokales Backup.');
+            logger.warn('[CloudManager] Cloud-Laden Zeitüberschreitung, lade lokales Backup.');
             this._pendingLoadResolve = null;
             resolve(this._loadFromLocal());
           }
@@ -214,7 +215,7 @@ export class CloudManager {
       const cloudData = JSON.parse(raw);
       return cloudData.saveData || null;
     } catch (error) {
-      console.error('[CloudManager] Laden aus lokalem Backup fehlgeschlagen:', error);
+      logger.error('[CloudManager] Laden aus lokalem Backup fehlgeschlagen:', error);
       return null;
     }
   }
@@ -295,7 +296,7 @@ export class CloudManager {
     if (this._saveTimeout) clearTimeout(this._saveTimeout);
     this._lastSync = timestamp || Date.now();
     this._isSynced = true;
-    console.log('[CloudManager] Spielstand erfolgreich online gesichert!');
+    logger.info('[CloudManager] Spielstand erfolgreich online gesichert!');
     
     this._eventBus.publish('cloud:synced', {
       timestamp: this._lastSync,
@@ -311,7 +312,7 @@ export class CloudManager {
 
   onCloudSaveError(error) {
     if (this._saveTimeout) clearTimeout(this._saveTimeout);
-    console.error('[CloudManager] Online-Sichern fehlgeschlagen:', error);
+    logger.error('[CloudManager] Online-Sichern fehlgeschlagen:', error);
     this._eventBus.publish('cloud:syncFailed', { error });
 
     if (this._pendingSaveResolve) {
@@ -323,7 +324,7 @@ export class CloudManager {
 
   onCloudLoadSuccess(payload) {
     if (this._loadTimeout) clearTimeout(this._loadTimeout);
-    console.log('[CloudManager] Spielstand erfolgreich online geladen!');
+    logger.info('[CloudManager] Spielstand erfolgreich online geladen!');
 
     if (payload && payload.saveData) {
       const cloudData = {
@@ -349,7 +350,7 @@ export class CloudManager {
 
   onCloudLoadError(error) {
     if (this._loadTimeout) clearTimeout(this._loadTimeout);
-    console.error('[CloudManager] Online-Laden fehlgeschlagen:', error);
+    logger.error('[CloudManager] Online-Laden fehlgeschlagen:', error);
 
     if (this._pendingLoadResolve) {
       const resolve = this._pendingLoadResolve;

@@ -145,7 +145,11 @@
 
     // --- Launcher Control ---
     launchGame: () => {
-      invoke('launch_game');
+      if (invoke) {
+        invoke('launch_installed_game').catch((err) => {
+          console.warn('[Tauri Bridge] launch_installed_game Command nicht verfügbar:', err);
+        });
+      }
     },
 
     showMainWindow: () => {
@@ -256,14 +260,11 @@
 
       img.src = bgUrl;
     } else {
-      // Fallback if launcher container is not found
+      // Main game window or context (no launcher container)
       if (invoke) {
-        invoke('show_launcher')
-          .then(() => console.log('[Tauri Bridge] show_launcher command erfolgreich.'))
-          .catch((err) => {
-            console.warn('[Tauri Bridge] show_launcher Command in diesem Kontext nicht verfügbar:', err);
-            if (currentWindow) currentWindow.show();
-          });
+        invoke('show_main_window').catch(() => {
+          if (currentWindow) currentWindow.show();
+        });
       } else if (currentWindow) {
         currentWindow.show();
       }

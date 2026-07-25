@@ -13,6 +13,7 @@
 
 import StateManager from '../state/manager.js';
 import { STORY_BRANCHES, getStoryNode, isEndingNode } from '../../data/story_branches.js';
+import { logger } from '../logger.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -197,7 +198,7 @@ export class StoryBranchService {
         this._eventBus.publish('story:actionTradeParticles', {});
         break;
       default:
-        console.log('[StoryBranch] Unbekannte Aktion:', action);
+        logger.warn('[StoryBranch] Unbekannte Aktion:', action);
     }
   }
 

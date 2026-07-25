@@ -7,6 +7,7 @@
 import { h, html, useStateSelector, useEventBus, useState } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
 import { getNPC, getDialog } from '../../../data/dialogs.js';
+import { logger } from '../../../core/logger.js';
 
 export function DialogUI({ stateManager, eventBus, services }) {
   const { storyBranchService, codexService, resourceService, i18nService } = services;
@@ -79,7 +80,7 @@ export function DialogUI({ stateManager, eventBus, services }) {
           }
           break;
         default:
-          console.log('[Dialog] Unbekannte Aktion:', option.action);
+          logger.warn('[Dialog] Unbekannte Aktion:', option.action);
       }
     }
 

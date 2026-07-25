@@ -1,4 +1,5 @@
 import { h, html, useState, useEffect, useCallback } from '../setup.js';
+import { logger } from '../../../core/logger.js';
 
 // Helper-Funktion für benutzerfreundliche Fehlermeldungen
 function getAuthErrorMessage(errorCode, t, additionalData = {}) {
@@ -98,7 +99,7 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
         setErrorMessage(errorMsg);
       }
     } catch (err) {
-      console.error('[Auth] Unerwarteter Fehler:', err);
+      logger.error('[Auth] Unerwarteter Fehler:', err);
       setErrorMessage(t('common.error', 'Ein unerwarteter Fehler ist aufgetreten.'));
     } finally {
       setLoading(false);
@@ -135,7 +136,7 @@ export function AccountModal({ isOpen, onClose, eventBus, services }) {
         setErrorMessage(errorMsg);
       }
     } catch (err) {
-      console.error('[Auth] Unerwarteter Fehler:', err);
+      logger.error('[Auth] Unerwarteter Fehler:', err);
       setErrorMessage(t('common.error', 'Ein unerwarteter Fehler ist aufgetreten.'));
     } finally {
       setLoading(false);

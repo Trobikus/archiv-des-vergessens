@@ -1,6 +1,4 @@
-// ============================================================
-// FILE: js/core/pool.js – DOM-Pool für Floating-Texts
-// ============================================================
+import { logger } from './logger.js';
 
 export default class DOMPool {
     constructor(createFn, initialSize = 20) {
@@ -22,7 +20,7 @@ export default class DOMPool {
 
     get() {
         if (this._destroyed) {
-            console.warn('[DOMPool] Zugriff auf zerstörten Pool');
+            logger.warn('[DOMPool] Zugriff auf zerstörten Pool');
             return this.createFn();
         }
 
