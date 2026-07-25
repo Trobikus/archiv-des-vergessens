@@ -50,7 +50,7 @@ export function MenuView({ eventBus, services }) {
   };
 
   return html`
-    <section id="menu-container" class="center-layout fade-in" role="main" aria-label="Hauptmenü" style="display: flex; position: relative;">
+    <section id="menu-container" class="center-layout fade-in" role="main" aria-label="Hauptmenü" style="display: flex; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;">
       <!-- Account Badge top right -->
       <div style="position: absolute; top: 24px; right: 24px; z-index: 100; pointer-events: auto;">
         <${AccountBadge} eventBus=${eventBus} services=${services} onClick=${handleOpenAccount} />

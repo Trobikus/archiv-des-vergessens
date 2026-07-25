@@ -31,6 +31,7 @@ export class AccountVaultService {
       sharedVault: []
     };
     this._isInitialized = false;
+    this._saveTimer = null;
   }
 
   /**
@@ -179,12 +180,32 @@ export class AccountVaultService {
   }
 
   /**
-   * Speichert den Tresor-Zustand.
+   * Speichert den Tresor-Zustand (debounced um IndexedDB Spam bei schnellen Clicks zu vermeiden).
    */
-  async _save() {
-    const u = this._authService ? this._authService.getCurrentUser() : null;
-    const userId = u && !u.isGuest ? (u.id || u.username) : null;
-    await SaveManager.saveAccountVault(this._vault, userId);
+  async _save(immediate = false) {
+    if (this._saveTimer) {
+      clearTimeout(this._saveTimer);
+      this._saveTimer = null;
+    }
+
+    const doSave = async () => {
+      const u = this._authService ? this._authService.getCurrentUser() : null;
+      const userId = u && !u.isGuest ? (u.id || u.username) : null;
+      await SaveManager.saveAccountVault(this._vault, userId);
+    };
+
+    if (immediate) {
+      await doSave();
+    } else {
+      this._saveTimer = setTimeout(doSave, 300);
+    }
+  }
+
+  /**
+   * Erzwingt ein sofortiges Speichern aller ungespeicherten Tresor-Änderungen.
+   */
+  async flush() {
+    await this._save(true);
   }
 }
 

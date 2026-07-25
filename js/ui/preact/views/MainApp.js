@@ -125,7 +125,7 @@ export function MainApp({ stateManager, eventBus, services }) {
   const renderActiveView = () => {
     switch (currentView) {
       case 'intro':
-        return html`<${IntroView} />`;
+        return html`<${IntroView} eventBus=${eventBus} services=${services} />`;
       case 'login':
         return html`<${LoginView} eventBus=${eventBus} services=${services} />`;
       case 'characterSelect':
@@ -139,7 +139,7 @@ export function MainApp({ stateManager, eventBus, services }) {
       case 'game':
         return html`<${GameView} stateManager=${stateManager} eventBus=${eventBus} services=${services} />`;
       default:
-        return html`<${IntroView} />`;
+        return html`<${IntroView} eventBus=${eventBus} services=${services} />`;
     }
   };
 

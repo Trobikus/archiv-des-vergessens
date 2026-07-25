@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.35] - 2026-07-25
+
+### 🔐 Vault Concurrency & Global Tauri Integration
+- **Account Vault Queueing (`js/core/persistence/save-manager.js`)**:
+  - Implementierung von `_vaultSaveLock` und `_vaultSaveQueue` zur Absicherung paralleler Schreibzugriffe auf das Account-Lager.
+- **BigInt Serialisierungs-Schutz (`js/core/persistence/save-manager.js`)**:
+  - Sicheres Klonen und Konvertieren von BigInt-Werten in `cleanState` vor der IndexedDB-Persistierung.
+- **Global Tauri API Access (`src-tauri/tauri.conf.json`)**:
+  - Re-Aktivierung von `"withGlobalTauri": true` zur Unterstützung direkter globaler `window.__TAURI__`-Zugriffe.
+
+---
+
 ## [1.0.34] - 2026-07-25
 
 ### 🌌 Story System & Visual Polish

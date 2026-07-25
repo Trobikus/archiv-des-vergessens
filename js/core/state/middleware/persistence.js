@@ -40,10 +40,12 @@ export function persistenceMiddleware(saveFunction, debounceMs = 1000, excludeAc
       timeoutId = setTimeout(() => {
         if (pendingSave) {
           try {
-            saveFunction(state);
+            Promise.resolve(saveFunction(state)).catch((e) => {
+              logger.warn('[StateMiddleware] Persistenz Warnung:', e);
+            });
             lastSaveTime = Date.now();
           } catch (e) {
-            logger.error('[StateMiddleware] Persistenz fehlgeschlagen:', e);
+            logger.warn('[StateMiddleware] Persistenz Warnung:', e);
           }
           pendingSave = false;
         }

@@ -153,7 +153,7 @@ export function LoginView({ eventBus, services }) {
   const currentLang = i18nService ? i18nService.getLanguage() : 'de';
 
   return html`
-    <section id="login-container" class="center-layout fade-in" role="main" aria-label="Login-Portal" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; position: relative; width: 100%; z-index: 10; pointer-events: auto;">
+    <section id="login-container" class="center-layout fade-in" role="main" aria-label="Login-Portal" style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: auto;">
       
       <!-- PORTAL DER ERINNERUNGEN: SPEZIELLER HINTERGRUND VFX -->
       <div class="login-bg-portal" aria-hidden="true">

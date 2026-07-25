@@ -160,7 +160,7 @@ export async function bootGame() {
         try {
           await SaveManager.save(state);
         } catch (e) {
-          logger.error('[State] Autosave fehlgeschlagen:', e);
+          logger.warn('[State] Autosave Warnung:', e);
         }
       },
       1500,

@@ -25,6 +25,8 @@ export class SaveManager {
   static _db = null;
   static _saveLock = false;
   static _saveQueue = [];
+  static _vaultSaveLock = false;
+  static _vaultSaveQueue = [];
   static _pendingState = null;
   static _pendingSlotId = null;
   static _loadLock = false;
@@ -210,12 +212,16 @@ export class SaveManager {
         }
       };
 
+      const cleanState = JSON.parse(
+        JSON.stringify(stateToSave, (k, v) => (typeof v === 'bigint' ? v.toString() : v))
+      );
+
       const saveData = {
         key: slotKey,
         timestamp: saveTime,
         version: LATEST_VERSION,
         rngSeed: RNG.getSeed(),
-        state: stateToSave
+        state: cleanState
       };
 
       let checksum;
@@ -252,7 +258,7 @@ export class SaveManager {
       result = true;
 
     } catch (error) {
-      logger.error('[SaveManager] Save fehlgeschlagen:', error);
+      logger.warn('[SaveManager] Save fehlgeschlagen:', error);
       result = false;
     } finally {
       this._saveLock = false;
@@ -408,23 +414,45 @@ export class SaveManager {
   }
 
   static async saveAccountVault(vaultData, userId = null) {
+    if (this._isGuest()) {
+      return false;
+    }
+
     if (!this._isRegisteredUser(userId)) {
       return false;
     }
 
+    if (this._vaultSaveLock) {
+      return new Promise((resolve) => {
+        this._vaultSaveQueue.push({ vaultData, userId, resolve });
+      });
+    }
+
+    this._vaultSaveLock = true;
+
     try {
       const db = await this._getDB();
       const vaultKey = this._getVaultKey(userId);
+      const safeData = JSON.parse(JSON.stringify(vaultData || {}));
+
       await new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        const req = store.put({ key: vaultKey, timestamp: Date.now(), vaultData: vaultData });
+        const req = store.put({ key: vaultKey, timestamp: Date.now(), vaultData: safeData });
         req.onsuccess = () => resolve(true);
         req.onerror = () => reject(req.error);
       });
+
       return true;
     } catch (e) {
-      logger.error('[SaveManager] Fehler beim Speichern des Account-Lagers:', e);
+      logger.warn('[SaveManager] Warnung beim Speichern des Account-Lagers:', e);
+      return false;
+    } finally {
+      this._vaultSaveLock = false;
+      if (this._vaultSaveQueue.length > 0) {
+        const next = this._vaultSaveQueue.shift();
+        this.saveAccountVault(next.vaultData, next.userId).then(next.resolve);
+      }
     }
   }
 
