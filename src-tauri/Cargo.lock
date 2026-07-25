@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "archiv-des-vergessens"
-version = "1.0.26"
+version = "1.0.27"
 dependencies = [
  "aes-gcm",
  "argon2",

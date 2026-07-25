@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.27] - 2026-07-25
+
+### ⚙️ Tauri Capabilities & Frontend Plugin-Dependencies Update
+- **Tauri Plugin Permissions & Capabilities (`src-tauri/capabilities/default.json`)**:
+  - Aktualisierung der Plugin-Berechtigungen auf `updater:default` und `process:allow-restart`.
+- **Frontend Dependencies & Tauri Scripts (`package.json`)**:
+  - Ergänzung von `@tauri-apps/api`, `@tauri-apps/plugin-process` und `@tauri-apps/plugin-updater` unter `dependencies`.
+  - Hinzufügen von Hilfsskripten (`tauri:dev`, `tauri:build`, `tauri:build:local`).
+- **Verifikation & Release Build Trigger**:
+  - Sämtliche Typechecks, Vitest-Tests und Cargo-Checks erfolgreich durchgeführt.
+
+---
+
 ## [1.0.26] - 2026-07-25
 
 ### 🧹 Codebase-Bereinigung & Refactoring

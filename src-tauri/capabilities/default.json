@@ -4,7 +4,7 @@
   "windows": ["*"],
   "permissions": [
     "core:default",
-    "plugin:updater:default",
-    "plugin:process:allow-restart"
+    "updater:default",
+    "process:allow-restart"
   ]
 }
