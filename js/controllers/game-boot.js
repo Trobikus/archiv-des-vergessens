@@ -891,16 +891,27 @@ if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', () => {
     bootGame().catch((error) => {
       console.error('[GameBoot] Boot fehlgeschlagen:', error);
+      
+      // HTML Escape Funktion
+      const escapeHTML = (str) => {
+        const p = document.createElement('p');
+        p.textContent = str;
+        return p.innerHTML;
+      };
+
+      const safeMessage = escapeHTML(error.message || 'Unbekannter Fehler');
+      const safeStack = escapeHTML(error.stack || error.message || '');
+
       document.body.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#050507;color:#d1d1d6;font-family:monospace;padding:2rem;text-align:center;">
           <h1 style="color:#8b1c1c;">⚠️ Boot fehlgeschlagen</h1>
-          <p style="color:#6e6e7a;">${error.message}</p>
+          <p style="color:#6e6e7a;">${safeMessage}</p>
           <button onclick="location.reload()" style="margin-top:1rem;padding:0.5rem 2rem;background:#1a1a20;border:1px solid #c5a059;color:#c5a059;border-radius:2px;cursor:pointer;">
             🔄 Neu laden
           </button>
           <details style="margin-top:1rem;text-align:left;color:#6e6e7a;font-size:0.8rem;max-width:600px;">
             <summary>Fehlerdetails</summary>
-            <pre style="background:#0a0a0c;padding:1rem;border-radius:2px;overflow:auto;max-height:200px;">${error.stack || error.message}</pre>
+            <pre style="background:#0a0a0c;padding:1rem;border-radius:2px;overflow:auto;max-height:200px;">${safeStack}</pre>
           </details>
         </div>
       `;

@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.28] - 2026-07-25
+
+### 🔐 Server-Sicherheit, App Icons & Tauri CSP
+- **Server-Sicherheits-Schutz**:
+  - Hinzufügen von Payload-Limit (300 KB) bei Cloud-Saves und Plausibilitätsprüfungen für Leaderboard-Einträge in `server/server.js`.
+- **Tauri Sicherheits-Konfiguration & Icon Assets**:
+  - Verschärfung der Content Security Policy (CSP) in `src-tauri/tauri.conf.json`.
+  - Aktualisierung und Bereitstellung aller App-Icons für Windows, Android und Web in `src-tauri/icons/` und `public/icons/`.
+- **Rust Backend Optimierung**:
+  - Säuberung ungenutzter Tauri IPC Commands in `src-tauri/src/commands/mod.rs` & Entkopplung aus `src-tauri/src/lib.rs`.
+- **Verifikation & Testabdeckung**:
+  - Alle 26 Rust Backend Tests und 115 Frontend Unit-Tests bestanden.
+
+---
+
 ## [1.0.27] - 2026-07-25
 
 ### ⚙️ Tauri Capabilities & Frontend Plugin-Dependencies Update

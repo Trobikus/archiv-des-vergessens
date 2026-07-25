@@ -51,9 +51,7 @@ pub fn create_app_builder() -> tauri::Builder<tauri::Wry> {
         .invoke_handler(tauri::generate_handler![
             commands::quit_app,
             commands::show_main_window,
-            commands::open_release_page,
-            commands::save_game_command,
-            commands::authenticate_command
+            commands::open_release_page
         ])
 }
 

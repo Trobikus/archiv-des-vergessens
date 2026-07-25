@@ -227,8 +227,12 @@
         // Show launcher window smoothly after a tiny timeout to ensure the browser has fully painted the layout
         setTimeout(() => {
           if (invoke) {
-            invoke('show_launcher');
-            console.log('[Tauri Bridge] show_launcher command invoked after image load.');
+            invoke('show_launcher')
+              .then(() => console.log('[Tauri Bridge] show_launcher command erfolgreich.'))
+              .catch((err) => {
+                console.warn('[Tauri Bridge] show_launcher Command in diesem Kontext nicht verfügbar:', err);
+                if (currentWindow) currentWindow.show();
+              });
           } else if (currentWindow) {
             currentWindow.show();
           }
@@ -239,7 +243,12 @@
         console.error('[Tauri Bridge] Failed to load background image:', err);
         // Fallback: show the window anyway so the launcher is not stuck hidden
         if (invoke) {
-          invoke('show_launcher');
+          invoke('show_launcher')
+            .then(() => console.log('[Tauri Bridge] show_launcher command erfolgreich.'))
+            .catch((err) => {
+              console.warn('[Tauri Bridge] show_launcher Command in diesem Kontext nicht verfügbar:', err);
+              if (currentWindow) currentWindow.show();
+            });
         } else if (currentWindow) {
           currentWindow.show();
         }
@@ -249,7 +258,12 @@
     } else {
       // Fallback if launcher container is not found
       if (invoke) {
-        invoke('show_launcher');
+        invoke('show_launcher')
+          .then(() => console.log('[Tauri Bridge] show_launcher command erfolgreich.'))
+          .catch((err) => {
+            console.warn('[Tauri Bridge] show_launcher Command in diesem Kontext nicht verfügbar:', err);
+            if (currentWindow) currentWindow.show();
+          });
       } else if (currentWindow) {
         currentWindow.show();
       }

@@ -1,5 +1,3 @@
-use crate::db::DbManager;
-use crate::services::auth::AuthService;
 use tauri::{AppHandle, Manager};
 
 #[tauri::command]
@@ -21,6 +19,10 @@ pub fn open_release_page(url: Option<String>) -> Result<String, String> {
         "https://github.com/Trobikus/archiv-des-vergessens/releases/latest".to_string()
     });
 
+    if !target_url.starts_with("https://github.com/Trobikus/archiv-des-vergessens") {
+        return Err("Sicherheitsverletzung: URL nicht erlaubt.".into());
+    }
+
     #[cfg(target_os = "windows")]
     {
         let _ = std::process::Command::new("cmd")
@@ -39,29 +41,4 @@ pub fn open_release_page(url: Option<String>) -> Result<String, String> {
     }
 
     Ok(target_url)
-}
-
-#[tauri::command]
-pub fn save_game_command(
-    player_name: String,
-    mneme_points: u64,
-    play_time: u64,
-    db_state: tauri::State<'_, DbManager>,
-) -> Result<i64, String> {
-    if player_name.trim().is_empty() {
-        return Err("Player name cannot be empty".to_string());
-    }
-
-    db_state
-        .save_game(&player_name, mneme_points, play_time)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn authenticate_command(
-    password: String,
-    stored_hash: String,
-    stored_salt: String,
-) -> Result<bool, String> {
-    AuthService::verify_password(&password, &stored_hash, &stored_salt).map_err(|e| e.to_string())
 }

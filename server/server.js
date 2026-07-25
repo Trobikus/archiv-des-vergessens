@@ -42,7 +42,7 @@ const PBKDF2_DIGEST = 'sha512';
 const MAX_PASSWORD_LENGTH = 128;
 
 // ---- GLOBALE STATS & DATABASE ----
-const clients = new Map(); // Map: WebSocket -> { userId, username, guildId, sessionToken }
+const clients = new Map(); // Map: WebSocket -> { userId, username, sessionToken }
 let db;
 
 // ============================================================
@@ -224,13 +224,12 @@ async function initStorage() {
         player TEXT,
         message TEXT,
         timestamp INTEGER,
-        type TEXT,
-        guildId TEXT
+        type TEXT
       )
     `).run();
 
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_type_timestamp ON chats(type, timestamp DESC)`).run();
-    db.prepare(`CREATE INDEX IF NOT EXISTS idx_chats_type_guild_timestamp ON chats(type, guildId, timestamp DESC)`).run();
+
 
     console.log('[Storage] SQLite-Datenbank erfolgreich initialisiert.');
 
@@ -431,33 +430,11 @@ function getGlobalChatHistory(limit = 50) {
 }
 
 // Holt den Gilden-Chatverlauf aus SQLite
-function getGuildChatHistory(guildId, limit = 50) {
-  if (!guildId) return [];
-  try {
-    return db.prepare(`
-      SELECT id, player, message, timestamp, guildId
-      FROM chats
-      WHERE type = 'guild' AND guildId = ?
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(guildId, limit).reverse();
-  } catch (err) {
-    console.error('[Chat] Fehler beim Laden des Gilden-Chatverlaufs:', err);
-    return [];
-  }
-}
-
-// Sendet den gespeicherten Chatverlauf (Global & Gilde) an eine Verbindung
-function sendChatHistory(ws, guildId) {
+// Sendet den gespeicherten Chatverlauf (Global) an eine Verbindung
+function sendChatHistory(ws) {
   const globalHistory = getGlobalChatHistory(50);
   for (const msg of globalHistory) {
     send(ws, 'chat:globalMessage', msg);
-  }
-  if (guildId) {
-    const guildHistory = getGuildChatHistory(guildId, 50);
-    for (const msg of guildHistory) {
-      send(ws, 'chat:guildMessage', msg);
-    }
   }
 }
 
@@ -499,15 +476,7 @@ function broadcast(type, payload) {
   }
 }
 
-function broadcastToGuild(guildId, type, payload) {
-  if (!guildId) return;
-  const msg = JSON.stringify({ type, payload });
-  for (const [ws, info] of clients) {
-    if (info.guildId === guildId && ws.readyState === 1) {
-      ws.send(msg);
-    }
-  }
-}
+
 
 function sanitize(str, maxLength = 200) {
   if (typeof str !== 'string') return '';
@@ -528,25 +497,6 @@ const USERNAME_BLACKLIST = [
   'guest', 'bot', 'server', 'official', 'archive', 'vergessen'
 ];
 
-function levenshteinDistance(s1, s2) {
-  if (s1.length < s2.length) return levenshteinDistance(s2, s1);
-  if (s2.length === 0) return s1.length;
-  
-  let previousRow = Array.from({length: s2.length + 1}, (_, i) => i);
-  
-  for (let i = 0; i < s1.length; i++) {
-    let currentRow = [i + 1];
-    for (let j = 0; j < s2.length; j++) {
-      const insertions = previousRow[j + 1] + 1;
-      const deletions = currentRow[j] + 1;
-      const substitutions = previousRow[j] + (s1[i] !== s2[j] ? 1 : 0);
-      currentRow.push(Math.min(insertions, deletions, substitutions));
-    }
-    previousRow = currentRow;
-  }
-  return previousRow[previousRow.length - 1];
-}
-
 function validateEmailFormat(email) {
   const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   return emailRegex.test(email) && email.length >= 6 && email.length <= 254;
@@ -560,30 +510,11 @@ function checkUsernameSimilarity(newUsername, db) {
     return { isDuplicate: true, reason: 'auth.error.username_blacklisted' };
   }
   
-  // Ähnlichkeitsprüfung gegen bestehende Usernamen
-  const existingUsers = db.prepare('SELECT username FROM users').all();
+  // O(1) statt O(n) durch direkte Datenbankabfrage
+  const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(username) = ? LIMIT 1').get(normalized);
   
-  for (const user of existingUsers) {
-    const existingNormalized = user.username.toLowerCase();
-    
-    // Exakte Übereinstimmung (sollte durch UNIQUE Constraint abgedeckt sein)
-    if (normalized === existingNormalized) {
-      return { isDuplicate: true, reason: 'auth.error.username_taken' };
-    }
-    
-    // Levenshtein-Distanz für ähnliche Namen
-    const distance = levenshteinDistance(normalized, existingNormalized);
-    const maxLength = Math.max(normalized.length, existingNormalized.length);
-    const similarity = ((maxLength - distance) / maxLength) * 100;
-    
-    // Warne bei >85% Ähnlichkeit
-    if (similarity > 85 && maxLength > 3) {
-      return { 
-        isDuplicate: true, 
-        reason: 'auth.error.username_too_similar',
-        similarTo: user.username 
-      };
-    }
+  if (existingUser) {
+    return { isDuplicate: true, reason: 'auth.error.username_taken' };
   }
   
   return { isDuplicate: false };
@@ -591,6 +522,16 @@ function checkUsernameSimilarity(newUsername, db) {
 
 // Rate Limiting Map (IP -> {count, resetTime})
 const rateLimitMap = new Map();
+
+// Verhindert Memory-Leak: Alle 15 Minuten veraltete Einträge löschen
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of rateLimitMap.entries()) {
+    if (now > record.resetTime) { 
+      rateLimitMap.delete(ip);
+    }
+  }
+}, 15 * 60 * 1000); // 15 Minuten Intervall
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 Minuten
 const RATE_LIMIT_MAX = 5; // Max 5 Registrierungen pro IP
 
@@ -619,17 +560,24 @@ const httpServer = createServer((req, res) => {
   res.end('Archiv des Vergessens - Multiplayer-Server läuft!\n');
 });
 
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ 
+  server: httpServer,
+  maxPayload: 256 * 1024 // Limitiert die maximale Payload-Größe auf 256 KB
+});
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   console.log('[Net] Neuer Verbindungsversuch...');
   
+  // [Sicherheit] IP-Erkennung hinter Proxy
+  const forwarded = req?.headers['x-forwarded-for'];
+  const clientIp = (forwarded ? forwarded.split(',')[0].trim() : null) || req?.headers['x-real-ip'] || ws._socket.remoteAddress || 'unknown';
+
   ws.isAlive = true;
   ws.on('pong', () => {
     ws.isAlive = true;
   });
   
-  clients.set(ws, { userId: null, username: 'Anonymus', guildId: null, sessionToken: null });
+  clients.set(ws, { userId: null, username: 'Anonymus', sessionToken: null, clientIp });
 
   ws.on('message', async (message) => {
     try {
@@ -666,7 +614,7 @@ wss.on('connection', (ws) => {
             const cleanUsername = sanitize(payload.username, 25);
             const cleanEmail = sanitize(payload.email, 100).toLowerCase();
             const password = typeof payload.password === 'string' ? payload.password : '';
-            const clientIp = ws._socket.remoteAddress || 'unknown';
+            const clientIp = clientInfo.clientIp || 'unknown';
             
             // ========== VALIDIERUNG ==========
             if (!cleanUsername || cleanUsername.length < 3 || cleanUsername.length > 25) {
@@ -775,7 +723,7 @@ wss.on('connection', (ws) => {
             
             send(ws, 'auth:register:success', { user: userObj, token: result.token });
             send(ws, 'auth:success', { userId: result.userId, username: cleanUsername });
-            sendChatHistory(ws, clientInfo.guildId);
+            sendChatHistory(ws);
             
           } catch (err) {
             console.error('[Auth] Registrierungsfehler:', err);
@@ -840,7 +788,7 @@ wss.on('connection', (ws) => {
 
             send(ws, 'auth:login:success', { user: userObj, token: newToken });
             send(ws, 'auth:success', { userId: user.id, username: user.username });
-            sendChatHistory(ws, clientInfo.guildId);
+            sendChatHistory(ws);
           } catch (err) {
             console.error('[Auth] Login-Fehler:', err);
             send(ws, 'auth:login:error', { error: 'auth.error.missing_fields' });
@@ -884,7 +832,7 @@ wss.on('connection', (ws) => {
 
             send(ws, 'auth:verifyToken:success', { user: userObj, token });
             send(ws, 'auth:success', { userId: user.id, username: user.username });
-            sendChatHistory(ws, clientInfo.guildId);
+            sendChatHistory(ws);
           } catch (err) {
             console.error('[Auth] Token-Verifizierungsfehler:', err);
             send(ws, 'auth:verifyToken:error', { error: 'Session token invalid or expired.' });
@@ -898,7 +846,7 @@ wss.on('connection', (ws) => {
             const cleanUsername = sanitize(payload.username, 25);
             const cleanEmail = sanitize(payload.email, 100).toLowerCase();
             const password = payload.password || '';
-            const clientIp = ws._socket.remoteAddress || 'unknown';
+            const clientIp = clientInfo.clientIp || 'unknown';
             
             // ========== VALIDIERUNG ==========
             if (!guestId || !guestId.startsWith('guest_')) {
@@ -1090,34 +1038,6 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        case 'chat:guild': {
-          if (!clientInfo.userId || !clientInfo.guildId) return;
-          const text = sanitize(payload.message, 200);
-          if (!text) return;
-
-          const msg = {
-            id: Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
-            player: clientInfo.username,
-            message: text,
-            timestamp: Date.now(),
-            guildId: clientInfo.guildId
-          };
-
-          try {
-            db.prepare(`
-              INSERT INTO chats (id, player, message, timestamp, type, guildId)
-              VALUES (?, ?, ?, ?, 'guild', ?)
-            `).run(msg.id, msg.player, msg.message, msg.timestamp, msg.guildId);
-            pruneChatHistory(500);
-          } catch (err) {
-            console.error('[Chat] Fehler beim Speichern der Gilden-Nachricht:', err);
-          }
-
-          console.log(`[Chat:Guild ${clientInfo.guildId}] ${clientInfo.username}: ${text}`);
-          broadcastToGuild(clientInfo.guildId, 'chat:guildMessage', msg);
-          break;
-        }
-
         // ---- 3. CLOUD-SAVES ----
         case 'cloud:save': {
           if (!clientInfo.userId) {
@@ -1131,6 +1051,12 @@ wss.on('connection', (ws) => {
               ? payload.saveData 
               : JSON.stringify(payload.saveData);
             const version = payload.version || '1.6';
+
+            // [Sicherheit] Payload Limit für Spielstände
+            if (saveDataStr.length > 300_000) {
+              send(ws, 'cloud:save:error', { error: 'Speicherstand zu groß.' });
+              return;
+            }
 
             const stmt = db.prepare(`
               INSERT INTO saves (userId, username, saveData, version, timestamp)
@@ -1185,10 +1111,22 @@ wss.on('connection', (ws) => {
           if (!clientInfo.userId) return;
 
           try {
-            const prestige = Math.max(0, parseInt(payload.prestige) || 0);
-            const bosses = Math.max(0, parseInt(payload.bosses) || 0);
-            const level = Math.max(1, parseInt(payload.level) || 1);
+            // Plausibilitätsgrenzen definieren (anpassen je nach Game-Design)
+            const MAX_PRESTIGE = 99999; 
+            const MAX_BOSSES = 999999;
+            const MAX_LEVEL = 100000;
+
+            const prestige = Math.min(MAX_PRESTIGE, Math.max(0, parseInt(payload.prestige) || 0));
+            const bosses = Math.min(MAX_BOSSES, Math.max(0, parseInt(payload.bosses) || 0));
+            const level = Math.min(MAX_LEVEL, Math.max(1, parseInt(payload.level) || 1));
             const timestamp = Date.now();
+
+            // [Sicherheit] Leaderboard-Validierung auf plausible Prestige-Werte
+            const existing = db.prepare('SELECT prestige FROM leaderboard WHERE userId = ?').get(clientInfo.userId);
+            if (existing && prestige > existing.prestige + 50) {
+              console.warn(`[Security] Plausibilitätsprüfung fehlgeschlagen für Benutzer ${clientInfo.userId}: Prestige ${prestige} > ${existing.prestige} + 50`);
+              return; // Anfrage still verwerfen
+            }
 
             const stmt = db.prepare(`
               INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
