@@ -105,6 +105,14 @@ export class HeroService {
         newLevel, 
         statPoints: (newLevel - oldLevel) * 3 
       });
+
+      if (oldLevel < 5 && newLevel >= 5) {
+        this._eventBus.publish('ui:showFeatureUnlock', {
+          title: 'Mneme-Talentbaum',
+          description: 'Die Sterne weisen dir den Weg.',
+          icon: '🌌'
+        });
+      }
     }
     
     this._eventBus.publish('hero:updated', { experience: finalAmount });

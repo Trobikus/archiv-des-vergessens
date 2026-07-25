@@ -3,6 +3,9 @@ import { EVENTS } from '../../../core/events/definitions.js';
 import { PACTS } from '../../../data/pacts.js';
 import { ITEM_TEMPLATES } from '../../../data/items.js';
 import { AccountBadge } from '../account/AccountBadge.js';
+import { selectDominantPath, selectTotalMnemeFragmenteBigInt } from '../../../core/state/selectors.js';
+import { calculatePrestigeCurrency } from '../../../core/game/math.js';
+import { EwigeMnemeSequence } from '../shared/EwigeMnemeSequence.js';
 
 export function HubView({ stateManager, eventBus, services }) {
   const hero = useStateSelector(stateManager, (state) => state.hero);
@@ -10,12 +13,25 @@ export function HubView({ stateManager, eventBus, services }) {
   const bossProgress = hero?.prestige?.bossProgress || 0;
   const prestigeLevel = hero?.prestige?.level || 0;
 
+  const dominantPath = useStateSelector(stateManager, (state) => {
+    const p = selectDominantPath(state);
+    if (p === 'aethel') return 'guardian';
+    if (p === 'lethe') return 'shadow';
+    return 'lone';
+  });
+
+  const hubClasses = `fade-in path-${dominantPath} ${prestigeLevel > 0 ? 'prestige-amplified' : ''}`;
+
   const [activeCategory, setActiveCategory] = useState('core');
   const [isWikiOpen, setIsWikiOpen] = useState(false);
   const [wikiCategory, setWikiCategory] = useState('mechanics');
   const [wikiSearch, setWikiSearch] = useState('');
   const [selectedWikiItem, setSelectedWikiItem] = useState(null);
   const [lang, setLang] = useState(services?.i18nService ? services.i18nService.getLanguage() : 'de');
+  
+  const [showPrestigeSequence, setShowPrestigeSequence] = useState(false);
+  const totalMneme = useStateSelector(stateManager, selectTotalMnemeFragmenteBigInt) || 0n;
+  const pendingEwigeMneme = calculatePrestigeCurrency(totalMneme, 10000);
 
   useEffect(() => {
     if (eventBus) {
@@ -54,8 +70,31 @@ export function HubView({ stateManager, eventBus, services }) {
     eventBus.publish('hub:enterGame');
   };
 
+  const handleEwigeMnemePrestige = () => {
+    if (pendingEwigeMneme <= 0 || showPrestigeSequence) return;
+    // Pause Idle Loop
+    eventBus.publish('game:pause');
+    setShowPrestigeSequence(true);
+  };
+
+  const onPrestigeSequenceComplete = () => {
+    setShowPrestigeSequence(false);
+    // Resume Loop & trigger actual logic
+    if (services?.idleService?.performEwigeMnemePrestige) {
+      services.idleService.performEwigeMnemePrestige();
+    }
+    eventBus.publish('game:resume');
+  };
+
   return html`
-    <section id="hub-container" class="fade-in" style="display: flex;" role="main" aria-label="Archiv-Hub">
+    <section id="hub-container" class="${hubClasses}" style="display: flex;" role="main" aria-label="Archiv-Hub">
+      ${showPrestigeSequence ? html`
+        <${EwigeMnemeSequence} 
+          dominantPath=${dominantPath} 
+          lang=${lang} 
+          onComplete=${onPrestigeSequenceComplete} 
+        />
+      ` : null}
       <!-- Header -->
       <header id="hub-header" class="glass-panel">
         <div class="hub-header-left">
@@ -156,6 +195,15 @@ export function HubView({ stateManager, eventBus, services }) {
                 <span class="label">${lang === 'de' ? 'Kapitel & Kämpfe' : 'Chapters & Battles'}</span>
                 <span class="hub-btn-glow"></span>
               </button>
+              
+              ${pendingEwigeMneme > 0 ? html`
+                <button class="hub-btn primary epic-pulse" id="hub-prestige-ewig" onClick=${handleEwigeMnemePrestige} type="button">
+                  <span style="font-size: 2.2rem; margin-bottom: 4px; display: block; filter: drop-shadow(0 0 10px var(--color-primary));">🌌</span>
+                  <span class="cinzel text-lg">${lang === 'de' ? 'Verewigung' : 'Eternity'}</span>
+                  <span class="label text-gold">+${pendingEwigeMneme} Ewige Mneme</span>
+                  <span class="hub-btn-glow"></span>
+                </button>
+              ` : null}
 
             </div>
           </div>

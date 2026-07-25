@@ -240,6 +240,15 @@ export class IdleService {
       totalEwigeMneme: selectEwigeMneme(this._stateManager.getState())
     });
 
+    const prestigeLevel = this._stateManager.getState().hero.prestige.level;
+    if (prestigeLevel === 1) {
+      this._eventBus.publish('ui:showFeatureUnlock', {
+        title: 'Finstre Pakte & Anomalien',
+        description: 'Die Realität reißt auf. Wähle dein Schicksal.',
+        icon: '🌌'
+      });
+    }
+
     this._eventBus.publish('ui:showToast', {
       message: `✨ Verewigung vollzogen! +${reward} Ewige Mneme erhalten.`,
       type: 'success',

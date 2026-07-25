@@ -288,6 +288,56 @@ export function selectHubData(state) {
 }
 
 // ============================================================
+// STORY & ALIGNMENT SELECTOREN
+// ============================================================
+
+/**
+ * Holt den dominanten Story-Pfad für UI und Partikel.
+ * Rückgabe: 'aethel', 'lethe' oder 'neutral'
+ */
+export function selectDominantPath(state) {
+  let aethel = 0;
+  let lethe = 0;
+
+  if (state) {
+    const flags = state.storyBranch?.flags || {};
+    if (flags.hero_path) aethel += 2;
+    if (flags.guardian_path) aethel += 2;
+    if (flags.secrets_path) aethel += 2;
+    if (flags.god_path) aethel += 2;
+    if (flags.seal_path) aethel += 1;
+    if (flags.epic_path) aethel += 1;
+
+    if (flags.coward_path) lethe += 2;
+    if (flags.hidden_path) lethe += 2;
+    if (flags.scholar_path) lethe += 2;
+    if (flags.rebel_path) lethe += 2;
+    if (flags.lone_wolf_path) lethe += 1;
+    
+    // Lore Node Entscheidungen
+    if (flags.node_prologue === 'aethel') aethel += 2;
+    if (flags.node_prologue === 'lethe') lethe += 2;
+    if (flags.node_cataclysm === 'aethel') aethel += 2;
+    if (flags.node_cataclysm === 'lethe') lethe += 2;
+
+    const activePact = state.hero?.prestige?.activePact;
+    if (activePact) {
+      if (activePact === 'ancient_folios' || activePact === 'scourged_bodies') aethel += 2;
+      else if (activePact === 'shadowy_legions' || activePact === 'greedy_souls' || activePact === 'ruthless_greed') lethe += 2;
+      else if (activePact === 'solitary_wanderer') lethe += 1;
+    }
+
+    const currentNode = state.storyBranch?.currentNode || '';
+    if (['hero', 'guardian', 'secrets', 'god', 'seal', 'epic', 'victory', 'ruler', 'eternal'].some(s => currentNode.includes(s))) aethel += 1;
+    if (['coward', 'hidden', 'scholar', 'rebel', 'lone', 'void', 'exile'].some(s => currentNode.includes(s))) lethe += 1;
+  }
+
+  if (aethel > lethe + 1) return 'aethel';
+  if (lethe > aethel + 1) return 'lethe';
+  return 'neutral';
+}
+
+// ============================================================
 // IDLE GAME SELECTOREN
 // ============================================================
 
@@ -350,5 +400,6 @@ export default {
   selectEwigeMneme,
   selectEwigeMnemeBigInt,
   selectIdleGenerators,
-  selectGedankenArchiv
+  selectGedankenArchiv,
+  selectDominantPath
 };

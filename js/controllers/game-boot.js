@@ -30,6 +30,7 @@ import SettingsManager from '../core/settings.js';
 import { EVENTS } from '../core/events/definitions.js';
 import { CONFIG } from '../data/config.js';
 import { escapeHtml } from '../utils/sanitizer.js';
+import { selectDominantPath } from '../core/state/selectors.js';
 
 /**
  * Bootet das Spiel.
@@ -257,6 +258,42 @@ export async function bootGame() {
       cloudManager.sync(stateManager.getState());
     }, 5000);
   }
+
+  // ============================================================
+  // 5.5. THEME / PATH UPDATE (Body Classes)
+  // ============================================================
+  let currentThemePath = null;
+  let isPrestigeAmplified = false;
+
+  const updateTheme = (state) => {
+    const rawPath = selectDominantPath(state); // 'aethel', 'lethe', 'neutral'
+    const pathMap = {
+      'aethel': 'guardian',
+      'lethe': 'shadow',
+      'neutral': 'lone'
+    };
+    const newPath = pathMap[rawPath] || 'lone';
+    const prestigeLvl = state.hero?.prestige?.level || 0;
+    const isAmplified = prestigeLvl > 0;
+
+    if (currentThemePath !== newPath || isPrestigeAmplified !== isAmplified) {
+      if (currentThemePath) document.body.classList.remove(`path-${currentThemePath}`);
+      document.body.classList.add(`path-${newPath}`);
+      
+      if (isAmplified) {
+        document.body.classList.add('prestige-amplified');
+      } else {
+        document.body.classList.remove('prestige-amplified');
+      }
+
+      currentThemePath = newPath;
+      isPrestigeAmplified = isAmplified;
+    }
+  };
+
+  stateManager.subscribe(updateTheme);
+  // Initial aufrufen
+  updateTheme(stateManager.getState());
 
   // ============================================================
   // 6. GAME LOOP

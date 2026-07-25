@@ -1,4 +1,4 @@
-import { calculateAlignment } from './particles.js';
+import { selectDominantPath } from '../../core/state/selectors.js';
 
 export function initClickBurst(stateManager) {
   const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('fx-canvas'));
@@ -65,15 +65,7 @@ export function initClickBurst(stateManager) {
   const stLethe = mkStamp('rgba(190,80,255,0.9)', 'rgba(120,20,200,0.5)', 4, 20);
   const stNeutral = mkStamp('rgba(200,200,200,0.9)', 'rgba(150,150,150,0.4)', 2, 10);
 
-  function spawnBurst(x, y, alignment) {
-    const total = alignment.aethel + alignment.lethe;
-    let type = 'neutral';
-    
-    if (total > 0) {
-      if (alignment.aethel > alignment.lethe) type = 'aethel';
-      else if (alignment.lethe > alignment.aethel) type = 'lethe';
-      else type = Math.random() > 0.5 ? 'aethel' : 'lethe';
-    }
+  function spawnBurst(x, y, type) {
 
     const count = 10 + Math.floor(Math.random() * 6); // 10 to 15
     for (let i = 0; i < count; i++) {
@@ -166,11 +158,11 @@ export function initClickBurst(stateManager) {
 
   const onClick = (e) => {
     let state = stateManager ? stateManager.getState() : null;
-    let alignment = { aethel: 0, lethe: 0 };
+    let path = 'neutral';
     if (state) {
-      alignment = calculateAlignment(state);
+      path = selectDominantPath(state);
     }
-    spawnBurst(e.clientX, e.clientY, alignment);
+    spawnBurst(e.clientX, e.clientY, path);
   };
 
   document.addEventListener('click', onClick, { passive: true });

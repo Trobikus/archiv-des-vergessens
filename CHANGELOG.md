@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.34] - 2026-07-25
+
+### 🌌 Story System & Visual Polish
+- **Ewige Mneme Sequenz (`js/ui/preact/shared/EwigeMnemeSequence.js`)**:
+  - Neue visuelle Story-Sequenz für Meilensteine und Mneme-Momente implementiert.
+- **Feature Unlock Toast (`js/ui/preact/shared/FeatureUnlockToast.js`)**:
+  - Benachrichtigungssystem für freigeschaltete Spielmechaniken und Features.
+- **Atmosphärische visuelle Effekte (`css/story-events.css`, `js/ui/dom/particles.js`, `click-burst.js`)**:
+  - Partikel- und Klick-Effekte für immersivere Story-Interaktionen optimiert.
+- **StoryService & State Selectors Update (`js/core/services/story-service.js`, `selectors.js`)**:
+  - Erweiterung der Story-Event-Trigger und Fortschritts-Prüfungen.
+
+---
+
 ## [1.0.33] - 2026-07-25
 
 ### 🛠️ Persistence & IPC Reliability

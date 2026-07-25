@@ -635,6 +635,21 @@ export class StoryService {
       };
     }, 'story/bossDefeated');
 
+    const newProgress = hero.prestige.bossProgress + 1;
+    if (newProgress === 1) {
+      this._eventBus.publish('ui:showFeatureUnlock', {
+        title: 'Artefakt-Schmiede & Ausrüstung',
+        description: 'Die Essenzen lassen sich nun formen.',
+        icon: '⚒️'
+      });
+    } else if (newProgress === 3) {
+      this._eventBus.publish('ui:showFeatureUnlock', {
+        title: 'Expeditionen & Geteiltes Lager',
+        description: 'Das Umland liegt offen vor deinen Kundschaftern.',
+        icon: '🗺️'
+      });
+    }
+
     // Erfahrung vergeben
     const expReward = boss.reward.exp || CONFIG.STORY.BASE_EXP_REWARD;
     this._heroService.addExperience(expReward);

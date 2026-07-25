@@ -61,6 +61,10 @@ export class GameLoop {
     this._lastSlowTick = now;
     this._catchupActive = this._stateManager.getState().resources.timeBank > 0;
     this._frameId = reqAnimationFrame(this._boundTick);
+
+    // Dynamic pause and resume listeners
+    this._eventBus.subscribe('game:pause', () => this.stop());
+    this._eventBus.subscribe('game:resume', () => this.start());
   }
 
   stop() {

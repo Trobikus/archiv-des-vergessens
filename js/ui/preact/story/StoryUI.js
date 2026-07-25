@@ -15,6 +15,9 @@ export function StoryUI({ stateManager, eventBus, services }) {
   const [currentChapter, setCurrentChapter] = useState(1);
   const [fightResult, setFightResult] = useState('');
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  
+  const [isGravityShift, setIsGravityShift] = useState(false);
+  const [isVictoryBurst, setIsVictoryBurst] = useState(false);
 
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const storyState = useStateSelector(stateManager, (state) => state.story);
@@ -25,8 +28,19 @@ export function StoryUI({ stateManager, eventBus, services }) {
   useEventBus(eventBus, EVENTS.UI_OPEN_STORY, () => setIsOpen(true));
   useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'story:battleResult', (data) => {
+    if (data.victory) {
+      setIsVictoryBurst(true);
+      setTimeout(() => setIsVictoryBurst(false), 1500);
+    }
     setFightResult(data.victory ? `🏆 SIEG! ${data.boss.name} besiegt!` : `💀 NIEDERLAGE! Du warst zu schwach.`);
     setTimeout(() => setFightResult(''), 3000);
+  });
+
+  useEventBus(eventBus, 'combat:tick', (data) => {
+    if (data.isCrit) {
+      setIsGravityShift(true);
+      setTimeout(() => setIsGravityShift(false), 500);
+    }
   });
 
   // Auto-Scroll für das Kampfprotokoll
@@ -123,23 +137,26 @@ export function StoryUI({ stateManager, eventBus, services }) {
 
         <!-- KAMPFSYSTEM V3.0 (REALTIME-BATTLE & DOCKED DIALOGUES) -->
         ${isBossFightActive && battleState ? html`
-          <div class="story-battle-active glass-inner-panel" style="position: relative; margin-top: 1rem; padding: 1.2rem; border-top: 1px solid rgba(255,255,255,0.1); overflow: hidden; min-height: 480px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="story-battle-active glass-inner-panel ${isGravityShift ? 'boss-gravity-shift' : ''} ${isVictoryBurst ? 'boss-victory-burst' : ''}" style="position: relative; margin-top: 1rem; padding: 1.2rem; border-top: 1px solid rgba(255,255,255,0.1); overflow: hidden; min-height: 480px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="boss-arena-overlay"></div>
             
-            <!-- STORY CUTSCENE OVERLAY (DOCK DIALOGUES v3.0) -->
+            <!-- STORY CUTSCENE OVERLAY (DOCK DIALOGUES v3.0 -> CINEMATIC v4.0) -->
             ${battleState.activeDialogue ? html`
-              <div class="dialogue-cutscene-overlay" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; padding: 1.5rem; backdrop-filter: blur(5px); animation: fadeIn 0.35s ease-out;">
-                <div class="dialogue-cutscene-box glass-panel" style="width: 100%; max-width: 520px; padding: 1.6rem; border: 1.5px solid var(--color-gold); background: rgba(14, 10, 7, 0.98); box-shadow: 0 0 35px rgba(197, 160, 89, 0.35); border-radius: 8px;">
-                  <div style="display: flex; gap: 1.2rem; align-items: flex-start; margin-bottom: 1.2rem;">
-                    <span style="font-size: 3.8rem; filter: drop-shadow(0 0 12px var(--color-gold-glow)); line-height: 1;">${battleState.activeDialogue.portrait}</span>
-                    <div style="flex: 1;">
-                      <div class="cinzel" style="color: var(--color-gold); font-size: 1.2rem; font-weight: bold; margin-bottom: 0.4rem; letter-spacing: 0.6px; text-shadow: 0 0 8px rgba(197,160,89,0.2);">${battleState.activeDialogue.speaker}</div>
-                      <div style="color: #ede2cf; font-size: 0.95rem; line-height: 1.55; font-style: italic; font-family: 'Outfit', sans-serif;">
-                        "${battleState.activeDialogue.text}"
-                      </div>
-                    </div>
+              <div class="cinematic-overlay cinematic-bars cinematic-active" style="position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10000; padding: 1.5rem; backdrop-filter: blur(8px);">
+                <div class="cinematic-content" style="width: 100%; max-width: 800px; text-align: center; position: relative; z-index: 10001;">
+                  <div style="font-size: 5.5rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 25px var(--color-primary-glow));">
+                    ${battleState.activeDialogue.portrait}
                   </div>
-                  <div style="display: flex; justify-content: flex-end;">
-                    <button class="glass-btn primary cinzel" onClick=${() => storyService.advanceDialogue()} style="padding: 0.45rem 1.4rem; font-size: 0.9rem; border-color: var(--color-gold); cursor: pointer; letter-spacing: 0.5px;">
+                  <h2 class="cinzel" style="color: var(--color-primary); font-size: 2.2rem; font-weight: bold; margin-bottom: 2rem; letter-spacing: 3px; text-shadow: 0 0 20px var(--color-primary-glow); text-transform: uppercase;">
+                    ${battleState.activeDialogue.speaker}
+                  </h2>
+                  <div style="color: #fff; font-size: 1.35rem; line-height: 1.8; font-style: italic; font-family: 'Outfit', sans-serif; margin-bottom: 3.5rem; text-shadow: 0 2px 8px rgba(0,0,0,0.9); background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 8px; border-left: 2px solid var(--color-primary); border-right: 2px solid var(--color-primary);">
+                    "${battleState.activeDialogue.text}"
+                  </div>
+                  <div style="display: flex; justify-content: center;">
+                    <button class="glass-btn primary cinzel" onClick=${() => storyService.advanceDialogue()} style="padding: 1rem 4rem; font-size: 1.2rem; border-color: var(--color-primary); cursor: pointer; letter-spacing: 2px; transition: all 0.3s ease;"
+                            onMouseOver=${(e) => { e.currentTarget.style.boxShadow = '0 0 15px var(--color-primary-glow)'; }}
+                            onMouseOut=${(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
                       Weiter ➔
                     </button>
                   </div>
@@ -148,7 +165,7 @@ export function StoryUI({ stateManager, eventBus, services }) {
             ` : ''}
 
             <!-- Kampfverlauf-Content -->
-            <div>
+            <div style="position: relative; z-index: 2;">
               <!-- BOSS-BEREICH -->
               <div class="boss-status-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                 <span class="boss-name-label cinzel" style="font-size: 1.2rem; color: var(--color-danger); font-weight: bold; text-shadow: 0 0 8px rgba(255,0,0,0.2);">
@@ -181,7 +198,7 @@ export function StoryUI({ stateManager, eventBus, services }) {
               </div>
             </div>
 
-            <div>
+            <div style="position: relative; z-index: 2;">
               <!-- HELDEN-BEREICH -->
               <div class="hero-status-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
                 <span class="hero-name-label cinzel" style="font-size: 1.1rem; color: var(--color-success); font-weight: bold; text-shadow: 0 0 8px rgba(0,255,0,0.1);">

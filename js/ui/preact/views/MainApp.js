@@ -30,6 +30,7 @@ import { AccountModal } from '../account/AccountModal.js';
 import { SharedVaultModal } from '../shared/SharedVaultModal.js';
 import { OfflineProgressModal } from '../shared/OfflineProgressModal.js';
 import { UpdateModal } from '../shared/UpdateModal.js';
+import { FeatureUnlockToast } from '../shared/FeatureUnlockToast.js';
 
 export function MainApp({ stateManager, eventBus, services }) {
   const { i18nService } = services;
@@ -149,6 +150,7 @@ export function MainApp({ stateManager, eventBus, services }) {
 
       <!-- Global Modals & Managers -->
       <${ToastManager} eventBus=${eventBus} />
+      <${FeatureUnlockToast} eventBus=${eventBus} stateManager=${stateManager} lang=${lang} />
       <${HeroUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${StoryUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${ForgeUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
