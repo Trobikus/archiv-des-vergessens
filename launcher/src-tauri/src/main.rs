@@ -145,7 +145,7 @@ async fn download_and_extract_game(
     let game_dir = get_game_dir()?;
     let temp_zip_path = game_dir.parent().unwrap().join("temp_download.zip");
 
-    println!("[Launcher] Starte Download von URL: {}", download_url);
+    // [Production] Logging entfernt
 
     // Emit initial event
     let _ = app.emit(
@@ -292,7 +292,7 @@ fn launch_installed_game(app: AppHandle) -> Result<(), String> {
         return Err("Spieldatei (ArchivDesVergessens.exe) wurde nicht gefunden. Bitte installiere das Spiel zuerst.".to_string());
     }
 
-    println!("[Launcher] Starte Spiel von: {:?}", exe_path);
+    // [Production] Logging entfernt
 
     #[cfg(target_os = "windows")]
     {

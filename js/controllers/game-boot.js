@@ -61,6 +61,36 @@ export async function bootGame() {
   const eventBus = new EventBus();
   logger.setEventBus(eventBus);
 
+  // Globaler Catch-All Handler für verwaiste Events
+  eventBus.subscribeAll((eventName, data) => {
+    if (eventBus.countListeners(eventName) === 0) {
+      switch (eventName) {
+        case EVENTS.HERO_LEVEL_UP:
+        case 'hero:levelUp':
+          eventBus.publish('ui:showToast', {
+            message: `🌟 Level Up! Du bist nun Level ${data?.level || '!'}!`,
+            type: 'success',
+            duration: 4000
+          });
+          break;
+        case 'network:connected':
+          eventBus.publish('ui:showToast', {
+            message: '🌐 Netzwerk verbunden',
+            type: 'info',
+            duration: 3000
+          });
+          break;
+        case 'network:disconnected':
+          eventBus.publish('ui:showToast', {
+            message: '⚠️ Netzwerkverbindung unterbrochen!',
+            type: 'warning',
+            duration: 4000
+          });
+          break;
+      }
+    }
+  });
+
   // Registriere globale Helper-Funktionen für spieleigene, wunderschöne Popups
   window.gameConfirm = (message, title = 'BESTÄTIGUNG') => {
     return new Promise((resolve) => {

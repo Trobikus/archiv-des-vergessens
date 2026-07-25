@@ -30,7 +30,7 @@ function isNewerVersion(currentVer, latestVer) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[Launcher] Initialisiere den eigenständigen Launcher...');
+  // [Production] Logging entfernt
 
   // DOM Elemente
   const actionBtn = document.getElementById('action-btn');
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   } catch (e) {
-    console.warn('[Launcher] Konnte Event Listener nicht registrieren:', e);
+    // [Production] Logging entfernt
   }
 
   // Action Button Handler
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           setUIState('ready-to-play');
         } catch (err) {
-          console.error('[Launcher] Download/Extraction Fehler:', err);
+          // [Production] Logging entfernt
           setUIState('error', `Installation fehlgeschlagen: ${err}`);
         }
       } else if (launcherState === 'ready-to-play') {
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
           await invoke('launch_installed_game');
         } catch (err) {
-          console.error('[Launcher] Spiel konnte nicht gestartet werden:', err);
+          // [Production] Logging entfernt
           setUIState('error', `Fehler beim Starten: ${err}`);
         }
       }
@@ -239,16 +239,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Check installed game version
     try {
       installedVersion = await invoke('get_installed_game_version');
-      console.log('[Launcher] Installierte Version:', installedVersion);
+      // [Production] Logging entfernt
     } catch (e) {
-      console.warn('[Launcher] Konnte installierte Version nicht abfragen:', e);
+      // [Production] Logging entfernt
       installedVersion = null;
     }
 
     // 2. Query latest GitHub release
     try {
       latestReleaseInfo = await invoke('check_github_release');
-      console.log('[Launcher] Neueste GitHub Release Info:', latestReleaseInfo);
+      // [Production] Logging entfernt
 
       const latestTag = latestReleaseInfo.tag_name;
 
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setUIState('ready-to-play');
       }
     } catch (e) {
-      console.warn('[Launcher] Offline oder Release-Abfrage fehlgeschlagen:', e);
+      // [Production] Logging entfernt
       if (installedVersion) {
         setUIState('ready-to-play');
       } else {

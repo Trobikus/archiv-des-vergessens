@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.30] - 2026-07-25
+
+### ⚔️ Combat Events, Custom Icons & Production Logging Cleanup
+- **Combat Events & Feedback (`story-service.js`, `definitions.js`)**:
+  - Hinzufügen von `COMBAT_TICK`-Events für Kampfzauber und Physische Angriffe zur verbesserten UI-Rückmeldung.
+- **Dynamic Hero Item Icons (`HeroUI.js`)**:
+  - Dynamisches Fallback-Icon-Mapping basierend auf Gegenstandsnamen und Slots (inkl. neuer Assets für Hammer, Schwert, Rüstung, Helm, Juwel).
+- **Network Toast Feedback (`game-boot.js`)**:
+  - Automatische Toast-Benachrichtigungen bei Verbindungstrennung (`network:disconnected`) und Wiederherstellung.
+- **Production Build & Launcher Cleanup (`launcher.js`, `main.rs`)**:
+  - Entfernung von Debug-Konsolenausgaben im Launcher für schlankere Production Builds.
+  - Hinzufügen der CI/CD Build-Skripte (`game:build`, `launcher:build`) in `package.json`.
+- **Pure Rust Crypto & CI Compatibility (`jsonwebtoken`)**:
+  - Umstellung auf `rust_crypto` Provider zur plattformübergreifenden Absicherung in GitHub Actions.
+
+---
+
 ## [1.0.29] - 2026-07-25
 
 ### 🚀 Opener Plugin Integration & Persistence Stability

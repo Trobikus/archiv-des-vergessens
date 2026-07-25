@@ -44,6 +44,7 @@ export const EVENTS = {
   STORY_ENDING_REACHED: 'story:endingReached',
   STORY_BRANCH_CHANGED: 'story:branchChanged',
   STORY_BRANCH_RESET: 'story:branchReset',
+  COMBAT_TICK: 'combat:tick',
 
   // ==================== FORGE ====================
   FORGE_CRAFTED: 'forge:crafted',

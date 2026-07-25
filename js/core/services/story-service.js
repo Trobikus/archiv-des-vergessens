@@ -320,6 +320,7 @@ export class StoryService {
       const damageDealt = Math.max(1, Math.floor(damageBase * (1 - bossDamageReduction)));
       updatedBossHp = Math.max(0, updatedBossHp - damageDealt);
       logMessage = `⚡ Speer des Bundes geschleudert! Du fügst ${battleState.boss.name} ${damageDealt} Schaden zu!`;
+      this._eventBus.publish(EVENTS.COMBAT_TICK || 'combat:tick', { damage: damageDealt, isCrit: false, type: 'mneme' });
     } else if (spellId === 'spell-shield' || spellId === 'shield') {
       const shieldValue = Math.floor(battleState.heroMaxHp * 0.4);
       updatedShieldAmount = shieldValue;
@@ -328,6 +329,7 @@ export class StoryService {
       const healValue = Math.floor(battleState.heroMaxHp * 0.35);
       updatedHeroHp = Math.min(battleState.heroMaxHp, updatedHeroHp + healValue);
       logMessage = `❤️ Temporale Heilung gewirkt! Du heilst dich um +${healValue} HP.`;
+      this._eventBus.publish(EVENTS.COMBAT_TICK || 'combat:tick', { damage: healValue, isCrit: false, type: 'heal' });
     }
 
     // State aktualisieren
@@ -438,6 +440,8 @@ export class StoryService {
       text: `⚔️ Du triffst ${boss.name} für ${heroDamageDealt} Schaden.${isHeroCrit ? ' (KRITISCH!)' : ''}`,
       type: isHeroCrit ? 'crit' : 'damage-deal'
     });
+
+    this._eventBus.publish(EVENTS.COMBAT_TICK || 'combat:tick', { damage: heroDamageDealt, isCrit: isHeroCrit, type: 'physical' });
 
     // Sieg prüfen mit Dialog-Check
     if (bossHp <= 0) {

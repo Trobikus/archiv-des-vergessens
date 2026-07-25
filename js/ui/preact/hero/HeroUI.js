@@ -151,7 +151,9 @@ export function HeroUI({ stateManager, eventBus, services }) {
   // Hilfsfunktion für Custom-Icons
   const getItemIcon = (item) => {
     if (!item) return null;
-    const name = item.name;
+    const name = item.name || "";
+    const nameLower = name.toLowerCase();
+
     if (name === "Amulett der Dämmerung") {
       return "icons/Amulett der Dämmerung .png";
     }
@@ -161,18 +163,31 @@ export function HeroUI({ stateManager, eventBus, services }) {
     if (
       name === "Klinge der Ersten" || 
       name === "Ewige Mneme-Klinge" || 
-      name === "Staubige Klinge" || 
-      name === "Schattenklinge" || 
       name === "Archiv-Klinge" || 
       name === "Architekten-Klinge" || 
       name === "Gott-Klinge" || 
-      name === "Grundlegende Klinge" || 
-      name === "Stahlklinge" || 
-      name === "Dämonenklinge" || 
       name === "Göttliche Klinge"
     ) {
       return "icons/Die Klinge der Ersten.png";
     }
+
+    // Fallbacks based on name keywords or slot
+    if (nameLower.includes("hammer") || nameLower.includes("streitkolben")) {
+      return "icons/Magmahammer.png";
+    }
+    if (nameLower.includes("schwert") || nameLower.includes("klinge") || item.slot === "weapon") {
+      return "icons/Flammenschwert.png";
+    }
+    if (nameLower.includes("rüstung") || nameLower.includes("panzer") || item.slot === "armor") {
+      return "icons/Knochenruestung.png";
+    }
+    if (nameLower.includes("helm") || nameLower.includes("krone") || item.slot === "helmet") {
+      return "icons/Knochenhelm.png";
+    }
+    if (nameLower.includes("juwel") || nameLower.includes("stein") || item.slot === "amulet" || (item.slot && item.slot.startsWith("ring"))) {
+      return "icons/Feuerjuwel.png";
+    }
+
     return null;
   };
 
