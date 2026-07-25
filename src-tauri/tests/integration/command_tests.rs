@@ -39,17 +39,12 @@ async fn test_authenticate_command_valid_and_invalid() {
     let password = "CmdTestPassword2026!";
     let hash_obj = AuthService::hash_password(password, &salt).unwrap();
 
-    let valid_res = AuthService::verify_password(
-        password,
-        &hash_obj.hash_hex,
-        &hash_obj.salt_hex,
-    ).map_err(|e| e.to_string());
+    let valid_res = AuthService::verify_password(password, &hash_obj.hash_hex, &hash_obj.salt_hex)
+        .map_err(|e| e.to_string());
     assert_eq!(valid_res, Ok(true));
 
-    let invalid_res = AuthService::verify_password(
-        "WrongCmdPassword",
-        &hash_obj.hash_hex,
-        &hash_obj.salt_hex,
-    ).map_err(|e| e.to_string());
+    let invalid_res =
+        AuthService::verify_password("WrongCmdPassword", &hash_obj.hash_hex, &hash_obj.salt_hex)
+            .map_err(|e| e.to_string());
     assert_eq!(invalid_res, Ok(false));
 }

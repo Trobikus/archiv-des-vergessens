@@ -25,7 +25,8 @@ pub struct ProgressPayload {
 }
 
 fn get_game_dir() -> Result<PathBuf, String> {
-    let mut path = dirs::data_dir().ok_or_else(|| "Konnte APPDATA Verzeichnis nicht ermitteln".to_string())?;
+    let mut path =
+        dirs::data_dir().ok_or_else(|| "Konnte APPDATA Verzeichnis nicht ermitteln".to_string())?;
     path.push("ArchivDesVergessens");
     path.push("app");
     fs::create_dir_all(&path).map_err(|e| e.to_string())?;
@@ -79,7 +80,10 @@ fn get_installed_game_version() -> Result<Option<String>, String> {
 async fn check_github_release() -> Result<ReleaseInfo, String> {
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
-    headers.insert(USER_AGENT, HeaderValue::from_static("ArchivDesVergessensLauncher/1.0"));
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static("ArchivDesVergessensLauncher/1.0"),
+    );
 
     let res = client
         .get("https://api.github.com/repos/Trobikus/archiv-des-vergessens/releases/latest")
@@ -156,7 +160,10 @@ async fn download_and_extract_game(
 
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
-    headers.insert(USER_AGENT, HeaderValue::from_static("ArchivDesVergessensLauncher/1.0"));
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static("ArchivDesVergessensLauncher/1.0"),
+    );
 
     let response = client
         .get(&download_url)
@@ -218,8 +225,8 @@ async fn download_and_extract_game(
     let zip_file = File::open(&temp_zip_path)
         .map_err(|e| format!("Konnte heruntergeladenes Archiv nicht öffnen: {}", e))?;
 
-    let mut archive = zip::ZipArchive::new(zip_file)
-        .map_err(|e| format!("Ungültiges ZIP-Archiv: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(zip_file).map_err(|e| format!("Ungültiges ZIP-Archiv: {}", e))?;
 
     for i in 0..archive.len() {
         let mut file = archive
@@ -255,7 +262,10 @@ async fn download_and_extract_game(
         "installed_at": chrono_like_now()
     });
     let version_path = get_version_file_path()?;
-    let _ = fs::write(version_path, serde_json::to_string_pretty(&version_data).unwrap_or_default());
+    let _ = fs::write(
+        version_path,
+        serde_json::to_string_pretty(&version_data).unwrap_or_default(),
+    );
 
     let _ = app.emit(
         "download_progress",
