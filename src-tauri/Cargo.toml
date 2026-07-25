@@ -48,7 +48,7 @@ tempfile = "3.10"
 toml = "0.8"
 aes-gcm = "0.10"
 argon2 = "0.5"
-jsonwebtoken = "9.3"
+jsonwebtoken = "10.3"
 base64 = "0.22"
 
 [dev-dependencies]
