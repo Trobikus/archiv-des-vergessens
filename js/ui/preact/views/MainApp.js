@@ -13,7 +13,6 @@ import { ForgeUI } from '../forge/ForgeUI.js';
 import { CraftingUI } from '../crafting/CraftingUI.js';
 import { QuestUI } from '../quest/QuestUI.js';
 import { AchievementUI } from '../achievement/AchievementUI.js';
-import { GuildUI } from '../guild/GuildUI.js';
 import { ChatUI } from '../chat/ChatUI.js';
 import { DialogUI } from '../dialog/DialogUI.js';
 import { CodexUI } from '../codex/CodexUI.js';
@@ -154,7 +153,6 @@ export function MainApp({ stateManager, eventBus, services }) {
       <${CraftingUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${QuestUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${AchievementUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
-      <${GuildUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${ChatUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${DialogUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${CodexUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />

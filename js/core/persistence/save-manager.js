@@ -136,16 +136,6 @@ export class SaveManager {
         req.onerror = () => resolve(null);
       });
 
-      // Legacy Migration for Slot 1 if empty
-      if (!storedData && i === 1) {
-        storedData = await new Promise((resolve) => {
-          const tx = db.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.get(SAVE_KEY);
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve(null);
-        });
-      }
 
       if (storedData && storedData.state) {
         const st = storedData.state;
@@ -225,13 +215,6 @@ export class SaveManager {
         req.onerror = () => reject(req.error);
       });
 
-      // Synchronisiere auch Legacy SAVE_KEY bei Slot 1
-      if (slotId === 1) {
-        try {
-          const tx2 = db.transaction(STORE_NAME, 'readwrite');
-          tx2.objectStore(STORE_NAME).put(saveData, SAVE_KEY);
-        } catch (e) {}
-      }
 
       if (this._services?.stateManager) {
         this._services.stateManager.dispatch((s) => ({
@@ -286,16 +269,6 @@ export class SaveManager {
         req.onerror = () => reject(req.error);
       });
 
-      // Legacy Fallback for Slot 1
-      if (!storedData && slotId === 1) {
-        storedData = await new Promise((resolve) => {
-          const tx = db.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.get(SAVE_KEY);
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve(null);
-        });
-      }
 
       if (!storedData) {
         this._loadQueue = [];
