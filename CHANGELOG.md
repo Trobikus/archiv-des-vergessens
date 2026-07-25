@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.36] - 2026-07-26
+
+### 🛠️ Architecture & Settings Controller Refactoring
+- **Settings Controller Extraction (`js/controllers/settings.js`)**:
+  - Trennung von Einstellungen und Navigation: Extraktion von `SettingsController` aus dem `NavigationController`.
+  - Saubere Injektion und DI-Entkopplung aller Einstellungsoptionen und SSOT-State-Updates.
+- **Dependency Cleanup & Test Coverage**:
+  - 20 Unit- & Integrationstest-Suites im Frontend (135 Tests) und alle Rust-Integrationstests vollständig verifiziert.
+
+---
+
 ## [1.0.35] - 2026-07-25
 
 ### 🔐 Vault Concurrency & Global Tauri Integration
