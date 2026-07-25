@@ -154,7 +154,6 @@ export async function bootGame() {
   const craftingService = container.get('craftingService');
   const questService = container.get('questService');
   const achievementService = container.get('achievementService');
-  const guildService = container.get('guildService');
   const friendService = container.get('friendService');
   const chatService = container.get('chatService');
   const codexService = container.get('codexService');
@@ -278,7 +277,6 @@ export async function bootGame() {
     craftingService,
     questService,
     achievementService,
-    guildService,
     friendService,
     chatService,
     codexService,
@@ -871,7 +869,6 @@ export async function bootGame() {
       craftingService,
       questService,
       achievementService,
-      guildService,
       friendService,
       chatService,
       codexService,

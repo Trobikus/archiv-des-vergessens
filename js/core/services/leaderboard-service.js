@@ -47,34 +47,8 @@ export class LeaderboardService {
         this._lastParticles = BigInt(state.resources?.particles || '0');
         this._lastRelics = BigInt(state.resources?.relics || '0');
         
-        // Einmalige Legacy-Migration beim ersten Booten, falls der State noch leer ist
         if (state.leaderboard) {
           const r = { ...state.leaderboard };
-          if (r.sessionCount === 0) {
-            // Versuchen, aus Legacy-localStorage zu migrieren
-            const legacy = this._loadLegacy();
-            if (legacy && legacy.highestPrestige > 0) {
-              r.highestPrestige = legacy.highestPrestige;
-              r.totalPrestiges = legacy.totalPrestiges;
-              r.fastestBossKill = legacy.fastestBossKill;
-              r.totalBossesDefeated = legacy.totalBossesDefeated;
-              r.highestChapterReached = legacy.highestChapterReached;
-              r.highestLevel = legacy.highestLevel;
-              r.highestCraftingLevel = legacy.highestCraftingLevel;
-              r.totalMasterworksCrafted = legacy.totalMasterworksCrafted;
-              r.highestItemQuality = legacy.highestItemQuality;
-              r.peakParticlesPerSecond = legacy.peakParticlesPerSecond;
-              r.totalParticlesCollected = legacy.totalParticlesCollected;
-              r.peakRelicsPerSecond = legacy.peakRelicsPerSecond;
-              r.totalRelicsCollected = legacy.totalRelicsCollected;
-              r.totalExpeditions = legacy.totalExpeditions;
-              r.successfulExpeditions = legacy.successfulExpeditions;
-              r.achievementsUnlocked = legacy.achievementsUnlocked;
-              r.fastestPrestige = legacy.fastestPrestige;
-              r.totalPlayTime = legacy.totalPlayTime;
-              r.sessionCount = legacy.sessionCount;
-            }
-          }
           r.sessionCount++;
           this._records = r;
         }
@@ -293,19 +267,6 @@ export class LeaderboardService {
     }
   }
 
-  _loadLegacy() {
-    try {
-      const raw = localStorage.getItem(this._STORAGE_KEY);
-      if (raw) {
-        // Legacy-Eintrag aus localStorage entfernen, um doppelten Import zu vermeiden
-        localStorage.removeItem(this._STORAGE_KEY);
-        return JSON.parse(raw);
-      }
-    } catch (e) {
-      console.warn('[Leaderboard] Load legacy failed:', e);
-    }
-    return null;
-  }
 
   _getDefaultRecords() {
     return {

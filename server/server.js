@@ -659,27 +659,6 @@ wss.on('connection', (ws) => {
       switch (type) {
         // ---- 1. AUTHENTIFIZIERUNG & ACCOUNTS ----
 
-        // Legacy / Guest Handshake
-        case 'auth': {
-          const rawUserId = sanitize(payload.userId, 50);
-          const rawUsername = sanitize(payload.username, 25) || 'Gast-Hüter';
-          const rawGuildId = sanitize(payload.guildId, 50) || null;
-
-          if (!rawUserId) {
-            send(ws, 'auth:error', { message: 'Ungültige User-ID.' });
-            return;
-          }
-
-          clientInfo.userId = rawUserId;
-          clientInfo.username = rawUsername;
-          clientInfo.guildId = rawGuildId;
-
-          console.log(`[Auth] Spieler '${rawUsername}' (${rawUserId}) eingeloggt. Gilde: ${rawGuildId || 'keine'}`);
-          send(ws, 'auth:success', { userId: rawUserId, username: rawUsername });
-
-          sendChatHistory(ws, rawGuildId);
-          break;
-        }
 
         // Real Server Registration
         case 'auth:register': {
