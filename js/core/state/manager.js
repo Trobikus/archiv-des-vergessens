@@ -51,7 +51,6 @@ function shallowFreezeState(obj) {
  * @property {Object} library - Bibliotheks-Upgrades
  * @property {Object} skillTree - Talentbaum
  * @property {Object} challenges - Anomalien
- * @property {Object} guild - Gilden-Daten
  * @property {Object} friends - Freunde
  * @property {Object} chat - Chat-Nachrichten
  * @property {Object} codex - Codex-Einträge
@@ -179,9 +178,8 @@ export class StateManager {
       library: { upgrades: { gather_boost: 0, clan_boost: 0, forge_discount: 0 } },
       skillTree: { unlocked: [] },
       challenges: { active: null, completed: [] },
-      guild: { id: null, guilds: {}, memberGuilds: {} },
       friends: { list: [], pending: [], sent: [] },
-      chat: { global: [], guild: [], messageId: 0 },
+      chat: { global: [], clan: [], messageId: 0 },
       codex: { entries: {} },
       storyBranch: { currentNode: 'prologue', flags: {}, visited: ['prologue'], history: [], endingReached: false },
       leaderboard: {

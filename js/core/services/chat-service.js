@@ -5,7 +5,7 @@
  * 
  * VERANTWORTUNG:
  * - Globale Nachrichten
- * - Gilden-Nachrichten
+ * - Clan-Nachrichten
  * - Nachrichten-Persistenz
  * ============================================================
  */
@@ -16,21 +16,21 @@ import { sanitizeString } from '../../utils/sanitizer.js';
 /** @typedef {import('../events/bus.js').default} EventBus */
 
 /** @typedef {import('./hero-service.js').default} HeroService */
-/** @typedef {import('./guild-service.js').default} GuildService */
+/** @typedef {import('./clan-service.js').default} ClanService */
 
 export class ChatService {
   /**
    * @param {StateManager} stateManager
    * @param {EventBus} eventBus
    * @param {HeroService} heroService
-   * @param {GuildService} guildService
+   * @param {ClanService} clanService
    * @param {import('./network-service.js').NetworkService} [networkService]
    */
-  constructor(stateManager, eventBus, heroService, guildService, networkService = null) {
+  constructor(stateManager, eventBus, heroService, clanService, networkService = null) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
     this._heroService = heroService;
-    this._guildService = guildService;
+    this._clanService = clanService;
     this._networkService = networkService;
     this._maxMessages = 100;
   }
@@ -64,19 +64,16 @@ export class ChatService {
     return { success: true, msg };
   }
 
-  sendGuildMessage(text) {
+  sendClanMessage(text) {
     const cleanText = sanitizeString(text, 200, '');
     if (!cleanText) {
       return { success: false, message: 'Nachricht darf nicht leer sein.' };
     }
-    const guild = this._guildService.getPlayerGuild();
-    if (!guild) {
-      return { success: false, message: 'Du bist in keiner Gilde.' };
-    }
+    const clanId = 'local_clan';
 
     // Falls Netzwerk verbunden, senden wir über das WebSocket-Netzwerk
     if (this._networkService && this._networkService.isConnected()) {
-      const sent = this._networkService.send('chat:guild', { message: cleanText });
+      const sent = this._networkService.send('chat:clan', { message: cleanText, clanId });
       if (sent) {
         return { success: true };
       }
@@ -90,10 +87,10 @@ export class ChatService {
       player: playerName,
       message: cleanText,
       timestamp: Date.now(),
-      guildId: guild.id
+      clanId: clanId
     };
 
-    this.addReceivedGuildMessage(msg);
+    this.addReceivedClanMessage(msg);
     return { success: true, msg };
   }
 
@@ -105,10 +102,10 @@ export class ChatService {
   }
 
   /**
-   * Gibt Gilden-Nachrichten zurück.
+   * Gibt Clan-Nachrichten zurück.
    */
-  getGuildMessages(limit = 50) {
-    return this._stateManager.getState().chat.guild.slice(-limit);
+  getClanMessages(limit = 50) {
+    return this._stateManager.getState().chat.clan.slice(-limit);
   }
 
   /**
@@ -124,16 +121,17 @@ export class ChatService {
   }
 
   /**
-   * Leert den Gilden-Chat.
+   * Leert den Clan-Chat.
    */
-  clearGuildChat() {
+  clearClanChat() {
     this._stateManager.dispatch((state) => ({
       ...state,
-      chat: { ...state.chat, guild: [] }
-    }), 'chat/clearGuild');
-    this._eventBus.publish('chat:cleared', { type: 'guild' });
+      chat: { ...state.chat, clan: [] }
+    }), 'chat/clearClan');
+    this._eventBus.publish('chat:cleared', { type: 'clan' });
     return { success: true };
   }
+
   /**
    * Wird aufgerufen, wenn ein globales Chat-Paket vom Server empfangen wird.
    */
@@ -153,21 +151,21 @@ export class ChatService {
   }
 
   /**
-   * Wird aufgerufen, wenn ein Gilden-Chat-Paket vom Server empfangen wird.
+   * Wird aufgerufen, wenn ein Clan-Chat-Paket vom Server empfangen wird.
    */
-  addReceivedGuildMessage(msg) {
+  addReceivedClanMessage(msg) {
     this._stateManager.dispatch((state) => {
-      const guildChat = [...state.chat.guild, msg];
-      if (guildChat.length > this._maxMessages) {
-        guildChat.splice(0, guildChat.length - this._maxMessages);
+      const clanChat = [...state.chat.clan, msg];
+      if (clanChat.length > this._maxMessages) {
+        clanChat.splice(0, clanChat.length - this._maxMessages);
       }
       return {
         ...state,
-        chat: { ...state.chat, guild: guildChat }
+        chat: { ...state.chat, clan: clanChat }
       };
-    }, 'chat/guildMessage');
+    }, 'chat/clanMessage');
 
-    this._eventBus.publish('chat:guildMessage', msg);
+    this._eventBus.publish('chat:clanMessage', msg);
   }
 }
 

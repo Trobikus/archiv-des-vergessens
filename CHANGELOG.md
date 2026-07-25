@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.26] - 2026-07-25
+
+### 🧹 Codebase-Bereinigung & Refactoring
+- **Gilden-Bereinigung & Entkopplung**:
+  - Entfernen veralteter Gilden-Module (`guild-service.js`, `GuildUI.js`) und Bereinigung der DI-Container-Registrierung (`js/core/di/config.js`) sowie der Boot-Initialisierung in `game-boot.js`.
+- **Projekt-Struktur & Skript-Aufräumung**:
+  - Verlagerung von `server/test-live.js` nach `scripts/test-live.js` und Entfernung nicht benötigter i18n-Dateien (`i18n/de.json`, `i18n/en.json`).
+- **NPM Package.json Aufteilung**:
+  - Säuberung der `package.json` devDependencies.
+- **Gründliche Testverifikation**:
+  - Erfolgreiche Ausführung aller 115 Frontend Unit-Tests, 26 Rust Integrationstests und des Produktions-Builds.
+
+---
+
 ## [1.0.25] - 2026-07-25
 
 ### 🔐 AppConfig, AES-256-GCM Verschlüsselung, Argon2id & JWT Backend-Erweiterung
