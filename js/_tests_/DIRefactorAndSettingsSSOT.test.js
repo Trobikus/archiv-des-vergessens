@@ -4,7 +4,7 @@ import registerServices from '../core/di/config.js';
 import EventBus from '../core/events/bus.js';
 import StateManager from '../core/state/manager.js';
 import SaveManager from '../core/persistence/save-manager.js';
-import NavigationController from '../controllers/navigation.js';
+import SettingsController from '../controllers/settings-controller.js';
 
 describe('DI Container & Settings SSOT Refactor', () => {
   let container;
@@ -67,25 +67,23 @@ describe('DI Container & Settings SSOT Refactor', () => {
     expect(settingsManager.get('volume')).toBe(0.9);
   });
 
-  it('should persist settings when NavigationController updates options', () => {
+  it('should persist settings when SettingsController updates options', () => {
     const settingsManager = container.get('settingsManager');
     const cloudManager = container.get('cloudManager');
 
-    const nav = new NavigationController({
+    const settingsCtrl = new SettingsController({
       eventBus,
       stateManager,
-      gameLoop: null,
-      heroService: null,
-      resourceService: null,
-      clanService: null,
-      saveManager: SaveManager,
       settingsManager,
       cloudManager,
-      i18nService: null
+      i18nService: null,
+      saveManager: SaveManager,
+      clanService: null,
+      navigationController: null
     });
 
-    // Change music volume via navigation
-    nav._setMusicVolume(50);
+    // Change music volume via settings controller
+    settingsCtrl._setMusicVolume(50);
 
     // StateManager state updated
     expect(stateManager.getState().settings.volume).toBe(0.5);

@@ -20,6 +20,7 @@ import StateManager from '../core/state/manager.js';
 import * as Middleware from '../core/state/middleware.js';
 import GameLoop from '../core/game/loop.js';
 import NavigationController from './navigation.js';
+import SettingsController from './settings-controller.js';
 import { bootPreactUI } from '../ui/preact/index.js';
 import { initDOMUI } from '../ui/dom/index.js';
 import SaveManager from '../core/persistence/save-manager.js';
@@ -311,22 +312,30 @@ export async function bootGame() {
   container.register('gameLoop', () => gameLoop);
 
   // ============================================================
-  // 7. NAVIGATION
+  // 7. NAVIGATION & SETTINGS
   // ============================================================
 
   const navigation = new NavigationController({
     eventBus,
     stateManager,
     gameLoop,
-    heroService,
     resourceService,
     clanService,
-    saveManager: SaveManager,
-    settingsManager,
-    cloudManager,
-    i18nService
+    saveManager: SaveManager
   });
   container.register('navigation', () => navigation);
+
+  const settingsController = new SettingsController({
+    eventBus,
+    stateManager,
+    settingsManager,
+    cloudManager,
+    i18nService,
+    saveManager: SaveManager,
+    clanService,
+    navigationController: navigation
+  });
+  container.register('settingsController', () => settingsController);
 
   // ============================================================
   // Step 4 (80%): "Initialisiere UI & Preact-Komponenten..."

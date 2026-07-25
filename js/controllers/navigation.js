@@ -4,87 +4,44 @@
  * ============================================================
  * 
  * VERANTWORTUNG:
- * - View-Wechsel via State-Updates (Menu, Hub, Game, Options)
- * - Empfang von EventBus-Nachrichten aus Preact-Views
- * - Spielstand-Lade/Start-Schnittstellen
- * - Audio- & Grafik-Einstellungen verwalten
+ * - Zentrale Haupt-Navigation (Menu, Hub, Game)
+ * - Game Loop Status Updates
+ * - Manuelles Sammeln und Upgrades
  * ============================================================
  */
 
 import { EVENTS } from '../core/events/definitions.js';
-import { IdleService } from '../core/services/idle-service.js';
 import { setCurrentView } from '../core/state/actions.js';
-import { CONFIG } from '../data/config.js';
-import { logger } from '../core/logger.js';
-
-/** @typedef {import('../core/events/bus.js').default} EventBus */
-/** @typedef {import('../core/state/manager.js').default} StateManager */
-/** @typedef {import('../core/game/loop.js').default} GameLoop */
-/** @typedef {import('../core/services/hero-service.js').default} HeroService */
-/** @typedef {import('../core/services/resource-service.js').default} ResourceService */
-/** @typedef {import('../core/services/clan-service.js').default} ClanService */
-/** @typedef {typeof import('../core/persistence/save-manager.js').default} SaveManager */
+import { calculateGatherAmount, calculateClickPowerUpgradeCost } from '../core/services/gather-service.js';
 
 export class NavigationController {
   /**
    * @param {Object} deps
-   * @param {EventBus} deps.eventBus
-   * @param {StateManager} deps.stateManager
-   * @param {GameLoop} deps.gameLoop
-   * @param {HeroService} deps.heroService
-   * @param {ResourceService} deps.resourceService
-   * @param {ClanService} deps.clanService
-   * @param {SaveManager} deps.saveManager
-   * @param {import('../core/settings.js').default} deps.settingsManager
-   * @param {import('../core/persistence/cloud-manager.js').default} deps.cloudManager
-   * @param {import('../core/services/i18n-service.js').default} [deps.i18nService]
+   * @param {import('../core/events/bus.js').default} deps.eventBus
+   * @param {import('../core/state/manager.js').default} deps.stateManager
+   * @param {import('../core/game/loop.js').default} deps.gameLoop
+   * @param {import('../core/services/resource-service.js').default} deps.resourceService
+   * @param {import('../core/services/clan-service.js').default} deps.clanService
+   * @param {typeof import('../core/persistence/save-manager.js').default} deps.saveManager
    */
-  constructor({ eventBus, stateManager, gameLoop, heroService, resourceService, clanService, saveManager, settingsManager, cloudManager, i18nService }) {
+  constructor({ eventBus, stateManager, gameLoop, resourceService, clanService, saveManager }) {
     this._eventBus = eventBus;
     this._stateManager = stateManager;
     this._gameLoop = gameLoop;
-    this._heroService = heroService;
     this._resourceService = resourceService;
     this._clanService = clanService;
     this._saveManager = saveManager;
-    this._settingsManager = settingsManager;
-    this._cloudManager = cloudManager;
-    this._i18nService = i18nService;
 
     this._bindEvents();
   }
 
   _bindEvents() {
-    // --- Auth / Login-Events ---
-    this._eventBus.subscribe(EVENTS.AUTH_PROCEED_TO_MENU, () => this.showCharacterSelect());
-    this._eventBus.subscribe(EVENTS.AUTH_SHOW_LOGIN, () => this.showLogin());
-
-    // --- Character-Events ---
-    this._eventBus.subscribe(EVENTS.CHARACTER_SELECT, (data) => this._selectCharacterSlot(data.slotId));
-    this._eventBus.subscribe(EVENTS.CHARACTER_CREATE, (data) => this._createCharacterSlot(data));
-
     // --- Menü-Events ---
-    this._eventBus.subscribe(EVENTS.MENU_NEW_GAME, () => this._showNewGameModal());
-    this._eventBus.subscribe(EVENTS.MENU_CONTINUE, () => this._loadGame());
-    this._eventBus.subscribe(EVENTS.MENU_OPTIONS, () => this.showOptions());
+    this._eventBus.subscribe(EVENTS.MENU_OPTIONS, () => this._eventBus.publish(EVENTS.UI_OPEN_OPTIONS));
     this._eventBus.subscribe(EVENTS.MENU_QUIT, () => this._quitGame());
-    this._eventBus.subscribe(EVENTS.MENU_START_NEW_GAME, (data) => this._startNewGame(data.name));
-
-    // --- Options-Events ---
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_LANGUAGE, (data) => this._setLanguage(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_PARTICLES, (data) => this._setParticles(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_FLOATING, (data) => this._setFloating(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_TOGGLE_AUDIO, () => this._toggleAudio());
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_MUSIC_VOLUME, (data) => this._setMusicVolume(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_SFX_VOLUME, (data) => this._setSfxVolume(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_AUTOSAVE, (data) => this._setAutosave(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_SET_CLOUD_ENABLED, (data) => this._setCloudEnabled(data.value));
-    this._eventBus.subscribe(EVENTS.OPTIONS_SYNC_CLOUD, () => this._syncCloud());
-    this._eventBus.subscribe(EVENTS.OPTIONS_HARD_RESET, () => this._hardReset());
-    this._eventBus.subscribe(EVENTS.OPTIONS_BACK, () => this._saveAndExitOptions());
 
     // --- Hub-Events ---
-    this._eventBus.subscribe(EVENTS.HUB_BACK_TO_MENU, () => this.showCharacterSelect());
+    this._eventBus.subscribe(EVENTS.HUB_BACK_TO_MENU, () => this.showMenu());
     this._eventBus.subscribe(EVENTS.HUB_ENTER_GAME, () => this.showGame());
 
     // --- In-Game-Events ---
@@ -119,45 +76,9 @@ export class NavigationController {
         }
       }
     });
-
-    // Offline modal logic moved to Preact
   }
 
   // ---- VIEW-WECHSEL ----
-
-  showLogin() {
-    this._stateManager.dispatch(setCurrentView('login'));
-  }
-
-  showCharacterSelect() {
-    this._stateManager.dispatch(setCurrentView('characterSelect'));
-  }
-
-  async _selectCharacterSlot(slotId) {
-    this._saveManager.setActiveSlot(slotId);
-    const loadedState = await this._saveManager.load(slotId);
-    if (loadedState) {
-      this._stateManager.dispatch(() => loadedState, 'character/load');
-    }
-    this.showHub();
-  }
-
-  async _createCharacterSlot({ slotId, name, avatar, title }) {
-    this._saveManager.setActiveSlot(slotId);
-    this._stateManager.reset();
-    this._stateManager.dispatch((state) => ({
-      ...state,
-      hero: {
-        ...state.hero,
-        name: name || 'Hüter',
-        avatar: avatar || '🛡️',
-        title: title || 'Schatten-Hüter'
-      }
-    }), 'character/create');
-
-    await this._saveManager.save(this._stateManager.getState(), slotId);
-    this.showHub();
-  }
 
   showMenu() {
     this._stateManager.dispatch(setCurrentView('menu'));
@@ -177,289 +98,6 @@ export class NavigationController {
     this._eventBus.publish(EVENTS.UI_REFRESH_QUEST);
   }
 
-  showOptions() {
-    const currentView = this._stateManager.getState()?.system?.currentView || 'hub';
-    if (currentView !== 'options') {
-      this._previousView = (currentView === 'menu' ? 'hub' : currentView);
-    }
-    this._stateManager.dispatch(setCurrentView('options'));
-  }
-
-  // ---- NEUES SPIEL LOGIK ----
-
-  _showNewGameModal() {
-    this._eventBus.publish(EVENTS.UI_SHOW_NEW_GAME_MODAL);
-  }
-
-  _hideNewGameModal() {
-    this._eventBus.publish(EVENTS.UI_HIDE_NEW_GAME_MODAL);
-  }
-
-  async _startNewGame(name) {
-    // Prüfen, ob ein Save existiert – ggf. löschen
-    const hasSave = await this._saveManager.hasSave();
-    if (hasSave) {
-      if (!(await window.gameConfirm('Möchtest du den alten Spielstand überschreiben?'))) return;
-      await this._saveManager.deleteSave();
-    }
-
-    // State komplett zurücksetzen
-    this._stateManager.reset();
-
-    // Hero-Namen setzen
-    this._stateManager.dispatch((state) => ({
-      ...state,
-      hero: { ...state.hero, name }
-    }), 'game/setHeroName');
-
-    // Lokale Service-Zustände zurücksetzen
-    this._clanService.reset();
-    this._eventBus.publish(EVENTS.GAME_RESET);
-
-    // Zum Hub navigieren
-    this.showHub();
-    this._eventBus.publish(EVENTS.HERO_UPDATED, {});
-    this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
-    this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, {});
-    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-      message: `🌅 Willkommen, ${name}! Deine Reise beginnt.`,
-      type: 'success',
-      duration: 4000
-    });
-  }
-
-  // ---- SPIELSTAND LADEN ----
-
-  async _loadGame() {
-    const state = this._stateManager.getState();
-    if (state) {
-      this._clanService.cleanupExpeditions();
-      
-      // Richtige View basierend auf Tutorial wiederherstellen
-      this._navigateToCorrectViewAfterLoad(state);
-
-      // Offline-Zeit berechnen
-      const now = Date.now();
-      const lastSave = state.system.originalLastSave || state.system.lastSave || now;
-      const offlineMs = now - lastSave;
-
-      // originalLastSave löschen, damit es bei erneutem Weiter-Klicken nicht nochmal verwendet wird
-      if (state.system.originalLastSave) {
-        this._stateManager.dispatch((s) => {
-          const newSystem = { ...s.system };
-          delete newSystem.originalLastSave;
-          return { ...s, system: newSystem };
-        }, 'system/clearOriginalLastSave');
-      }
-
-      if (offlineMs > 60000) {
-        const clampedOffline = Math.min(offlineMs, 12 * 60 * 60 * 1000);
-        
-        // Offline-Fortschritt berechnen
-        const offlineHours = clampedOffline / (3600 * 1000);
-        const exponentialScale = Math.pow(1.02, offlineHours); // Exponentieller Skalierungsfaktor für Offline-Ertrag
-        const prestigeBonus = state.hero?.prestige?.level * 2 || 0;
-        const libraryBonus = (state.library?.upgrades?.clan_boost || 0) * 0.05;
-        const talentBonus = ((state.hero?.talents?.allocatedNodeIds || []).length * 1.5) / 100;
-        const tickRateMs = 10000; // CONFIG.CLAN.TICK_RATE_MS ist 10000 (10 Sekunden)
-        const expPerCycle = 1; // CONFIG.CLAN.EXP_PER_CYCLE ist 1
-        
-        let totalParticles = 0;
-        let totalRelics = 0;
-        let totalArtifacts = 0;
-        let totalLevels = 0;
-        
-        const simulatedMembers = [];
-        const members = state.clan?.members || [];
-        const expeditionStatus = state.clan?.expeditionStatus || {};
-        
-        for (const member of members) {
-          // Wenn das Mitglied auf einer Expedition ist, produziert es keine Ressourcen offline
-          if (expeditionStatus[member.id] === true) {
-            simulatedMembers.push({ ...member });
-            continue;
-          }
-          
-          let memberProgress = member.progress || 0;
-          let memberLevel = member.level || 1;
-          let memberExp = member.experience || 0;
-          let memberExpToNext = member.expToNextLevel || 50;
-          const baseRate = member.baseCollectRate || 1.0;
-          
-          let remainingTime = clampedOffline;
-          
-          while (remainingTime > 0) {
-            let rate = baseRate * Math.pow(1.05, memberLevel - 1) * exponentialScale;
-            rate *= (1 + prestigeBonus / 100);
-            rate *= (1 + libraryBonus + talentBonus);
-            
-            if (rate <= 0) break;
-            
-            // msNeeded = verbleibender Fortschritt bis 100 * tickRateMs / (rate * 100)
-            const msNeeded = ((100 - memberProgress) * tickRateMs) / (rate * 100);
-            
-            if (remainingTime >= msNeeded) {
-              remainingTime -= msNeeded;
-              memberProgress = 0;
-              
-              const role = member.role;
-              if (role === 'collector') {
-                totalParticles += 1;
-              } else if (role === 'weaver') {
-                if (Math.random() < 0.1) {
-                  totalRelics += 1;
-                } else {
-                  totalParticles += 2;
-                }
-              } else if (role === 'guardian') {
-                if (Math.random() < 0.05) {
-                  totalArtifacts += 1;
-                } else {
-                  totalParticles += 3;
-                }
-              } else if (role === 'archivist') {
-                if (Math.random() < 0.15) {
-                  totalRelics += 1;
-                } else {
-                  totalParticles += 4;
-                }
-              } else if (role === 'elder') {
-                const rand = Math.random();
-                if (rand < 0.1) {
-                  totalArtifacts += 1;
-                } else if (rand < 0.3) {
-                  totalRelics += 1;
-                } else {
-                  totalParticles += 6;
-                }
-              }
-              
-              memberExp += expPerCycle;
-              while (memberExp >= memberExpToNext) {
-                memberExp -= memberExpToNext;
-                memberLevel++;
-                totalLevels++;
-                memberExpToNext = Math.floor(memberExpToNext * 1.15);
-              }
-            } else {
-              const progressGain = (rate * remainingTime) / tickRateMs * 100;
-              memberProgress = Math.min(100, memberProgress + progressGain);
-              remainingTime = 0;
-            }
-          }
-          
-          simulatedMembers.push({
-            ...member,
-            level: memberLevel,
-            experience: memberExp,
-            progress: memberProgress,
-            expToNextLevel: memberExpToNext
-          });
-        }
-        
-        // Idle Generator Offline Progress (Mneme-Fragmente)
-        let offlineMneme = 0;
-        const gen = state.idleGenerators?.gedankenArchiv;
-        if (gen && gen.level > 0) {
-          const ewigeMneme = Number(state.resources?.ewigeMneme || '0');
-          const prestigeMult = 1.0 + (ewigeMneme * 0.10);
-          const upgradeBonus = gen.upgrades?.focusBonus || 0;
-          const yieldPerSec = IdleService.calculateYieldPerSecond(gen.baseYield, gen.level, upgradeBonus, prestigeMult);
-          const idleOffline = IdleService.calculateOfflineProgress(lastSave, now, yieldPerSec, CONFIG.SYSTEM.MAX_OFFLINE_MS / 1000);
-          offlineMneme = idleOffline.totalYield;
-        }
-
-        // Ressourcen und Clan-Mitglieder im State aktualisieren
-        this._stateManager.dispatch((state) => {
-          const currentParticles = BigInt(state.resources.particles || '0');
-          const totalParticlesAcc = BigInt(state.resources.totalParticles || '0');
-          const currentRelics = BigInt(state.resources.relics || '0');
-          const totalRelicsAcc = BigInt(state.resources.totalRelics || '0');
-          const currentArtifacts = BigInt(state.resources.artifacts || '0');
-          const currentMneme = BigInt(state.resources.mnemeFragmente || '0');
-          const totalMnemeAcc = BigInt(state.resources.totalMnemeFragmente || '0');
-          
-          return {
-            ...state,
-            resources: {
-              ...state.resources,
-              particles: String(currentParticles + BigInt(totalParticles)),
-              totalParticles: String(totalParticlesAcc + BigInt(totalParticles)),
-              relics: String(currentRelics + BigInt(totalRelics)),
-              totalRelics: String(totalRelicsAcc + BigInt(totalRelics)),
-              artifacts: String(currentArtifacts + BigInt(totalArtifacts)),
-              mnemeFragmente: String(currentMneme + BigInt(offlineMneme)),
-              totalMnemeFragmente: String(totalMnemeAcc + BigInt(offlineMneme)),
-              timeBank: 0 // Da wir die Belohnungen sofort gewähren, ist kein zeitbasierter Catchup nötig
-            },
-            clan: {
-              ...state.clan,
-              members: simulatedMembers
-            }
-          };
-        }, 'game/offlineProgress');
-        
-        // Offline-Modal einblenden & Werte aktualisieren
-        this._eventBus.publish(EVENTS.UI_SHOW_OFFLINE_PROGRESS, {
-          timeStr: this._formatTime(clampedOffline),
-          particles: totalParticles,
-          relics: totalRelics,
-          artifacts: totalArtifacts,
-          levels: totalLevels
-        });
-        
-        // Event-Bus benachrichtigen, um alle Views und Overlays zu aktualisieren
-        this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
-        this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, { members: this._clanService.getMembers() });
-      }
-      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-        message: '💾 Spielstand geladen!',
-        type: 'success',
-        duration: 2000
-      });
-    } else {
-      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-        message: '❌ Kein Spielstand vorhanden.',
-        type: 'warning',
-        duration: 2000
-      });
-    }
-  }
-
-  _navigateToCorrectViewAfterLoad(state) {
-    const isFinished = state.system?.tutorialFinished === true;
-    const step = state.system?.tutorialStep !== undefined ? state.system.tutorialStep : -1;
-
-    if (!isFinished && step >= 0) {
-      if (step === 4 || step === 5 || step === 6 || step === 7) {
-        this.showGame();
-        return;
-      }
-      if (step === 9) {
-        this.showHub();
-        setTimeout(() => this._eventBus.publish(EVENTS.UI_OPEN_HERO), 150);
-        return;
-      }
-      if (step === 11) {
-        this.showHub();
-        setTimeout(() => this._eventBus.publish(EVENTS.UI_OPEN_STORY), 150);
-        return;
-      }
-    }
-    this.showHub();
-  }
-
-  _formatTime(ms) {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-    let str = '';
-    if (hours > 0) str += hours + 'h ';
-    if (minutes > 0) str += minutes + 'm ';
-    str += seconds + 's';
-    return str;
-  }
-
   // ---- BEENDEN ----
 
   async _quitGame() {
@@ -471,172 +109,11 @@ export class NavigationController {
     }
   }
 
-  // ---- OPTIONEN SETTINGS LOGIK ----
-
-  _setParticles(val) {
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, particles: val }
-    }), 'settings/updateParticles');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _setFloating(val) {
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, floatingText: val }
-    }), 'settings/updateFloatingText');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _setLanguage(val) {
-    if (this._i18nService) {
-      this._i18nService.setLanguage(val, false);
-    }
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, language: val }
-    }), 'settings/updateLanguage');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _toggleAudio() {
-    const settings = this._stateManager.getState()?.settings || {};
-    const newVal = !settings.music;
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, music: newVal, sfx: newVal }
-    }), 'settings/toggleAudio');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _setMusicVolume(val) {
-    const isMuted = val === 0;
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, music: !isMuted, volume: val / 100 }
-    }), 'settings/updateMusicVolume');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _setSfxVolume(val) {
-    const isMuted = val === 0;
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, sfx: !isMuted, sfxVolume: val / 100 }
-    }), 'settings/updateSfxVolume');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _setAutosave(val) {
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, autosave: val }
-    }), 'settings/updateAutosave');
-    this._settingsManager.save(newState.settings);
-  }
-
-  _setCloudEnabled(val) {
-    this._cloudManager.setEnabled(val);
-    const newState = this._stateManager.dispatch((state) => ({
-      ...state,
-      settings: { ...state.settings, cloudEnabled: val }
-    }), 'settings/updateCloudEnabled');
-    this._settingsManager.save(newState.settings);
-  }
-
-  async _syncCloud() {
-    if (!this._cloudManager.isEnabled()) {
-      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-        message: '⚠️ Cloud-Sync ist deaktiviert. Bitte zuerst aktivieren.',
-        type: 'warning',
-        duration: 3000
-      });
-      return;
-    }
-    
-    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-      message: '☁️ Synchronisiere mit Cloud...',
-      type: 'info',
-      duration: 1500
-    });
-    
-    const success = await this._cloudManager.sync(this._stateManager.getState());
-    if (success) {
-      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-        message: '💾 Cloud-Sync erfolgreich abgeschlossen!',
-        type: 'success',
-        duration: 3000
-      });
-    } else {
-      this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-        message: '❌ Cloud-Sync fehlgeschlagen.',
-        type: 'error',
-        duration: 3000
-      });
-    }
-  }
-
-  _saveAndExitOptions() {
-    this._eventBus.publish(EVENTS.SAVE_STARTED);
-    const state = this._stateManager.getState();
-    this._saveManager.save(state).then(() => {
-      logger.info('[Settings] Einstellungen erfolgreich persistent gespeichert.');
-    }).catch((err) => {
-      logger.error('[Settings] Fehler beim automatischen Speichern der Einstellungen:', err);
-    });
-
-    const targetView = this._previousView && this._previousView !== 'options' && this._previousView !== 'menu'
-      ? this._previousView
-      : 'hub';
-
-    if (targetView === 'characterSelect') {
-      this.showCharacterSelect();
-    } else if (targetView === 'game') {
-      this.showGame();
-    } else if (targetView === 'login') {
-      this.showLogin();
-    } else {
-      this.showHub();
-    }
-  }
-
-  async _hardReset() {
-    if (!(await window.gameConfirm('🚨 ACHTUNG: Möchtest du deinen Spielstand wirklich unwiderruflich löschen? Alle Fortschritte gehen verloren!', 'SPIELSTAND LÖSCHEN'))) return;
-    
-    await this._saveManager.deleteSave();
-    this._cloudManager.clearCloudData();
-    this._stateManager.reset();
-    this._clanService.reset();
-    this._eventBus.publish(EVENTS.GAME_RESET);
-    
-    await this.showMenu();
-    this._eventBus.publish(EVENTS.HERO_UPDATED, {});
-    this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
-    this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, {});
-    
-    this._eventBus.publish(EVENTS.UI_SHOW_TOAST, {
-      message: '🗑️ Spielstand wurde erfolgreich gelöscht.',
-      type: 'success',
-      duration: 4000
-    });
-  }
-
   // ---- MANUAL GATHER IN-GAME ----
 
   _manualGather(clientX, clientY) {
     const state = this._stateManager.getState();
-    const clickPowerLevel = state.hero.clickPowerLevel || 0;
-    const base = CONFIG.GATHER.BASE_AMOUNT + clickPowerLevel * CONFIG.GATHER.POWER_MULT;
-    const gatherLevel = state.library.upgrades?.gather_boost || 0;
-    const libraryBonus = gatherLevel * 0.10;
-    
-    // Finstre Pakte Multiplikatoren
-    let amount = Math.floor(base * (1 + libraryBonus));
-    const activePact = state.hero?.prestige?.activePact;
-    if (activePact === 'solitary_wanderer') {
-      amount = Math.floor(amount * 2.5); // +150% click power
-    }
+    const amount = calculateGatherAmount(state);
 
     this._resourceService.addParticles(amount);
     this._eventBus.publish(EVENTS.QUEST_MANUAL_GATHER, {});
@@ -666,13 +143,7 @@ export class NavigationController {
 
   _upgradeClickPower() {
     const state = this._stateManager.getState();
-    const clickPowerLevel = state.hero.clickPowerLevel || 0;
-    let cost = Math.floor(CONFIG.GATHER.UPGRADE_BASE_COST * Math.pow(CONFIG.GATHER.UPGRADE_COST_MULT, clickPowerLevel));
-    
-    const activePact = state.hero?.prestige?.activePact;
-    if (activePact === 'ancient_folios') {
-      cost = Math.floor(cost * 1.5); // +50% Upgrade-Kosten
-    }
+    const cost = calculateClickPowerUpgradeCost(state);
 
     const currentParticles = BigInt(state.resources.particles || '0');
 

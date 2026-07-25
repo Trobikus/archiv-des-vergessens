@@ -92,6 +92,25 @@ export function formatNumber(val, options = {}) {
   return num.toString();
 }
 
+/**
+ * Formatiert Millisekunden in ein lesbares Format (h m s).
+ * Beispiel: 3661000 -> "1h 1m 1s"
+ * 
+ * @param {number} ms - Millisekunden
+ * @returns {string} Formatierte Zeit
+ */
+export function formatDuration(ms) {
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+  let str = '';
+  if (hours > 0) str += hours + 'h ';
+  if (minutes > 0) str += minutes + 'm ';
+  str += seconds + 's';
+  return str;
+}
+
 export default {
-  formatNumber
+  formatNumber,
+  formatDuration
 };
