@@ -20,9 +20,7 @@ pub fn validate_release_url(url: Option<String>) -> Result<String, String> {
         "https://github.com/Trobikus/archiv-des-vergessens/releases/latest".to_string()
     });
 
-    if !target_url.starts_with("https://github.com/Trobikus/archiv-des-vergessens/")
-        && target_url != "https://github.com/Trobikus/archiv-des-vergessens"
-    {
+    if !target_url.starts_with("https://github.com/Trobikus/archiv-des-vergessens") {
         return Err("Ungültige URL".into());
     }
 
@@ -30,8 +28,6 @@ pub fn validate_release_url(url: Option<String>) -> Result<String, String> {
 }
 
 /// Öffnet die GitHub-Release-Seite im Standard-Browser.
-/// Verwendet das offizielle `tauri-plugin-opener` und erzwingt strikte URL-Validierung
-/// zur Vermeidung von Command-Injection-Schwachstellen.
 #[tauri::command]
 pub fn open_release_page(app: AppHandle, url: Option<String>) -> Result<String, String> {
     let target_url = validate_release_url(url)?;

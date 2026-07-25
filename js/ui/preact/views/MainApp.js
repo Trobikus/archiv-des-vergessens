@@ -1,5 +1,5 @@
 import { h, html, useStateSelector, useState, useEffect } from '../setup.js';
-import { EVENTS } from '../../core/events/definitions.js';
+import { EVENTS } from '../../../core/events/definitions.js';
 import { IntroView } from './IntroView.js';
 import { MenuView } from './MenuView.js';
 import { OptionsView } from './OptionsView.js';

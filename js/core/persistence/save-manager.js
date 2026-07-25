@@ -101,7 +101,7 @@ export class SaveManager {
       const request = indexedDB.open(DB_NAME, 2);
       
       request.onupgradeneeded = (event) => {
-        const db = event.target.result;
+        const db = request.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: 'key' });
         }
@@ -110,13 +110,13 @@ export class SaveManager {
 
       request.onblocked = (event) => {
         logger.warn('[SaveManager] Datenbank-Öffnen blockiert.');
-        if (event.target && event.target.result) {
-          try { event.target.result.close(); } catch (e) {}
+        if (request.result) {
+          try { request.result.close(); } catch (e) {}
         }
       };
       
       request.onsuccess = (event) => {
-        this._db = event.target.result;
+        this._db = request.result;
         this._dbReady = true;
         this._db.onerror = (event) => {
           logger.error('[SaveManager] Datenbank-Fehler:', event.target.error);
@@ -431,14 +431,15 @@ export class SaveManager {
   /**
    * Lädt die geteilten Account-Vault Daten aus der IndexedDB.
    */
-  static async loadAccountVault() {
+  static async loadAccountVault(userId = null) {
     try {
       const db = await this._getDB();
       const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
+      const vaultKey = this._getVaultKey(userId);
 
       return new Promise((resolve) => {
-        const request = store.get('account_vault');
+        const request = store.get(vaultKey);
         request.onsuccess = () => resolve(request.result ? request.result.vaultData : null);
         request.onerror = () => resolve(null);
       });

@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.33] - 2026-07-25
+
+### 🛠️ Persistence & IPC Reliability
+- **SaveManager & IndexedDB Update (`js/core/persistence/save-manager.js`)**:
+  - Direkter Zugriff auf `request.result` bei DB-Lifecycle-Events (`onupgradeneeded`, `onblocked`, `onsuccess`).
+  - `loadAccountVault(userId)` nutzt nun die korrekte `_getVaultKey(userId)`-Methode zur benutzerspezifischen Vault-Zuordnung.
+- **Tauri Bridge & IPC Robustheit (`public/tauri-bridge.js`, `src-tauri/`)**:
+  - Abgefangenes Handling unbehandelter Promise-Rejections bei nativen IPC-Aufrufen (`quit_app`, `show_main_window`, `close_launcher`).
+  - Wiederherstellung und Validierung des `open_release_page`-Befehls mit striktem URL-Check im Rust Backend.
+- **Preact Modale & UI-Import-Fixes**:
+  - Korrigierte relative Importpfade für Preact-Komponenten und Modale (`OfflineProgressModal`, `UpdateModal`, `IntroView`, `MainApp`).
+
+---
+
 ## [1.0.32] - 2026-07-25
 
 ### ⚡ Refactoring & Stabilization

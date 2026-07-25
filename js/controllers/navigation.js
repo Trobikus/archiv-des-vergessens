@@ -12,6 +12,7 @@
  */
 
 import { EVENTS } from '../core/events/definitions.js';
+import { IdleService } from '../core/services/idle-service.js';
 import { setCurrentView } from '../core/state/actions.js';
 import { CONFIG } from '../data/config.js';
 import { logger } from '../core/logger.js';

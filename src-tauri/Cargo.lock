@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "archiv-des-vergessens"
-version = "1.0.31"
+version = "1.0.32"
 dependencies = [
  "mockall",
  "rand",

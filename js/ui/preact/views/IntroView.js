@@ -1,5 +1,5 @@
 import { h, html, useEffect, useState, useRef } from '../setup.js';
-import { EVENTS } from '../../core/events/definitions.js';
+import { EVENTS } from '../../../core/events/definitions.js';
 
 export function IntroView({ eventBus, services }) {
   const [loadingPct, setLoadingPct] = useState(0);

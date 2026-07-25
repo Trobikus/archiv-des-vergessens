@@ -1,4 +1,4 @@
-import { h, html, useState, useEffect } from '../../setup.js';
+import { h, html, useState, useEffect } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
 
 export function OfflineProgressModal({ eventBus, services }) {

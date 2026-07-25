@@ -129,8 +129,8 @@
     quitAndInstall: async () => {
       if (window.__TAURI__ && window.__TAURI__.process && typeof window.__TAURI__.process.relaunch === 'function') {
         await window.__TAURI__.process.relaunch();
-      } else {
-        invoke('quit_app');
+      } else if (invoke) {
+        invoke('quit_app').catch(err => console.warn('[Tauri Bridge] quit_app nicht verfügbar:', err));
       }
     },
 
@@ -154,7 +154,7 @@
 
     showMainWindow: () => {
       if (invoke) {
-        invoke('show_main_window');
+        invoke('show_main_window').catch(err => console.warn('[Tauri Bridge] show_main_window nicht verfügbar:', err));
       } else if (currentWindow) {
         currentWindow.show();
       }
@@ -185,7 +185,7 @@
 
     closeLauncher: () => {
       if (invoke) {
-        invoke('close_launcher');
+        invoke('close_launcher').catch(err => console.warn('[Tauri Bridge] close_launcher nicht verfügbar:', err));
       } else if (currentWindow) {
         currentWindow.close();
       }
@@ -210,7 +210,9 @@
     },
 
     sendQuitReady: () => {
-      invoke('quit_app');
+      if (invoke) {
+        invoke('quit_app').catch(err => console.warn('[Tauri Bridge] quit_app nicht verfügbar:', err));
+      }
     }
   };
 
