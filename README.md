@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/github/actions/workflow/status/Trobikus/archiv-des-vergessens/test.yml?branch=main&label=CI%2FCD%20Build&style=for-the-badge&color=2EA44F" alt="Build Status" />
   </a>
   <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
-    <img src="https://img.shields.io/badge/Version-v1.0.22-6B46C1?style=for-the-badge" alt="Latest Version" />
+    <img src="https://img.shields.io/badge/Version-v1.0.31-6B46C1?style=for-the-badge" alt="Latest Version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-41B883?style=for-the-badge" alt="License" />
@@ -57,7 +57,7 @@ Jedes Partikel, das du sammelst, birgt eine Geschichte. Jeder Boss verkörpert e
   - Gilden-System mit gemeinsamen Boni
   - Globale Bestenlisten (Rankings nach Prestige, Bossen und Stufe)
 - **Visuelle & Technische Exzellenz**:
-  - Nahtloser Launcher mit automatischen In-App-Updates (Tauri 2 Updater Plugin)
+  - Nahtloser Standalone-Launcher mit Ed25519-Signaturprüfung und In-App-Updates (Tauri 2 Updater Plugin)
   - Ultra-performantes Canvas-Partikelsystem (Zero-Lag 60 FPS)
   - AAA Glassmorphic Dark UI, Custom Glow-Effekte & dynamische Vignetten
   - Vollständige Zweisprachigkeit (**Deutsch DE** & **Englisch EN**)
@@ -310,7 +310,7 @@ Alle kryptographischen Schlüssel, JWT-Secrets und Datenbankpasswörter werden z
 - **Desktop Runtime**: Tauri 2 (Rust Core)
 - **Multiplayer Server**: Node.js, WebSockets (`ws`), SQLite (`better-sqlite3`)
 - **Architektur**: Reducer State-Management, Dependency Injection Container, JSDoc Typing
-- **Quality Assurance**: Vitest (115+ Frontend Unit-Tests) & Cargo Test Suite (18 Rust Unit-, Integrations- & E2E-Tests)
+- **Quality Assurance**: Vitest (116 Frontend Unit-Tests) & Cargo Test Suite (27 Rust Unit-, Integrations- & E2E-Tests)
 - **CI / CD**: GitHub Actions (Multi-Platform Portable & Release Pipelines, Rust Test Suite)
 
 ---
