@@ -90,3 +90,15 @@ When executing a release push or version bump requested by the user:
 1. **SemVer Tag Creation**: After committing version bump changes across `package.json`, `Cargo.toml`, `tauri.conf.json`, and `CHANGELOG.md`, create the matching SemVer git tag (e.g. `git tag v1.0.21`).
 2. **Explicit Tag Push**: Push the tag explicitly to the remote repository (`git push origin v1.0.21`).
 3. **Reasoning**: The GitHub Actions release pipeline (`.github/workflows/release.yml`) is triggered by `push.tags: ['v*.*.*']`. Pushing the `main` branch alone does not trigger the build and release of new executable binaries (`.exe`).
+
+### 11. Tauri IPC Command Promise Resilience
+All frontend bridge wrappers delegating to native Tauri IPC commands (`invoke('cmd_name')`) MUST handle promise rejections (e.g. `invoke('cmd_name').catch(err => console.warn('[Tauri Bridge]', err))`). This prevents unhandled promise rejection exceptions when the web app runs in browser fallback or mock contexts.
+
+### 12. Preact Component Relative Import Path Depth
+When creating or moving Preact components in nested subdirectories (e.g. `js/ui/preact/shared/` or `js/ui/preact/views/`), verify that relative imports to `setup.js` and `core/events/definitions.js` match the exact folder depth.
+
+### 13. Mandatory Dual-Layer Test Verification Before Release
+Release validation MUST run and verify BOTH test layers:
+1. Frontend JS Unit & Integration Tests: `npm test` (Vitest)
+2. Backend Tauri Rust Tests: `cargo test` inside `src-tauri` (and `launcher/src-tauri` if launcher code is modified)
+
