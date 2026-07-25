@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.29] - 2026-07-25
+
+### 🚀 Opener Plugin Integration & Persistence Stability
+- **Tauri Plugin Opener Integration (`src-tauri/`)**:
+  - Integration von `tauri-plugin-opener` zur sicheren Handhabung externer URLs (`open_release_page`) mit strikter Validierung auf das offizielle Repository.
+- **Speicher-Anomalien & Nebenläufigkeit (`SaveManager.js`)**:
+  - Absicherung paralleler Speichervorgänge via `_pendingState` und `_pendingSlotId`, um Datenverlust bei schnellen aufeinanderfolgenden Saves zu verhindern.
+- **Sanitizer & Math Hilfsfunktionen (`sanitizer.js` & `math.js`)**:
+  - Absicherung von `sanitizeNumber` gegen `Infinity` / `-Infinity` Werte (`Number.isFinite`).
+  - Anbindung von `calculateOfflineProgress` an die zentrale Maximalkonfiguration (`CONFIG.SYSTEM.MAX_OFFLINE_MS`).
+- **Umfassende Verifikation**:
+  - Erfolgreiche Durchführung aller 116 Frontend Unit-Tests, 27 Rust Integrationstests, TypeScript Typechecks und Produktions-Build.
+
+---
+
 ## [1.0.28] - 2026-07-25
 
 ### 🔐 Server-Sicherheit, App Icons & Tauri CSP

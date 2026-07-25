@@ -1,4 +1,4 @@
-use archiv_des_vergessens_lib::commands::open_release_page;
+use archiv_des_vergessens_lib::commands::validate_release_url;
 use archiv_des_vergessens_lib::db::DbManager;
 use archiv_des_vergessens_lib::services::auth::AuthService;
 
@@ -16,14 +16,21 @@ async fn test_save_game_command_execution() {
 
 #[tokio::test]
 async fn test_open_release_page_command() {
-    let result = open_release_page(Some(
-        "https://github.com/Trobikus/archiv-des-vergessens".to_string(),
+    let result = validate_release_url(Some(
+        "https://github.com/Trobikus/archiv-des-vergessens/releases/latest".to_string(),
     ));
     assert!(result.is_ok());
     assert_eq!(
         result.unwrap(),
-        "https://github.com/Trobikus/archiv-des-vergessens"
+        "https://github.com/Trobikus/archiv-des-vergessens/releases/latest"
     );
+}
+
+#[tokio::test]
+async fn test_open_release_page_invalid_url() {
+    let result = validate_release_url(Some("https://evil-site.com/malware".to_string()));
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), "Ungültige URL");
 }
 
 #[tokio::test]

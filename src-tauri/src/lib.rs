@@ -26,6 +26,7 @@ pub fn create_app_builder() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
         .manage(app_config)
         .manage(db_manager)
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(move |window, event| {

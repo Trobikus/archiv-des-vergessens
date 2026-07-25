@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use crate::services::crypto::CryptoService;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use pbkdf2::pbkdf2_hmac;

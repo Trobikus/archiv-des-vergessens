@@ -17,7 +17,7 @@ export function clamp(value, min, max) {
 export function sanitizeNumber(value, fallback = 0) {
   if (value === null || value === undefined) return fallback;
   const num = Number(value);
-  return isNaN(num) ? fallback : num;
+  return Number.isFinite(num) ? num : fallback;
 }
 
 /**

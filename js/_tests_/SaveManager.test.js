@@ -100,6 +100,23 @@ describe('SaveManager', () => {
     expect(results.every(r => r === true)).toBe(true);
   });
 
+  test('concurrent saves with updated state persist the pending state without data loss', async () => {
+    const initialState = stateManager.getState();
+    const state1 = { ...initialState, hero: { ...initialState.hero, level: 10 } };
+    const state2 = { ...initialState, hero: { ...initialState.hero, level: 25 } };
+
+    // Trigger two saves concurrently
+    const p1 = SaveManager.save(state1);
+    const p2 = SaveManager.save(state2);
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toBe(true);
+    expect(r2).toBe(true);
+
+    const loadedState = await SaveManager.load();
+    expect(loadedState.hero.level).toBe(25);
+  });
+
   test('prevents saving and loading for guest accounts', async () => {
     const mockAuthService = {
       getCurrentUser: () => ({ id: 'guest_123', username: 'Gast-Hüter', isGuest: true })

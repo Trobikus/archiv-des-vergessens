@@ -24,6 +24,8 @@ export class SaveManager {
   static _db = null;
   static _saveLock = false;
   static _saveQueue = [];
+  static _pendingState = null;
+  static _pendingSlotId = null;
   static _loadLock = false;
   static _loadQueue = [];
   static _workerManager = null;
@@ -169,11 +171,14 @@ export class SaveManager {
     }
 
     if (this._saveLock) {
+      this._pendingState = state;
+      this._pendingSlotId = slotId;
       return new Promise((resolve) => this._saveQueue.push(resolve));
     }
     this._saveLock = true;
     this.setActiveSlot(slotId);
 
+    let result = false;
     try {
       const db = await this._getDB();
       const saveTime = Date.now();
@@ -215,7 +220,6 @@ export class SaveManager {
         req.onerror = () => reject(req.error);
       });
 
-
       if (this._services?.stateManager) {
         this._services.stateManager.dispatch((s) => ({
           ...s,
@@ -227,19 +231,33 @@ export class SaveManager {
         }), 'setSavingStatus');
       }
 
-      const queue = [...this._saveQueue];
-      this._saveQueue = [];
-      for (const resolve of queue) resolve(true);
-
-      return true;
+      result = true;
 
     } catch (error) {
       console.error('[SaveManager] Save fehlgeschlagen:', error);
-      this._saveQueue = [];
-      return false;
+      result = false;
     } finally {
       this._saveLock = false;
     }
+
+    if (this._pendingState !== null) {
+      const pending = this._pendingState;
+      const pendingSlot = this._pendingSlotId || slotId;
+      this._pendingState = null;
+      this._pendingSlotId = null;
+
+      const queue = [...this._saveQueue];
+      this._saveQueue = [];
+
+      const pendingResult = await this.save(pending, pendingSlot);
+      for (const resolve of queue) resolve(pendingResult);
+    } else {
+      const queue = [...this._saveQueue];
+      this._saveQueue = [];
+      for (const resolve of queue) resolve(result);
+    }
+
+    return result;
   }
 
   /**
@@ -440,6 +458,8 @@ export class SaveManager {
   static destroy() {
     this._saveLock = false;
     this._saveQueue = [];
+    this._pendingState = null;
+    this._pendingSlotId = null;
     this._loadLock = false;
     this._loadQueue = [];
     if (this._db) {

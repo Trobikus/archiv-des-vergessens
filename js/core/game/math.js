@@ -10,6 +10,7 @@
  * ============================================================
  */
 
+import { CONFIG } from '../../data/config.js';
 import { sanitizeNumber } from '../../utils/sanitizer.js';
 
 /**
@@ -119,14 +120,14 @@ export function calculateYieldPerSecond(baseYield, level, upgradeBonusesSum = 0,
  * @param {number} lastTimestamp - Zeitstempel des letzten Speicherns/Aktivität (in ms)
  * @param {number} currentTimestamp - Aktueller Zeitstempel (in ms)
  * @param {number} yieldPerSecond - Ertrag pro Sekunde
- * @param {number} [maxOfflineSeconds=43200] - Maximale Anrechenbare Offline-Zeit in Sekunden (Standard: 12 Std)
+ * @param {number} [maxOfflineSeconds=CONFIG.SYSTEM.MAX_OFFLINE_MS / 1000] - Maximale Anrechenbare Offline-Zeit in Sekunden (Standard: 12 Std)
  * @returns {{ elapsedSeconds: number, clampedSeconds: number, totalYield: number }}
  */
-export function calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds = 43200) {
+export function calculateOfflineProgress(lastTimestamp, currentTimestamp, yieldPerSecond, maxOfflineSeconds = CONFIG.SYSTEM.MAX_OFFLINE_MS / 1000) {
   const last = sanitizeNumber(lastTimestamp, 0);
   const now = sanitizeNumber(currentTimestamp, 0);
   const safeYield = Math.max(0, sanitizeNumber(yieldPerSecond, 0));
-  const maxSec = Math.max(0, sanitizeNumber(maxOfflineSeconds, 43200));
+  const maxSec = Math.max(0, sanitizeNumber(maxOfflineSeconds, CONFIG.SYSTEM.MAX_OFFLINE_MS / 1000));
 
   if (now <= last || last <= 0) {
     return { elapsedSeconds: 0, clampedSeconds: 0, totalYield: 0 };
