@@ -20,6 +20,8 @@ import { PACTS } from '../../../data/pacts.js';
 import { SkillTreeModal } from '../skilltree/SkillTreeModal.js';
 import { useItemDisplay } from './useItemDisplay.js';
 import { HeroAvatarPanel } from './HeroAvatarPanel.js';
+import { PactSelectionModal } from './PactSelectionModal.js';
+import { SocketingModal } from './SocketingModal.js';
 
 /**
  * Helden-UI – Hauptkomponente.
@@ -899,152 +901,36 @@ export function HeroUI({ stateManager, eventBus, services }) {
         </div>
       ` : ''}
 
-      ${socketingItem ? html`
-        <div class="modal-overlay" style="display: flex; z-index: 11000;" onClick=${() => setSocketingItem(null)}>
-          <div class="modal-content glass-panel" style="max-width: 440px; text-align: center; padding: 1.5rem; border: 1px solid rgba(197,160,89,0.25);" onClick=${(e) => e.stopPropagation()}>
-            <button class="modal-close" onClick=${() => setSocketingItem(null)}>×</button>
-            <h3 class="modal-title glow-text cinzel" style="font-size: 1.3rem; margin-bottom: 0.3rem;">💎 ${lang === 'de' ? 'Katalysatorsockel' : 'Catalyst Sockets'}</h3>
-            <p class="text-muted text-sm mb-1" style="font-size: 0.8rem; line-height: 1.3; color: #bbb;">${lang === 'de' ? 'Wähle eine Katalysator-Rune, um sie in den nächsten freien Sockel dieses Gegenstandes einzusetzen.' : 'Choose a catalyst rune to insert into the next free socket of this item.'}</p>
-
-            <div class="glass-inner-panel mb-1" style="padding: 0.8rem; border-color: ${rarityColors[socketingItem.item.rarity] || 'var(--color-gold)'}; background: rgba(0,0,0,0.3); margin: 0.8rem 0;">
-              <div class="text-bold cinzel" style="color: ${rarityColors[socketingItem.item.rarity] || 'var(--color-gold)'}; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.05);">
-                ${translateItemName(socketingItem.item.name)}
-              </div>
-              <div class="text-muted text-xs" style="font-size: 0.72rem; margin-top: 2px;">Lv.${socketingItem.item.level} (${getRarityLabel(socketingItem.item.rarity)})</div>
-              
-              <!-- Sockets state -->
-              <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
-                ${socketingItem.item.sockets?.map((sock, sIdx) => html`
-                  <div style="padding: 0.3rem 0.6rem; border-radius: 4px; background: ${sock ? sock.color + '15' : 'rgba(255,255,255,0.03)'}; border: 1px solid ${sock ? sock.color : 'rgba(255,255,255,0.15)'}; color: ${sock ? sock.color : '#888'}; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;">
-                    <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${sock ? sock.color : 'transparent'}; border: 1px solid ${sock ? sock.color : '#666'};"></span>
-                    ${lang === 'de' ? `Sockel ${sIdx + 1}:` : `Socket ${sIdx + 1}:`} ${sock ? (lang === 'de' ? sock.title : sock.title_en || sock.title) : (lang === 'de' ? 'Leerer Sockel' : 'Empty Socket')}
-                  </div>
-                `)}
-              </div>
-            </div>
-
-            <div class="text-gold text-sm mb-1 text-bold" style="font-family: var(--font-header); font-size: 0.85rem;">
-              ${lang === 'de' ? 'Verfügbare Katalysatoren:' : 'Available Catalysts:'} <span class="text-highlight" style="font-size: 1rem; color: var(--color-gold);">${resources.catalyst || 0}</span>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
-              ${[
-                { id: 'attack', title: lang === 'de' ? 'Rubin der Glut' : 'Ruby of Embers', bonus: lang === 'de' ? '+5 Angriff' : '+5 Attack', desc: lang === 'de' ? 'Fügt dem Gegenstand Angriffskraft hinzu' : 'Adds attack power to the item', color: '#ff4d4d', icon: '⚔️' },
-                { id: 'defense', title: lang === 'de' ? 'Saphir des Schutzes' : 'Sapphire of Protection', bonus: lang === 'de' ? '+5 Zähigkeit' : '+5 Toughness', desc: lang === 'de' ? 'Fügt dem Gegenstand Zähigkeit hinzu' : 'Adds toughness to the item', color: '#4d79ff', icon: '🛡️' },
-                { id: 'agility', title: lang === 'de' ? 'Smaragd der Schnelligkeit' : 'Emerald of Swiftness', bonus: lang === 'de' ? '+5 Geschick' : '+5 Agility', desc: lang === 'de' ? 'Fügt dem Gegenstand Geschicklichkeit hinzu' : 'Adds agility to the item', color: '#33cc33', icon: '⚡' },
-                { id: 'stamina', title: lang === 'de' ? 'Bernstein des Lebens' : 'Amber of Vitality', bonus: lang === 'de' ? '+5 Vitalität' : '+5 Vitality', desc: lang === 'de' ? 'Fügt dem Gegenstand Vitalität hinzu' : 'Adds vitality to the item', color: '#ffaa00', icon: '❤️' }
-              ].map(cat => {
-                // Finde den ersten freien Sockel
-                const emptySocketIdx = socketingItem.item.sockets?.findIndex(s => s === null);
-                const hasCatalyst = BigInt(resources.catalyst || '0') >= BigInt(1);
-                const canSocket = emptySocketIdx !== -1 && hasCatalyst;
-
-                const handleConfirmSocket = () => {
-                  if (!canSocket) return;
-                  const res = services.forgeService.socketCatalyst(
-                    socketingItem.isEquipped,
-                    socketingItem.isEquipped ? socketingItem.slot : socketingItem.idx,
-                    emptySocketIdx,
-                    cat.id
-                  );
-                  if (res.success) {
-                    setSocketingItem(null);
-                  }
-                };
-
-                return html`
-                  <button class="glass-btn" 
-                          style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.8rem; border-color: rgba(255,255,255,0.08); cursor: ${canSocket ? 'pointer' : 'not-allowed'}; opacity: ${canSocket ? 1 : 0.55}; text-align: left; background: rgba(255,255,255,0.01);"
-                          disabled=${!canSocket}
-                          onClick=${handleConfirmSocket}>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-size: 1.1rem; color: ${cat.color};">${cat.icon}</span>
-                      <div>
-                        <div style="color: ${cat.color}; font-weight: bold; font-size: 0.8rem; font-family: var(--font-header);">${cat.title}</div>
-                        <div class="text-muted" style="font-size: 0.68rem; line-height: 1.1; color: #999;">${cat.desc}</div>
-                      </div>
-                    </div>
-                    <div class="text-success text-bold" style="font-size: 0.8rem; font-family: var(--font-header); color: #2ecc71;">${cat.bonus}</div>
-                  </button>
-                `;
-              })}
-            </div>
-          </div>
-        </div>
-      ` : ''}
+      ${socketingItem && html`
+        <${SocketingModal}
+          socketingItem=${socketingItem}
+          catalystCount=${resources.catalyst}
+          onClose=${() => setSocketingItem(null)}
+          onConfirmSocket=${(catalystId, emptySocketIdx) => {
+            const res = services.forgeService.socketCatalyst(
+              socketingItem.isEquipped,
+              socketingItem.isEquipped ? socketingItem.slot : socketingItem.idx,
+              emptySocketIdx,
+              catalystId
+            );
+            if (res.success) {
+              setSocketingItem(null);
+            }
+          }}
+          translateItemName=${translateItemName}
+          getRarityLabel=${getRarityLabel}
+          lang=${lang}
+        />
+      `}
 
       <!-- Finstre Pakte Modal Overlay -->
-      ${pactSelectionActive ? html`
-        <div class="modal-overlay fade-in active" style="z-index: 12000; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
-          <div class="glass-panel" style="max-width: 850px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 2rem; border-color: var(--color-gold); background: rgba(10, 8, 5, 0.9); box-shadow: 0 0 40px rgba(212, 175, 55, 0.15); border-radius: 8px; position: relative;">
-            
-            <h2 class="glow-text text-center text-gold cinzel" style="font-size: 1.8rem; letter-spacing: 2px; margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); text-transform: uppercase;">${lang === 'de' ? '🌀 Finstre Pakte der Verewigung 🌀' : '🌀 Dark Pacts of Eternalization 🌀'}</h2>
-            <p class="subtitle text-center" style="color: #ccc; font-size: 0.88rem; line-height: 1.4; max-width: 650px; margin: 0 auto 2rem auto; font-family: var(--font-header);">
-              ${lang === 'de'
-                ? 'Du stehst an den Grenzen des Archivs des Vergessens. Um den Kreislauf neu zu beginnen und deine Stufe zu erhöhen, musst du einen der drei angebotenen finsteren Pakte schließen. Wähle mit Bedacht – die Entscheidung ist bis zur nächsten Verewigung unumkehrbar.'
-                : 'You stand at the threshold of the Archive of the Forgotten. To begin the cycle anew and raise your level, you must seal one of the three dark pacts offered. Choose wisely – this decision is irreversible until the next eternalization.'
-              }
-            </p>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 1.5rem;">
-              ${pactChoices.map(pact => html`
-                <div class="glass-panel text-center" 
-                     style="display: flex; flex-direction: column; justify-content: space-between; padding: 1.2rem; border-color: rgba(212, 175, 55, 0.15); background: rgba(255, 255, 255, 0.01); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-radius: 6px; cursor: pointer; position: relative; overflow: hidden;"
-                     onMouseEnter=${(e) => {
-                       e.currentTarget.style.borderColor = 'var(--color-gold)';
-                       e.currentTarget.style.boxShadow = '0 0 25px rgba(212, 175, 55, 0.25)';
-                       e.currentTarget.style.transform = 'translateY(-4px)';
-                       e.currentTarget.style.background = 'rgba(212, 175, 55, 0.03)';
-                     }}
-                     onMouseLeave=${(e) => {
-                       e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.15)';
-                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-                       e.currentTarget.style.transform = 'translateY(0)';
-                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)';
-                     }}
-                     onClick=${() => handleSelectPact(pact.id)}>
-                  
-                  <div>
-                    <h3 class="text-gold cinzel" style="font-size: 1.1rem; margin-top: 0.2rem; margin-bottom: 0.8rem; font-weight: bold; letter-spacing: 1px;">${getLocText(pact, 'name')}</h3>
-                    <div style="width: 40px; height: 1px; background: linear-gradient(90deg, transparent, var(--color-gold), transparent); margin: 0 auto 1rem auto;"></div>
-                    <p style="font-size: 0.75rem; color: #aaa; line-height: 1.4; margin-bottom: 1.2rem; min-height: 3.2rem; display: flex; align-items: center; justify-content: center;">
-                      „${getLocText(pact, 'desc')}“
-                    </p>
-                  </div>
-
-                  <div style="display: flex; flex-direction: column; gap: 0.8rem; background: rgba(0,0,0,0.4); padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.03);">
-                    <!-- Segen -->
-                    <div>
-                      <div class="text-success text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #2ecc71;">${lang === 'de' ? '🌌 Segen (Positiv)' : '🌌 Blessing (Positive)'}</div>
-                      <div style="font-size: 0.78rem; font-weight: bold; color: #e5ffe5; line-height: 1.2;">
-                        ${getLocText(pact, 'passiveText')}
-                      </div>
-                    </div>
-
-                    <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 0 auto; width: 60%;"></div>
-
-                    <!-- Fluch -->
-                    <div>
-                      <div class="text-danger text-bold" style="font-size: 0.62rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; color: #e74c3c;">${lang === 'de' ? '💀 Fluch (Negativ)' : '💀 Curse (Negative)'}</div>
-                      <div style="font-size: 0.78rem; font-weight: bold; color: #ffe5e5; line-height: 1.2;">
-                        ${getLocText(pact, 'curseText')}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button class="glass-btn primary cinzel" style="width: 100%; margin-top: 1.2rem; padding: 0.45rem; font-size: 0.75rem; border-color: rgba(212, 175, 55, 0.3); pointer-events: none;">
-                    ${lang === 'de' ? 'Pakt besiegeln' : 'Seal Pact'}
-                  </button>
-                </div>
-              `)}
-            </div>
-
-            <div class="text-center" style="margin-top: 1.5rem;">
-              <button class="glass-btn secondary cinzel" style="font-size: 0.75rem; padding: 0.4rem 1.2rem; border-color: rgba(255,255,255,0.15);" onClick=${() => setPactSelectionActive(false)}>${lang === 'de' ? 'Abbrechen' : 'Cancel'}</button>
-            </div>
-          </div>
-        </div>
-      ` : ''}
+      <${PactSelectionModal}
+        isOpen=${pactSelectionActive}
+        pactChoices=${pactChoices}
+        onSelectPact=${handleSelectPact}
+        onClose=${() => setPactSelectionActive(false)}
+        lang=${lang}
+      />
 
       ${isSkillTreeOpen && html`
         <${SkillTreeModal}
