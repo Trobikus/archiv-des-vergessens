@@ -3,12 +3,12 @@
  * FILE: ui/preact/hero/HeroUI.js – Helden-UI (Preact) – v2.0 FINAL
  * ============================================================
  * 
- * Zeigt:
- * - Avatar mit 13 Equipment-Slots
- * - Attribute & Kampfstats
- * - Stat-Punkte-Verwaltung
- * - 3 Tabs: Ressourcen, Ausrüstung, Loot
- * - Prestige-Button
+ * Zeigt die Haupt-Modal-Shell, verknüpft State und Handler
+ * für den Helden, das Inventar und alle Tabs/Modals.
+ * Beinhaltet:
+ * - HeroAvatarPanel (Links)
+ * - Tabs: ResourcesTab, EquipmentTab, LootTab (Rechts)
+ * - Sub-Modals: Socketing, Pact Selection, Skill Tree
  * ============================================================
  */
 
@@ -54,7 +54,6 @@ export function HeroUI({ stateManager, eventBus, services }) {
     translateItemName,
     translateItemDescription,
     getRarityLabel,
-    getSlotLabel,
     getItemIcon
   } = useItemDisplay(lang);
 
@@ -136,21 +135,13 @@ export function HeroUI({ stateManager, eventBus, services }) {
   // Wenn nicht geöffnet, nichts rendern
   if (!isOpen) return null;
 
-  // Helfer: Seltenheitsfarben und -labels
+  // Helfer: Seltenheitsfarben
   const rarityColors = {
     common: '#aaa',
     uncommon: '#5a9a5a',
     rare: '#4a7aaa',
     epic: '#9a4aaa',
     legendary: '#d4af37'
-  };
-
-  const rarityLabels = {
-    common: 'Gewöhnlich',
-    uncommon: 'Ungewöhnlich',
-    rare: 'Selten',
-    epic: 'Episch',
-    legendary: 'Legendär'
   };
 
   // Stat-Punkt verteilen
