@@ -85,15 +85,15 @@ export function GameView({ stateManager, eventBus, services }) {
         <div class="header-right">
           <!-- Floating Time Warp Clock Button -->
           <button 
-            class="time-warp-float-btn ${timeWarpActive ? 'active-warp' : timeWarpCharge >= 100 ? 'charged' : ''}" 
-            style="display: flex;"
+            class="glass-btn ${timeWarpActive ? 'btn-danger' : timeWarpCharge >= 100 ? 'primary epic-pulse' : ''}" 
+            style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; padding: 0; margin-left: auto; box-shadow: ${timeWarpActive ? '0 0 20px rgba(255,50,50,0.4)' : timeWarpCharge >= 100 ? '0 0 20px rgba(197,160,89,0.4)' : 'none'}; transition: all 0.3s ease;"
             disabled=${!timeWarpActive && timeWarpCharge < 100}
             onClick=${handleActivateTimeWarp}
             type="button"
             title=${timeWarpActive ? (lang === 'de' ? `Zeitkrümmung aktiv: noch ${Math.ceil(timeWarpRemaining)}s` : `Time warp active: ${Math.ceil(timeWarpRemaining)}s remaining`) : timeWarpCharge >= 100 ? (lang === 'de' ? 'Klicke, um 3x Zeitkrümmung zu aktivieren!' : 'Click to activate 3x Time Warp!') : (lang === 'de' ? `Fokus aufladen: ${Math.floor(timeWarpCharge)}%` : `Charging focus: ${Math.floor(timeWarpCharge)}%`)}
           >
-            <span style="font-size: 1.5rem; line-height: 1;">${timeWarpActive ? '⏳' : '🌀'}</span>
-            <span style="font-size: 0.6rem; font-weight: bold; margin-top: 2px; font-family: var(--font-header);">
+            <span style="font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 0 5px currentColor);">${timeWarpActive ? '⏳' : '🌀'}</span>
+            <span class="cinzel glow-text" style="font-size: 0.65rem; font-weight: bold; margin-top: 4px; color: ${timeWarpActive || timeWarpCharge >= 100 ? '#fff' : 'var(--color-gold)'};">
               ${timeWarpActive ? `${Math.ceil(timeWarpRemaining)}s` : `${Math.floor(timeWarpCharge)}%`}
             </span>
           </button>
