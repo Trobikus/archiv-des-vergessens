@@ -1,5 +1,5 @@
-import { DE } from '../../data/locales/de.js';
-import { EN } from '../../data/locales/en.js';
+import { DE } from '../../../i18n/de.js';
+import { EN } from '../../../i18n/en.js';
 
 export default class I18nService {
     constructor(eventBus, settingsManager) {

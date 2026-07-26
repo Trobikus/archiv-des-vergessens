@@ -62,3 +62,62 @@ fn test_db_file_backed_persistence_with_tempfile() {
     assert_eq!(save.mneme_points, 9999);
     assert_eq!(save.play_time_seconds, 8888);
 }
+
+#[test]
+fn test_db_get_nonexistent_save() {
+    let db = DbManager::open_in_memory().expect("In-memory DB failed");
+    let save = db.get_save("Nobody").expect("Fetch should not error");
+    assert!(save.is_none());
+}
+
+#[test]
+fn test_db_save_game_multiple_players() {
+    let db = DbManager::open_in_memory().expect("In-memory DB failed");
+    db.save_game("Player1", 100, 10).unwrap();
+    db.save_game("Player2", 200, 20).unwrap();
+
+    let p1 = db.get_save("Player1").unwrap().unwrap();
+    let p2 = db.get_save("Player2").unwrap().unwrap();
+
+    assert_eq!(p1.mneme_points, 100);
+    assert_eq!(p2.mneme_points, 200);
+}
+
+#[test]
+fn test_db_save_game_overwrite_same_player() {
+    let db = DbManager::open_in_memory().expect("In-memory DB failed");
+    db.save_game("Hero", 50, 5).unwrap();
+    db.save_game("Hero", 150, 15).unwrap();
+
+    let p = db.get_save("Hero").unwrap().unwrap();
+    assert_eq!(p.mneme_points, 150);
+}
+
+#[test]
+fn test_db_save_game_zero_values() {
+    let db = DbManager::open_in_memory().expect("In-memory DB failed");
+    db.save_game("ZeroHero", 0, 0).unwrap();
+
+    let p = db.get_save("ZeroHero").unwrap().unwrap();
+    assert_eq!(p.mneme_points, 0);
+    assert_eq!(p.play_time_seconds, 0);
+}
+
+#[test]
+fn test_db_file_backed_persistence_with_corrupt_path() {
+    let temp_dir = tempfile::tempdir().expect("Tempdir creation failed");
+    let path_str = temp_dir.path().to_str().unwrap();
+    
+    let db = DbManager::open_at_path(path_str);
+    assert!(db.is_err(), "Should fail to open a directory as a db");
+}
+
+#[test]
+fn test_db_save_game_special_chars_name() {
+    let db = DbManager::open_in_memory().expect("In-memory DB failed");
+    let special_name = "Player_!@#$%^&*()";
+    db.save_game(special_name, 100, 10).unwrap();
+
+    let p = db.get_save(special_name).unwrap().unwrap();
+    assert_eq!(p.mneme_points, 100);
+}

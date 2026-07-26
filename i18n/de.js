@@ -1,4 +1,4 @@
-import { APP_VERSION } from '../../utils/version.js';
+import { APP_VERSION } from '../js/utils/version.js';
 
 export const DE = {
     // ===== MENU =====

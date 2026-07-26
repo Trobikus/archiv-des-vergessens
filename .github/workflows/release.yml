@@ -52,7 +52,7 @@ jobs:
         run: |
           Get-ChildItem -Path ./dist
           if (-not (Test-Path "./dist/index.html")) { throw "index.html fehlt in ./dist!" }
-          if (-not (Test-Path "./dist/launcher.html")) { throw "launcher.html fehlt in ./dist!" }
+          if (-not (Test-Path "./dist/launcher/launcher.html")) { throw "launcher.html fehlt in ./dist/launcher!" }
 
       - name: Build Portable Game Executable
         run: npm run game:build

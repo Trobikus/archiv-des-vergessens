@@ -35,7 +35,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
-        launcher: 'launcher.html'
+        launcher: 'launcher/launcher.html'
       },
       output: {
         manualChunks(id) {

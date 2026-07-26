@@ -14,7 +14,7 @@
       {
         "title": "Archiv des Vergessens - Launcher",
         "label": "main",
-        "url": "/launcher.html",
+        "url": "/launcher/launcher.html",
         "width": 1000,
         "height": 400,
         "resizable": false,
