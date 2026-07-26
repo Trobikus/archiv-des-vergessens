@@ -102,3 +102,7 @@ Release validation MUST run and verify BOTH test layers:
 1. Frontend JS Unit & Integration Tests: `npm test` (Vitest)
 2. Backend Tauri Rust Tests: `cargo test` inside `src-tauri` (and `launcher/src-tauri` if launcher code is modified)
 
+### 14. SQLite Concurrency & Non-Blocking I/O Invariants
+When initializing or querying SQLite databases (across `src-tauri` Rust backends using `rusqlite` or `server/` Node backends using `better-sqlite3`):
+1. **Mandatory Concurrency PRAGMAs**: Every SQLite connection MUST configure `PRAGMA journal_mode = WAL;` and `PRAGMA busy_timeout = 5000;` upon opening. Setting `busy_timeout` prevents immediate `SQLITE_BUSY: database is locked` errors during concurrent process/thread access.
+2. **Non-Blocking Tokio Offloading**: Synchronous SQLite disk I/O executed inside Tokio async functions or handlers MUST be offloaded using `tokio::task::spawn_blocking` (e.g. `save_game_async` / `get_save_async`) to prevent blocking Tokio event loop worker threads.

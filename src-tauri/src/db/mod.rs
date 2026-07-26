@@ -35,6 +35,8 @@ impl DbManager {
     /// Initializes an in-memory database instance for testing with complete isolation.
     pub fn open_in_memory() -> Result<Self, DbError> {
         let conn = Connection::open_in_memory()?;
+        let _ = conn.pragma_update(None, "busy_timeout", "5000");
+        let _ = conn.pragma_update(None, "foreign_keys", "ON");
         let manager = DbManager {
             conn: Arc::new(Mutex::new(conn)),
         };
@@ -61,6 +63,12 @@ impl DbManager {
         }
 
         let conn = Connection::open(path)?;
+
+        // Enable WAL mode, busy_timeout, and synchronous NORMAL for concurrency & locking protection
+        let _ = conn.pragma_update(None, "journal_mode", "WAL");
+        let _ = conn.pragma_update(None, "busy_timeout", "5000");
+        let _ = conn.pragma_update(None, "synchronous", "NORMAL");
+        let _ = conn.pragma_update(None, "foreign_keys", "ON");
 
         if !password.is_empty() {
             // Apply key for SQLCipher / SQLite encryption if supported
@@ -145,6 +153,27 @@ impl DbManager {
             Ok(None)
         }
     }
+
+    /// Asynchronously saves player game progress using `tokio::task::spawn_blocking` to avoid blocking Tokio worker threads.
+    pub async fn save_game_async(
+        &self,
+        player_name: String,
+        mneme_points: u64,
+        play_time: u64,
+    ) -> Result<i64, DbError> {
+        let db = self.clone();
+        tokio::task::spawn_blocking(move || db.save_game(&player_name, mneme_points, play_time))
+            .await
+            .map_err(|e| DbError::SaveError(format!("Task spawn error: {e}")))?
+    }
+
+    /// Asynchronously retrieves game save by player name using `tokio::task::spawn_blocking`.
+    pub async fn get_save_async(&self, player_name: String) -> Result<Option<GameSave>, DbError> {
+        let db = self.clone();
+        tokio::task::spawn_blocking(move || db.get_save(&player_name))
+            .await
+            .map_err(|e| DbError::SaveError(format!("Task spawn error: {e}")))?
+    }
 }
 
 #[cfg(test)]
@@ -186,5 +215,39 @@ mod tests {
 
         let save = db.get_save("EncryptedPlayer").unwrap().unwrap();
         assert_eq!(save.player_name, "EncryptedPlayer");
+    }
+
+    #[tokio::test]
+    async fn test_db_wal_mode_and_async_save_load() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path().to_str().unwrap().to_string();
+
+        let db = DbManager::open_at_path(&path).expect("File DB should open");
+
+        // Verify journal_mode is WAL
+        {
+            let conn = db.conn.lock().unwrap();
+            let journal_mode: String = conn
+                .query_row("PRAGMA journal_mode;", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(journal_mode.to_uppercase(), "WAL");
+        }
+
+        // Test async save and load roundtrip
+        let save_id = db
+            .save_game_async("AsyncHero".to_string(), 12345, 999)
+            .await
+            .expect("Async save should succeed");
+        assert!(save_id > 0);
+
+        let retrieved = db
+            .get_save_async("AsyncHero".to_string())
+            .await
+            .expect("Async load should succeed")
+            .unwrap();
+
+        assert_eq!(retrieved.player_name, "AsyncHero");
+        assert_eq!(retrieved.mneme_points, 12345);
+        assert_eq!(retrieved.play_time_seconds, 999);
     }
 }

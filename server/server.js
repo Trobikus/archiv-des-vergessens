@@ -56,19 +56,15 @@ async function createDatabaseBackup() {
     const backupFile = join(BACKUP_DIR, `database_${timestamp}.db`);
     
     // SQLite Online Backup API verwenden (sicherer als einfaches File-Copy)
-    const backupDb = new Database(backupFile);
-    
-    db.backup(backupDb)
+    db.backup(backupFile)
       .then(() => {
         console.log(`[Backup] Datenbank-Backup erstellt: ${backupFile}`);
-        backupDb.close();
         
         // Alte Backups aufräumen
         cleanupOldBackups();
       })
       .catch(err => {
         console.error('[Backup] Fehler beim Erstellen:', err);
-        backupDb.close();
       });
       
   } catch (err) {
@@ -150,6 +146,7 @@ async function attemptRecoveryFromBackup() {
     // DB neu laden
     db = new Database(DB_FILE);
     db.pragma('journal_mode = WAL');
+    db.pragma('busy_timeout = 5000');
     
     if (verifyDatabaseIntegrity()) {
       console.log('[Recovery] Wiederherstellung erfolgreich ✓');
@@ -174,6 +171,7 @@ async function initStorage() {
     // SQLite initialisieren
     db = new Database(DB_FILE);
     db.pragma('journal_mode = WAL');
+    db.pragma('busy_timeout = 5000');
     db.pragma('synchronous = NORMAL'); // Balance zwischen Sicherheit und Performance
     db.pragma('foreign_keys = ON');
 
@@ -550,8 +548,8 @@ function initPreparedStatements() {
           END
       `),
       insertChat: db.prepare('INSERT INTO chats (id, player, message, timestamp, type, guildId) VALUES (?, ?, ?, ?, ?, ?)'),
-      getGlobalChatHistory: db.prepare('SELECT id, player, message, timestamp, type FROM chats WHERE type = "global" ORDER BY timestamp DESC LIMIT ?'),
-      getGuildChatHistory: db.prepare('SELECT id, player, message, timestamp, type, guildId FROM chats WHERE type = "guild" AND guildId = ? ORDER BY timestamp DESC LIMIT ?'),
+      getGlobalChatHistory: db.prepare("SELECT id, player, message, timestamp, type FROM chats WHERE type = 'global' ORDER BY timestamp DESC LIMIT ?"),
+      getGuildChatHistory: db.prepare("SELECT id, player, message, timestamp, type, guildId FROM chats WHERE type = 'guild' AND guildId = ? ORDER BY timestamp DESC LIMIT ?"),
       pruneChats: db.prepare('DELETE FROM chats WHERE id NOT IN (SELECT id FROM chats ORDER BY timestamp DESC LIMIT ?)')
     };
     console.log('[Storage] Prepared Statements erfolgreich kompiliert.');
@@ -624,9 +622,20 @@ const httpServer = createServer((req, res) => {
   res.end('Archiv des Vergessens - Multiplayer-Server läuft!\n');
 });
 
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:8080', 'tauri://localhost', 'https://archiv-des-vergessens.de', 'https://api.archiv-des-vergessens.de'];
+
 const wss = new WebSocketServer({ 
   server: httpServer,
-  maxPayload: 256 * 1024 // Limitiert die maximale Payload-Größe auf 256 KB
+  maxPayload: 256 * 1024, // Limitiert die maximale Payload-Größe auf 256 KB
+  verifyClient: (info, cb) => {
+    const origin = info.origin || info.req.headers.origin;
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      cb(true);
+    } else {
+      console.warn(`[Net] Verbindung abgelehnt von nicht autorisiertem Origin: ${origin}`);
+      cb(false, 403, 'Forbidden');
+    }
+  }
 });
 
 wss.on('connection', (ws, req) => {
@@ -645,8 +654,14 @@ wss.on('connection', (ws, req) => {
   
   clients.set(ws, { userId: null, username: 'Anonymus', sessionToken: null, clientIp });
 
-  ws.on('message', async (message) => {
+  ws.on('message', async (message, isBinary) => {
     try {
+      if (isBinary) {
+        // TODO: Bincode Decoder implementieren, sobald Rust-Client Bincode sendet.
+        console.log('[Net] Empfing binäre Nachricht (Bincode). Wird aktuell ignoriert.');
+        return;
+      }
+
       let parsed;
       try {
         parsed = JSON.parse(message);
@@ -1336,6 +1351,37 @@ const heartbeatInterval = setInterval(() => {
     ws.ping();
   });
 }, 30000);
+
+// Graceful Shutdown Logik
+function gracefulShutdown() {
+  console.log('[System] Fahre Server herunter...');
+  clearInterval(heartbeatInterval);
+  
+  // Alle Clients sauber benachrichtigen und trennen
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) { // OPEN
+      client.close(1000, 'Server fährt herunter');
+    }
+  });
+
+  httpServer.close(() => {
+    console.log('[System] HTTP-Server beendet.');
+    if (db) {
+      db.close();
+      console.log('[Storage] SQLite-Datenbank geschlossen.');
+    }
+    process.exit(0);
+  });
+
+  // Fallback, falls Schließen zu lange dauert
+  setTimeout(() => {
+    console.error('[System] Zwangsweiser Shutdown nach Timeout.');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
 
 wss.on('close', () => {
   clearInterval(heartbeatInterval);
