@@ -215,76 +215,7 @@
     gap: 0.5rem;
 }
 
-/* ---- Time Warp Floating Button & Overlay Effects ---- */
-.time-warp-float-btn {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(20, 20, 35, 0.95) 0%, rgba(5, 5, 10, 0.98) 100%);
-    border: 2px solid rgba(197, 160, 89, 0.6);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(197, 160, 89, 0.15), inset 0 2px 2px rgba(255,255,255,0.1);
-    cursor: pointer;
-    z-index: 999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    user-select: none;
-    margin-left: auto;
-    overflow: hidden;
-}
 
-.time-warp-float-btn::before {
-    content: '';
-    position: absolute;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    background: radial-gradient(circle, rgba(197, 160, 89, 0.2) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-}
-
-.time-warp-float-btn:hover:not(:disabled) {
-    transform: scale(1.15) translateY(-5px);
-    border-color: var(--color-gold);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.95), 0 0 35px var(--color-gold-glow), inset 0 0 20px rgba(197, 160, 89, 0.4);
-}
-
-.time-warp-float-btn:hover:not(:disabled)::before {
-    opacity: 1;
-    animation: rotateSlowly 4s linear infinite;
-}
-
-.time-warp-float-btn:active:not(:disabled) {
-    transform: scale(0.95) translateY(2px);
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.9);
-}
-
-.time-warp-float-btn.charged {
-    border-color: #00d2ff;
-    box-shadow: 0 0 20px rgba(0, 210, 255, 0.5), 0 0 30px rgba(197, 160, 89, 0.3);
-    animation: charged-pulse 2s infinite;
-}
-
-.time-warp-float-btn.active-warp {
-    border-color: #ffaa00;
-    box-shadow: 0 0 25px rgba(255, 170, 0, 0.6);
-    animation: active-warp-pulse 1.5s infinite;
-}
-
-@keyframes charged-pulse {
-    0% { box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), 0 0 10px rgba(197, 160, 89, 0.2); }
-    50% { box-shadow: 0 0 30px rgba(0, 210, 255, 0.8), 0 0 20px rgba(197, 160, 89, 0.5); transform: scale(1.05); }
-    100% { box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), 0 0 10px rgba(197, 160, 89, 0.2); }
-}
-
-@keyframes active-warp-pulse {
-    0% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(1.08) rotate(180deg); }
-    100% { transform: scale(1) rotate(360deg); }
-}
 
 /* Fullscreen Time-Warp gold-blauer Schleier */
 .time-warp-fullscreen-overlay {
