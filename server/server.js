@@ -622,7 +622,7 @@ const httpServer = createServer((req, res) => {
   res.end('Archiv des Vergessens - Multiplayer-Server läuft!\n');
 });
 
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:8080', 'tauri://localhost', 'https://archiv-des-vergessens.de', 'https://api.archiv-des-vergessens.de'];
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000', 'tauri://localhost', 'https://archiv-des-vergessens.de', 'https://api.archiv-des-vergessens.de'];
 
 const wss = new WebSocketServer({ 
   server: httpServer,
@@ -688,6 +688,30 @@ wss.on('connection', (ws, req) => {
       switch (type) {
         // ---- 1. AUTHENTIFIZIERUNG & ACCOUNTS ----
 
+        // Gast/Anonymus Auth
+        case 'auth': {
+          const rawUserId = typeof payload.userId === 'string' ? payload.userId : null;
+          const cleanUsername = sanitize(payload.username || 'Gast', 25);
+          
+          if (!rawUserId) {
+            send(ws, 'auth:error', { message: 'Missing userId' });
+            return;
+          }
+          
+          clientInfo.userId = rawUserId;
+          clientInfo.username = cleanUsername;
+          clientInfo.isGuest = true;
+          
+          send(ws, 'auth:success', { userId: rawUserId, username: cleanUsername });
+          
+          // Leaderboard initial senden
+          try {
+            send(ws, 'leaderboard:update', getTop10());
+          } catch (err) {
+            console.error('[Leaderboard] Fehler beim initialen Senden:', err);
+          }
+          break;
+        }
 
         // Real Server Registration
         case 'auth:register': {

@@ -34,7 +34,9 @@ import { FeatureUnlockToast } from '../shared/FeatureUnlockToast.js';
 
 export function MainApp({ stateManager, eventBus, services }) {
   const { i18nService } = services;
-  const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
+  const targetView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
+  const [renderedView, setRenderedView] = useState(targetView);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [vaultModalOpen, setVaultModalOpen] = useState(false);
@@ -57,6 +59,17 @@ export function MainApp({ stateManager, eventBus, services }) {
     onConfirm: null,
     onCancel: null
   });
+
+  useEffect(() => {
+    if (targetView !== renderedView) {
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setRenderedView(targetView);
+        setIsTransitioning(false);
+      }, 300); // 300ms fade-out duration
+      return () => clearTimeout(timer);
+    }
+  }, [targetView, renderedView]);
 
   useEffect(() => {
     const showNewGame = () => setNewGameModalOpen(true);
@@ -123,7 +136,7 @@ export function MainApp({ stateManager, eventBus, services }) {
   };
 
   const renderActiveView = () => {
-    switch (currentView) {
+    switch (renderedView) {
       case 'intro':
         return html`<${IntroView} eventBus=${eventBus} services=${services} />`;
       case 'login':
@@ -145,8 +158,10 @@ export function MainApp({ stateManager, eventBus, services }) {
 
   return html`
     <div class="preact-root-inner">
-      <!-- Active View -->
-      ${renderActiveView()}
+      <!-- Active View with Smooth Transition -->
+      <div class=${`view-transition-wrapper ${isTransitioning ? 'fade-out' : 'fade-in'}`}>
+        ${renderActiveView()}
+      </div>
 
       <!-- Global Modals & Managers -->
       <${ToastManager} eventBus=${eventBus} />

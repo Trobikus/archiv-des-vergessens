@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.37] - 2026-07-26
+
+### 🎨 Layout, Navigation & Network Enhancements
+- **Multiplayer Network Service (`js/core/services/network-service.js`)**:
+  - Optimierung der WebSocket-Verbindung, Reconnect-Backoff und Sync-Kanal-Stabilität.
+- **Layout & Style Improvements (`css/layout.css`, `index.html`)**:
+  - Feinabstimmung des UI-Grids und responsiven Layouts.
+- **Navigation & IPC Resilience (`js/controllers/navigation.js`)**:
+  - TypeScript-Typisierungs-Fix für `window.__TAURI__` IPC-Aufrufe.
+- **Server Updates (`server/server.js`)**:
+  - Absicherung der WebSocket-Server-Ratenbegrenzung und Payload-Verarbeitung.
+
+---
+
 ## [1.0.36] - 2026-07-26
 
 ### 🛠️ Architecture & Settings Controller Refactoring

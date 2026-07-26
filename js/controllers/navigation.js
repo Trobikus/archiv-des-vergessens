@@ -36,6 +36,10 @@ export class NavigationController {
   }
 
   _bindEvents() {
+    // --- Auth-Events ---
+    this._eventBus.subscribe(EVENTS.AUTH_SHOW_LOGIN, () => this.showLogin());
+    this._eventBus.subscribe(EVENTS.AUTH_PROCEED_TO_MENU, () => this.showCharacterSelect());
+
     // --- Menü-Events ---
     this._eventBus.subscribe(EVENTS.MENU_OPTIONS, () => this._eventBus.publish(EVENTS.UI_OPEN_OPTIONS));
     this._eventBus.subscribe(EVENTS.MENU_QUIT, () => this._quitGame());
@@ -43,6 +47,32 @@ export class NavigationController {
     // --- Hub-Events ---
     this._eventBus.subscribe(EVENTS.HUB_BACK_TO_MENU, () => this.showMenu());
     this._eventBus.subscribe(EVENTS.HUB_ENTER_GAME, () => this.showGame());
+
+    // --- Character-Events ---
+    this._eventBus.subscribe(EVENTS.CHARACTER_SELECT, async (data) => {
+      if (data && data.slotId) {
+        const state = await this._saveManager.load(data.slotId);
+        if (state) {
+          this._stateManager.dispatch(() => state, 'character/load');
+        }
+        this.showHub();
+      }
+    });
+    this._eventBus.subscribe(EVENTS.CHARACTER_CREATE, (data) => {
+      this._stateManager.reset();
+      this._stateManager.dispatch((s) => ({
+        ...s,
+        hero: {
+          ...s.hero,
+          name: data.name,
+          avatar: data.avatar,
+          title: data.title,
+          level: 1
+        }
+      }), 'character/create');
+      this._saveManager.save(this._stateManager.getState(), data.slotId);
+      this.showHub();
+    });
 
     // --- In-Game-Events ---
     this._eventBus.subscribe(EVENTS.GAME_MANUAL_GATHER, (data) => this._manualGather(data.clientX, data.clientY));
@@ -80,6 +110,14 @@ export class NavigationController {
 
   // ---- VIEW-WECHSEL ----
 
+  showLogin() {
+    this._stateManager.dispatch(setCurrentView('login'));
+  }
+
+  showCharacterSelect() {
+    this._stateManager.dispatch(setCurrentView('characterSelect'));
+  }
+
   showMenu() {
     this._stateManager.dispatch(setCurrentView('menu'));
     this._eventBus.publish(EVENTS.UI_REFRESH_QUEST);
@@ -104,7 +142,14 @@ export class NavigationController {
     if (await window.gameConfirm('Möchtest du das Spiel wirklich beenden?')) {
       this._eventBus.publish(EVENTS.SAVE_STARTED);
       this._saveManager.save(this._stateManager.getState()).then(() => {
-        window.close();
+        const win = /** @type {any} */ (window);
+        if (win.electronAPI && win.electronAPI.sendQuitReady) {
+          win.electronAPI.sendQuitReady();
+        } else if (win.__TAURI__ && win.__TAURI__.core) {
+          win.__TAURI__.core.invoke('quit_app');
+        } else {
+          window.close();
+        }
       });
     }
   }

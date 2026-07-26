@@ -22,6 +22,9 @@ Dieses Dokument beschreibt die Kernarchitektur und Codierungsrichtlinien für da
 - **Pure Functions**: Für Kern-Logik (z.B. in `math.js`) bevorzugen wir Pure Functions ohne Seiteneffekte.
 - **Tauri APIs**: Interaktionen mit dem System immer über `@tauri-apps/api`.
 
+## Process Lifecycle / Window Management
+- **Closing the App**: NEVER use `window.close()` to exit the game, as it only kills the webview and leaves a white screen. ALWAYS use `window.electronAPI.sendQuitReady()` or `window.__TAURI__.core.invoke('quit_app')` to properly terminate the Tauri application.
+
 ## 🛑 Do not use
 - Keine Frameworks wie Vue/Angular hinzufügen, die Architektur ist etabliert (Vanilla JS + Preact).
 - Keine `require()` Aufrufe im Frontend-Code verwenden (Strict ES Modules).

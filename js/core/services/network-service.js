@@ -65,13 +65,13 @@ export class NetworkService {
     if (customUrl) return customUrl;
 
     // 2. Umgebungs variable via Vite (.env) falls konfiguriert
-    const envUrl = typeof import.meta !== 'undefined' && import.meta['env'] && import.meta['env'].VITE_WS_URL;
+    const envUrl = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WS_URL;
     if (envUrl) return envUrl;
 
     // 3. Nur im aktiven Vite-Entwicklungsmodus (npm run dev) auf localhost ausweichen
     if (typeof window !== 'undefined' && window.location) {
       const hostname = window.location.hostname || '';
-      const isViteDev = typeof import.meta !== 'undefined' && import.meta['env'] && import.meta['env'].DEV;
+      const isViteDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
       const isLocalHost = (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') && window.location.port !== '';
 
       if (isViteDev && isLocalHost) {
