@@ -36,14 +36,22 @@ async fn test_open_release_page_invalid_url() {
 async fn test_validate_release_url_none() {
     let result = validate_release_url(None);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "https://github.com/Trobikus/archiv-des-vergessens/releases/latest");
+    assert_eq!(
+        result.unwrap(),
+        "https://github.com/Trobikus/archiv-des-vergessens/releases/latest"
+    );
 }
 
 #[tokio::test]
 async fn test_validate_release_url_valid_different() {
-    let result = validate_release_url(Some("https://github.com/Trobikus/archiv-des-vergessens/releases/tag/v1.0.0".to_string()));
+    let result = validate_release_url(Some(
+        "https://github.com/Trobikus/archiv-des-vergessens/releases/tag/v1.0.0".to_string(),
+    ));
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "https://github.com/Trobikus/archiv-des-vergessens/releases/tag/v1.0.0");
+    assert_eq!(
+        result.unwrap(),
+        "https://github.com/Trobikus/archiv-des-vergessens/releases/tag/v1.0.0"
+    );
 }
 
 #[tokio::test]
@@ -52,7 +60,7 @@ async fn test_save_game_command_execution_update() {
     db.save_game("HeroCommand", 15000, 3600).unwrap();
     let result = db.save_game("HeroCommand", 20000, 4000);
     assert!(result.is_ok());
-    
+
     let saved = db.get_save("HeroCommand").unwrap().unwrap();
     assert_eq!(saved.mneme_points, 20000);
 }

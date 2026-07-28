@@ -107,7 +107,7 @@ fn test_db_save_game_zero_values() {
 fn test_db_file_backed_persistence_with_corrupt_path() {
     let temp_dir = tempfile::tempdir().expect("Tempdir creation failed");
     let path_str = temp_dir.path().to_str().unwrap();
-    
+
     let db = DbManager::open_at_path(path_str);
     assert!(db.is_err(), "Should fail to open a directory as a db");
 }
