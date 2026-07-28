@@ -207,7 +207,9 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let config = DatabaseConfig {
             path: temp_file.path().to_str().unwrap().to_string(),
-            password: crate::config::AppConfig::generate_default().database.password,
+            password: crate::config::AppConfig::generate_default()
+                .database
+                .password,
         };
 
         let db = DbManager::open_with_config(&config).expect("Encrypted DB should open");
