@@ -99,10 +99,19 @@ export class NetworkService {
     this.connect();
   }
 
+  _secureRandomHex(bytes) {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const arr = new Uint8Array(bytes);
+      crypto.getRandomValues(arr);
+      return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    }
+    throw new Error('Secure random generation is not supported in this environment.');
+  }
+
   _getUserId() {
     let id = localStorage.getItem('archiv_user_id');
     if (!id) {
-      id = 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+      id = 'user_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
       localStorage.setItem('archiv_user_id', id);
     }
     return id;
