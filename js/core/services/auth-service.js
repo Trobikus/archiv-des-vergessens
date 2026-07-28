@@ -178,17 +178,21 @@ export class AuthService {
     return 'fb_' + Math.abs(hash).toString(16);
   }
 
-  _generateSalt() {
+  _secureRandomHex(bytes) {
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      const arr = new Uint8Array(16);
+      const arr = new Uint8Array(bytes);
       crypto.getRandomValues(arr);
       return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
     }
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    throw new Error('Secure random generation is not supported in this environment.');
+  }
+
+  _generateSalt() {
+    return this._secureRandomHex(16);
   }
 
   _generateToken() {
-    return 'token_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 10);
+    return 'token_' + Date.now().toString(36) + '_' + this._secureRandomHex(4);
   }
 
   _getAccounts() {
@@ -219,7 +223,7 @@ export class AuthService {
   loginAsGuest() {
     let guestId = localStorage.getItem('archiv_guest_id');
     if (!guestId) {
-      guestId = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+      guestId = 'guest_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
       localStorage.setItem('archiv_guest_id', guestId);
     }
 
@@ -357,7 +361,7 @@ export class AuthService {
       }
 
       // Offline Fallback Registrierung
-      const userId = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+      const userId = 'usr_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
       const salt = this._generateSalt();
       const passwordHash = await this._hashPassword(password, salt);
 
