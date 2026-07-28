@@ -316,16 +316,19 @@ async function migrateOldJsonData() {
             timestamp = excluded.timestamp
         `);
 
+        const checkUserStmt = db.prepare('SELECT id FROM users WHERE id = ?');
         const runTx = db.transaction((items) => {
           for (const item of items) {
-            insertStmt.run(
-              item.userId,
-              item.username,
-              item.prestige || 0,
-              item.bosses || 0,
-              item.level || 1,
-              item.timestamp || Date.now()
-            );
+            if (checkUserStmt.get(item.userId)) {
+              insertStmt.run(
+                item.userId,
+                item.username,
+                item.prestige || 0,
+                item.bosses || 0,
+                item.level || 1,
+                item.timestamp || Date.now()
+              );
+            }
           }
         });
         runTx(list);
@@ -402,13 +405,17 @@ async function migrateOldJsonData() {
   }
 }
 
-// Hilfsfunktion: Holt die Top 10 Bestenliste aus SQLite
+// Hilfsfunktion: Holt die Top 10 Bestenliste aus SQLite (nur registrierte Benutzer)
 function getTop10() {
   try {
+    if (stmts.getLeaderboardTop) {
+      return stmts.getLeaderboardTop.all(10);
+    }
     return db.prepare(`
-      SELECT userId, username, prestige, bosses, level, timestamp
-      FROM leaderboard
-      ORDER BY prestige DESC, bosses DESC, level DESC
+      SELECT l.userId, l.username, l.prestige, l.bosses, l.level, l.timestamp
+      FROM leaderboard l
+      INNER JOIN users u ON l.userId = u.id
+      ORDER BY l.prestige DESC, l.bosses DESC, l.level DESC
       LIMIT 10
     `).all();
   } catch (err) {
@@ -530,7 +537,7 @@ function initPreparedStatements() {
           timestamp = excluded.timestamp
       `),
       getLeaderboardUser: db.prepare('SELECT prestige, bosses, level FROM leaderboard WHERE userId = ?'),
-      getLeaderboardTop: db.prepare('SELECT username, prestige, bosses, level, timestamp FROM leaderboard ORDER BY prestige DESC, bosses DESC, level DESC LIMIT ?'),
+      getLeaderboardTop: db.prepare('SELECT l.userId, l.username, l.prestige, l.bosses, l.level, l.timestamp FROM leaderboard l INNER JOIN users u ON l.userId = u.id ORDER BY l.prestige DESC, l.bosses DESC, l.level DESC LIMIT ?'),
       upsertLeaderboard: db.prepare(`
         INSERT INTO leaderboard (userId, username, prestige, bosses, level, timestamp)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -622,7 +629,7 @@ const httpServer = createServer((req, res) => {
   res.end('Archiv des Vergessens - Multiplayer-Server läuft!\n');
 });
 
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000', 'tauri://localhost', 'https://archiv-des-vergessens.de', 'https://api.archiv-des-vergessens.de'];
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000', 'tauri://localhost', 'https://archiv-des-vergessens.de', 'https://api.archiv-des-vergessens.de', 'https://grimoireinteractive.duckdns.org', 'wss://grimoireinteractive.duckdns.org'];
 
 const wss = new WebSocketServer({ 
   server: httpServer,
@@ -814,6 +821,7 @@ wss.on('connection', (ws, req) => {
             clientInfo.userId = result.userId;
             clientInfo.username = cleanUsername;
             clientInfo.sessionToken = result.token;
+            clientInfo.isGuest = false;
             
             console.log(`[Auth] Neuer Account registriert: '${cleanUsername}' (${result.userId})`);
             
@@ -879,6 +887,7 @@ wss.on('connection', (ws, req) => {
             clientInfo.userId = user.id;
             clientInfo.username = user.username;
             clientInfo.sessionToken = newToken;
+            clientInfo.isGuest = false;
 
             console.log(`[Auth] Erfolgreicher Login: '${user.username}' (${user.id})`);
 
@@ -923,6 +932,7 @@ wss.on('connection', (ws, req) => {
             clientInfo.userId = user.id;
             clientInfo.username = user.username;
             clientInfo.sessionToken = token;
+            clientInfo.isGuest = false;
 
             console.log(`[Auth] Session verifiziert für '${user.username}' (${user.id})`);
 
@@ -1081,6 +1091,7 @@ wss.on('connection', (ws, req) => {
             clientInfo.userId = result.userId;
             clientInfo.username = cleanUsername;
             clientInfo.sessionToken = result.token;
+            clientInfo.isGuest = false;
             
             console.log(`[Auth] Gast-Account '${guestId}' umgewandelt in '${cleanUsername}' (${result.userId})`);
             console.log(`[Auth] Save migriert: ${result.saveMigrated}, Leaderboard migriert: ${result.leaderboardMigrated}`);
@@ -1279,7 +1290,14 @@ wss.on('connection', (ws, req) => {
 
         // ---- 4. GLOBAL LEADERBOARD ----
         case 'leaderboard:submit': {
-          if (!clientInfo.userId) return;
+          if (!clientInfo.userId || clientInfo.isGuest) return;
+
+          // Nur registrierte Benutzer zulassen
+          const isRegisteredUser = stmts.getUserById ? stmts.getUserById.get(clientInfo.userId) : db.prepare('SELECT id FROM users WHERE id = ?').get(clientInfo.userId);
+          if (!isRegisteredUser) {
+            console.warn(`[Leaderboard] Übertragung abgelehnt: '${clientInfo.username}' (${clientInfo.userId}) ist kein registrierter Benutzer.`);
+            return;
+          }
 
           try {
             const MAX_PRESTIGE = 99999; 
