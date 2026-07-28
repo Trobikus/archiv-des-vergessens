@@ -63,10 +63,19 @@ export class CloudManager {
     }
   }
 
+  _secureRandomHex(bytes) {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const arr = new Uint8Array(bytes);
+      crypto.getRandomValues(arr);
+      return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    }
+    throw new Error('Secure random generation is not supported in this environment.');
+  }
+
   _getUserId() {
     let id = localStorage.getItem(this._USER_ID_KEY);
     if (!id) {
-      id = 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
+      id = 'user_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
       localStorage.setItem(this._USER_ID_KEY, id);
     }
     return id;
