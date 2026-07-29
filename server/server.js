@@ -1225,17 +1225,28 @@ wss.on('connection', (ws, req) => {
           }
 
           try {
+            if (!payload || payload.saveData === undefined || payload.saveData === null) {
+              send(ws, 'cloud:save:error', { error: 'Ungültige oder leere Speicherdaten.' });
+              return;
+            }
+
             const timestamp = Date.now();
             const saveDataStr = typeof payload.saveData === 'string' 
               ? payload.saveData 
               : JSON.stringify(payload.saveData);
-            const version = payload.version || '1.6';
 
-            // [Sicherheit] Payload Limit für Spielstände (250 KB)
-            if (saveDataStr.length > 250_000) {
+            if (!saveDataStr) {
+              send(ws, 'cloud:save:error', { error: 'Fehler beim Serialisieren des Spielstands.' });
+              return;
+            }
+
+            // [Sicherheit] Payload Limit für Spielstände (2 MB = 2.000.000 B)
+            if (saveDataStr.length > 2_000_000) {
               send(ws, 'cloud:save:error', { error: 'Speicherstand zu groß.' });
               return;
             }
+
+            const version = payload.version || '1.6';
 
             if (stmts.upsertSave) {
               stmts.upsertSave.run(clientInfo.userId, clientInfo.username, saveDataStr, version, timestamp);

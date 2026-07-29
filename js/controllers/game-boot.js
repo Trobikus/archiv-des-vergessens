@@ -255,6 +255,50 @@ export async function bootGame() {
     }, 5000);
   }
 
+  // Cloud-Loaded Subscriber (Prio 1 & Prio 2: Hydration & Konfliktlösung)
+  eventBus.subscribe('cloud:loaded', async ({ saveData, timestamp }) => {
+    if (!saveData || typeof saveData !== 'object') return;
+
+    try {
+      const currentState = stateManager.getState();
+      const localTimestamp = currentState?.system?.lastSave || currentState?.system?.originalLastSave || 0;
+      const cloudTimestamp = timestamp || saveData?.system?.lastSave || 0;
+
+      // Prio 2: Prüfe, ob lokaler Spielstand neuer ist (z. B. offline gespielt)
+      if (localTimestamp > cloudTimestamp + 2000) {
+        logger.info(`[CloudManager] Lokaler Spielstand (${localTimestamp}) ist neuer als Cloud (${cloudTimestamp}). Aktualisiere Cloud.`);
+        eventBus.publish('ui:showToast', {
+          message: 'ℹ️ Lokaler Spielstand war neuer – Cloud wurde aktualisiert.',
+          type: 'info',
+          duration: 4000
+        });
+        cloudManager.sync(currentState);
+        return;
+      }
+
+      // Prio 1: Cloud-Spielstand anwenden, wenn gleich oder neuer
+      logger.info(`[CloudManager] Wende Cloud-Spielstand an (Zeitstempel: ${cloudTimestamp}).`);
+      
+      // In SaveManager (IndexedDB) persisten
+      await SaveManager.save(saveData);
+
+      // In StateManager hydrieren
+      stateManager.dispatch(() => saveData, 'cloud/hydrate');
+
+      // Expeditionen & Theme aktualisieren
+      clanService.cleanupExpeditions();
+      updateTheme(stateManager.getState());
+
+      eventBus.publish('ui:showToast', {
+        message: '☁️ Spielstand erfolgreich aus der Cloud geladen!',
+        type: 'success',
+        duration: 4000
+      });
+    } catch (err) {
+      logger.error('[CloudManager] Fehler beim Anwenden des Cloud-Spielstands:', err);
+    }
+  });
+
   // ============================================================
   // 5.5. THEME / PATH UPDATE (Body Classes)
   // ============================================================

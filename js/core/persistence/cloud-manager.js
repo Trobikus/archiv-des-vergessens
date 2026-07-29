@@ -49,11 +49,18 @@ export class CloudManager {
           this._userId = data.user.id;
           localStorage.setItem(this._USER_ID_KEY, this._userId);
           if (data.isLoggedIn) {
-            this.setEnabled(true);
+            this.setEnabled(true, false);
             this.loadFromCloud();
           } else if (this._isEnabled) {
             this.sync();
           }
+        }
+      });
+
+      this._eventBus.subscribe('network:connected', () => {
+        if (this._isEnabled) {
+          logger.info('[CloudManager] Netzwerk wiederhergestellt. Synchronisiere mit Cloud...');
+          this.sync();
         }
       });
     }
@@ -90,13 +97,17 @@ export class CloudManager {
 
   /**
    * Aktiviert oder deaktiviert den Cloud-Sync.
+   * @param {boolean} enabled
+   * @param {boolean} [syncNow=true] - Ob sofort eine Synchronisation ausgelöst werden soll
    */
-  setEnabled(enabled) {
+  setEnabled(enabled, syncNow = true) {
     this._isEnabled = !!enabled;
     localStorage.setItem(this._ENABLED_KEY, String(this._isEnabled));
     if (this._isEnabled) {
       this._startAutoSync();
-      this.sync();
+      if (syncNow) {
+        this.sync();
+      }
     } else {
       this._stopAutoSync();
     }
@@ -138,18 +149,22 @@ export class CloudManager {
       if (!data) {
         try {
           data = await SaveManager.load();
-          if (!data) data = { timestamp: Date.now(), version: APP_VERSION };
         } catch (e) {
-          logger.warn('[CloudManager] SaveManager nicht verfügbar, verwende leeres Objekt:', e);
-          data = { timestamp: Date.now(), version: APP_VERSION };
+          logger.warn('[CloudManager] SaveManager.load() fehlgeschlagen:', e);
+          data = null;
         }
+      }
+
+      if (!data) {
+        logger.warn('[CloudManager] Sichern abgebrochen: Keine Speicherdaten vorhanden.');
+        return false;
       }
 
       const cloudData = {
         userId: this._userId,
         timestamp: Date.now(),
         saveData: data,
-        version: data.version || APP_VERSION,
+        version: (data && data.version) ? data.version : APP_VERSION,
         device: navigator.userAgent || 'unknown'
       };
 
