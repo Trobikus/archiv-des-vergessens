@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/github/actions/workflow/status/Trobikus/archiv-des-vergessens/test.yml?branch=main&label=CI%2FCD%20Build&style=for-the-badge&color=2EA44F" alt="Build Status" />
   </a>
   <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
-    <img src="https://img.shields.io/badge/Version-v1.0.39-6B46C1?style=for-the-badge" alt="Latest Version" />
+    <img src="https://img.shields.io/badge/Version-v1.0.41-6B46C1?style=for-the-badge" alt="Latest Version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-41B883?style=for-the-badge" alt="License" />
@@ -51,13 +51,14 @@ Jedes Partikel, das du sammelst, birgt eine Geschichte. Jeder Boss verkörpert e
   - **Kontoweite Truhe (Shared Vault)**: Sicherer Gegenstandstransfer zwischen Charakteren
 - **Server-Account & Server-Persistence**:
   - Benutzerkonto mit Login, Registrierung oder Schnellstart via Gast-Zugang
-  - Server-seitige SQLite-Persistenz mit automatischer Synchronisation über WebSockets <!-- NOTE: Technisch präzise Beschreibung anstelle von "Cloud-Speicherung". Entwickler erwarten exakte Angaben über die Persistenzschicht (SQLite + WebSockets) statt Marketing-Buzzwords. -->
-- **Echtzeit-Multiplayer**:
+  - Server-seitige SQLite-Persistenz mit automatischer Synchronisation über WebSockets, robuster Cloud-Hydrierung & automatischer Konfliktlösung
+- **Echtzeit-Multiplayer & Clans**:
   - Globaler Chat & Gilden-Chat mit Chat-Verlauf
-  - Gilden-System mit gemeinsamen Boni
-  - Globale Bestenlisten (Rankings nach Prestige, Bossen und Stufe)
+  - Clan- & Gilden-System mit dynamischen Rekrutierungskosten, Meilenstein-Multiplikatoren, Slot-Persistenz und Boss-EXP-Skalierung
+  - Globale Bestenlisten (Rankings nach Prestige, Bossen und Stufe, exklusiv für registrierte Benutzer)
 - **Visuelle & Technische Exzellenz**:
   - Nahtloser Standalone-Launcher mit Ed25519-Signaturprüfung und In-App-Updates (Tauri 2 Updater Plugin)
+  - Kryptographisch sichere Entropie (`crypto.getRandomValues()`) in Auth, Network & Cloud-Sync
   - Ultra-performantes Canvas-Partikelsystem (Zero-Lag 60 FPS)
   - AAA Glassmorphic Dark UI, Custom Glow-Effekte & dynamische Vignetten
   - Vollständige Zweisprachigkeit (**Deutsch DE** & **Englisch EN**)
@@ -157,6 +158,7 @@ archiv-des-vergessens/
 ├── 📁 deploy/               # Server Deployment Configs (Nginx Reverse Proxy & Caddy Setup)
 ├── 📁 i18n/                 # Lokalisierungsdateien (Deutsch DE / Englisch EN)
 ├── 📁 js/                   # Frontend-Anwendungslogik & UI-Module (Preact + HTM)
+│   ├── 📁 _tests_/          # Vitest Unit-Test-Suites (143 Tests in 22 Dateien)
 │   ├── 📁 controllers/      # Game Controller (Idle-Progression, Audio, Inventory, Network)
 │   ├── 📁 core/             # Central Event Bus, State Reducer & Dependency Injection
 │   ├── 📁 managers/         # System Manager (Multiplayer Websockets, Save-Game, Auto-Save)
@@ -310,7 +312,7 @@ Alle kryptographischen Schlüssel, JWT-Secrets und Datenbankpasswörter werden z
 - **Desktop Runtime**: Tauri 2 (Rust Core)
 - **Multiplayer Server**: Node.js, WebSockets (`ws`), SQLite (`better-sqlite3`)
 - **Architektur**: Reducer State-Management, Dependency Injection Container, JSDoc Typing
-- **Quality Assurance**: Vitest (116 Frontend Unit-Tests) & Cargo Test Suite (27 Rust Unit-, Integrations- & E2E-Tests)
+- **Quality Assurance**: Vitest (143 Frontend Unit-Tests in 22 Test-Suites) & Cargo Test Suite (27 Rust Unit-, Integrations- & E2E-Tests)
 - **CI / CD**: GitHub Actions (Multi-Platform Portable & Release Pipelines, Rust Test Suite)
 
 ---
@@ -318,12 +320,14 @@ Alle kryptographischen Schlüssel, JWT-Secrets und Datenbankpasswörter werden z
 ## 📌 Roadmap
 
 ### Phase 1 – Core Launch, Precision & Polishing (Abgeschlossen)
-- [x] Produktives Server-Account System (SQLite Persistence)
-- [x] Live Auto-Updater Integration (Tauri 2 Plugin)
+- [x] Produktives Server-Account System (SQLite Persistence) & Cloud-Hydrierung
+- [x] Live Auto-Updater Integration (Tauri 2 Plugin) & Ed25519-Signaturverifikation
 - [x] Deutsche Idle-Zahlenformatierung (`Tsd.` – `Brd.`)
 - [x] Re-Balancing der Prestige-Schwellenwerte (10.000 Mneme Erst-Prestige)
 - [x] Exponentielles Idle-Wachstum & Bulk-Buying (x1/x10/x100/Max)
-- [x] Vollständige Testabdeckung (115 Unit Tests)
+- [x] Clan-System mit dynamischen Rekrutierungskosten & Boss-EXP-Skalierung
+- [x] Kryptographische Sicherheit (`crypto.getRandomValues()`)
+- [x] Vollständige Testabdeckung (143 Frontend Unit-Tests & 27 Rust Backend-Tests)
 - [x] Vollständige DE / EN Lokalisierung
 
 ### Phase 2 – Erweiterte Inhalte & Social Features (In Arbeit)
