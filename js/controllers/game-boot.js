@@ -261,6 +261,17 @@ export async function bootGame() {
 
     try {
       const currentState = stateManager.getState();
+
+      // Prüfe, ob der geladene Cloud-Spielstand tatsächlich gültige Spieldaten enthält
+      const isValidCloudSave = !!(saveData.hero || saveData.resources || saveData.idleGenerators);
+      if (!isValidCloudSave) {
+        logger.info('[CloudManager] Cloud-Spielstand auf dem Server ist leer. Initialisiere Cloud mit lokalem Spielstand.');
+        if (currentState && (currentState.hero || currentState.resources)) {
+          cloudManager.sync(currentState);
+        }
+        return;
+      }
+
       const localTimestamp = currentState?.system?.lastSave || currentState?.system?.originalLastSave || 0;
       const cloudTimestamp = timestamp || saveData?.system?.lastSave || 0;
 

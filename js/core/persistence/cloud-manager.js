@@ -155,8 +155,8 @@ export class CloudManager {
         }
       }
 
-      if (!data) {
-        logger.warn('[CloudManager] Sichern abgebrochen: Keine Speicherdaten vorhanden.');
+      if (!data || typeof data !== 'object' || (!data.hero && !data.resources && !data.timestamp)) {
+        logger.warn('[CloudManager] Sichern abgebrochen: Keine gültigen Speicherdaten vorhanden.');
         return false;
       }
 
@@ -204,7 +204,7 @@ export class CloudManager {
 
       return true;
     } catch (error) {
-      logger.error('[CloudManager] Sync fehlgeschlagen:', error);
+      logger.warn('[CloudManager] Sync fehlgeschlagen:', error);
       this._eventBus.publish('cloud:syncFailed', { error: error.message });
       return false;
     }
@@ -239,7 +239,7 @@ export class CloudManager {
       const cloudData = JSON.parse(raw);
       return cloudData.saveData || null;
     } catch (error) {
-      logger.error('[CloudManager] Laden aus lokalem Backup fehlgeschlagen:', error);
+      logger.warn('[CloudManager] Laden aus lokalem Backup fehlgeschlagen:', error);
       return null;
     }
   }
@@ -336,7 +336,7 @@ export class CloudManager {
 
   onCloudSaveError(error) {
     if (this._saveTimeout) clearTimeout(this._saveTimeout);
-    logger.error('[CloudManager] Online-Sichern fehlgeschlagen:', error);
+    logger.warn('[CloudManager] Online-Sichern fehlgeschlagen:', error);
     this._eventBus.publish('cloud:syncFailed', { error });
 
     if (this._pendingSaveResolve) {
@@ -374,7 +374,7 @@ export class CloudManager {
 
   onCloudLoadError(error) {
     if (this._loadTimeout) clearTimeout(this._loadTimeout);
-    logger.error('[CloudManager] Online-Laden fehlgeschlagen:', error);
+    logger.warn('[CloudManager] Online-Laden fehlgeschlagen:', error);
 
     if (this._pendingLoadResolve) {
       const resolve = this._pendingLoadResolve;
