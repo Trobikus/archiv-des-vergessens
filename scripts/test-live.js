@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 
-const SERVER_URL = process.env.SERVER_URL || process.env.VITE_WS_URL || 'wss://api.archiv-des-vergessens.de';
+const SERVER_URL = process.env.SERVER_URL || process.env.VITE_WS_URL || 'wss://grimoireinteractive.duckdns.org';
 
 console.log(`[Test] Connecting to live server under ${SERVER_URL}...`);
 const ws = new WebSocket(SERVER_URL);

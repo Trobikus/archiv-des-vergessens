@@ -37,6 +37,20 @@ describe('ClanService', () => {
     expect(resourceService.getResources().particles).toBe(0);
   });
 
+  test('dynamic recruit cost increases with each recruited member of same role', () => {
+    expect(clanService.getRecruitCost('collector')).toBe(10);
+
+    resourceService.addParticles(100);
+    clanService.recruitMember('collector'); // 1st collector
+    expect(clanService.getRecruitCost('collector')).toBe(11); // 10 * 1.15^1 = 11.5 -> 11
+
+    clanService.recruitMember('collector'); // 2nd collector
+    expect(clanService.getRecruitCost('collector')).toBe(13); // 10 * 1.15^2 = 13.225 -> 13
+
+    // Weaver cost should still be base cost 25 (0 weavers recruited so far)
+    expect(clanService.getRecruitCost('weaver')).toBe(25);
+  });
+
   test('processTick updates progress, experience and resources in a batch', () => {
     // Add some members to state directly
     stateManager.dispatch((state) => ({

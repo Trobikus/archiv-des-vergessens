@@ -58,7 +58,7 @@ export class NavigationController {
         this.showHub();
       }
     });
-    this._eventBus.subscribe(EVENTS.CHARACTER_CREATE, (data) => {
+    this._eventBus.subscribe(EVENTS.CHARACTER_CREATE, async (data) => {
       this._stateManager.reset();
       this._stateManager.dispatch((s) => ({
         ...s,
@@ -70,7 +70,7 @@ export class NavigationController {
           level: 1
         }
       }), 'character/create');
-      this._saveManager.save(this._stateManager.getState(), data.slotId);
+      await this._saveManager.save(this._stateManager.getState(), data.slotId);
       this.showHub();
     });
 

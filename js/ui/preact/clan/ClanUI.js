@@ -52,7 +52,7 @@ export function ClanUI({ stateManager, eventBus, services }) {
   }, [selectedMemberId, isOnExp, clanService]);
 
   const handleRecruit = (role) => {
-    const cost = role === 'collector' ? 10 : role === 'weaver' ? 25 : 40;
+    const cost = clanService.getRecruitCost ? clanService.getRecruitCost(role) : 10;
     if (resources.particles < cost) {
       eventBus.publish('ui:showToast', {
         message: `❌ Nicht genug Partikel (${cost} benötigt)`,
@@ -305,26 +305,26 @@ export function ClanUI({ stateManager, eventBus, services }) {
             <div class="recruit-buttons" style="display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; padding-right: 10px;">
               <button id="recruit-collector-btn" class="glass-btn flex-between" onClick=${() => handleRecruit('collector')}>
                 <span>Sammler (Sammelt passive Partikel)</span>
-                <span class="text-gold">🪙 10</span>
+                <span class="text-gold">🪙 ${clanService.getRecruitCost ? clanService.getRecruitCost('collector') : 10}</span>
               </button>
               <button id="recruit-weaver-btn" class="glass-btn flex-between" onClick=${() => handleRecruit('weaver')}>
                 <span>Weber (Sammelt Relikte & Partikel)</span>
-                <span class="text-gold">🪙 25</span>
+                <span class="text-gold">🪙 ${clanService.getRecruitCost ? clanService.getRecruitCost('weaver') : 25}</span>
               </button>
               <button id="recruit-guardian-btn" class="glass-btn flex-between" onClick=${() => handleRecruit('guardian')}>
                 <span>Wächter (Findet seltene Artefakte)</span>
-                <span class="text-gold">🪙 40</span>
+                <span class="text-gold">🪙 ${clanService.getRecruitCost ? clanService.getRecruitCost('guardian') : 40}</span>
               </button>
               
               <div style="border-top: 1px dashed rgba(197, 160, 89, 0.2); margin: 5px 0;"></div>
               
               <button id="recruit-archivist-btn" class="glass-btn flex-between" style="border-color: #a855f7; box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.1);" onClick=${() => handleRecruit('archivist')}>
                 <span>Archivar (Episch: Sehr hohe Effizienz)</span>
-                <span class="text-gold">🪙 200</span>
+                <span class="text-gold">🪙 ${clanService.getRecruitCost ? clanService.getRecruitCost('archivist') : 200}</span>
               </button>
               <button id="recruit-elder-btn" class="glass-btn flex-between" style="border-color: #eab308; box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1);" onClick=${() => handleRecruit('elder')}>
                 <span style="text-shadow: 0 0 5px rgba(234,179,8,0.5);">Ältester (Legendär: Elite-Raidleiter)</span>
-                <span class="text-gold">🪙 500</span>
+                <span class="text-gold">🪙 ${clanService.getRecruitCost ? clanService.getRecruitCost('elder') : 500}</span>
               </button>
             </div>
           </div>

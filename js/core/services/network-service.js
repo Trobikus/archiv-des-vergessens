@@ -80,7 +80,7 @@ export class NetworkService {
     }
 
     // 4. Standard für alle Produktiv-Builds (Tauri Release, GitHub Pages, Executable):
-    return 'wss://api.archiv-des-vergessens.de';
+    return 'wss://grimoireinteractive.duckdns.org';
   }
 
   /**

@@ -18,6 +18,7 @@ import RNG from '../../utils/rng.js';
 import { CONFIG } from '../../data/config.js';
 import { EVENTS } from '../events/definitions.js';
 import { Item } from '../../models/item.js';
+import { calculateBuildingCost } from '../game/math.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -74,14 +75,32 @@ export class ClanService {
   }
   
   /**
+   * Berechnet die dynamischen Rekrutierungskosten für eine bestimmte Rolle.
+   * Formel: BasisKosten * (1.15 ^ AnzahlVorhandenerMitgliederDieserRolle)
+   * 
+   * @param {string} role - Rolle des Clan-Mitglieds
+   * @returns {number}
+   */
+  getRecruitCost(role) {
+    const baseCosts = {
+      collector: 10,
+      weaver: 25,
+      guardian: 40,
+      archivist: 200,
+      elder: 500
+    };
+    const baseCost = baseCosts[role] || 10;
+    const members = this.getMembers() || [];
+    const roleCount = members.filter(m => m.role === role).length;
+
+    return calculateBuildingCost(baseCost, 1.15, roleCount);
+  }
+
+  /**
    * Rekrutiert ein neues Mitglied.
    */
   recruitMember(role) {
-    let cost = 10; // collector
-    if (role === 'weaver') cost = 25;
-    else if (role === 'guardian') cost = 40;
-    else if (role === 'archivist') cost = 200;
-    else if (role === 'elder') cost = 500;
+    const cost = this.getRecruitCost(role);
     
     const state = this._stateManager.getState();
     const members = state.clan.members;

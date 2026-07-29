@@ -47,10 +47,26 @@ export class SaveManager {
   static setActiveSlot(slotId) {
     if (slotId >= 1 && slotId <= 5) {
       this._activeSlotId = slotId;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('archiv_active_slot', String(slotId));
+        }
+      } catch (e) {}
     }
   }
 
   static getActiveSlot() {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('archiv_active_slot');
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          if (parsed >= 1 && parsed <= 5) {
+            this._activeSlotId = parsed;
+          }
+        }
+      } catch (e) {}
+    }
     return this._activeSlotId;
   }
 
@@ -87,7 +103,7 @@ export class SaveManager {
     }
   }
 
-  static _getSlotKey(slotId = this._activeSlotId, userId = null) {
+  static _getSlotKey(slotId = this.getActiveSlot(), userId = null) {
     let uId = userId;
     if (!uId && this._services?.authService) {
       const u = this._services.authService.getCurrentUser();

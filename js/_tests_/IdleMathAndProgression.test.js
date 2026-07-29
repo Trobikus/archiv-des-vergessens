@@ -63,6 +63,12 @@ describe('Idle Math & Progression Systems (Steps 2 - 5)', () => {
       expect(max0.totalCost).toBe(0);
     });
 
+    it('calculates milestone multiplier correctly', () => {
+      expect(calculateYieldPerSecond(1.0, 5, 0, 1.0)).toBe(5.0); // Level 5 (<25) => 1x
+      expect(calculateYieldPerSecond(1.0, 25, 0, 1.0)).toBe(50.0); // Level 25 => 25 * 2 = 50
+      expect(calculateYieldPerSecond(1.0, 50, 0, 1.0)).toBe(200.0); // Level 50 => 50 * 4 = 200
+    });
+
     it('calculates yield per second correctly', () => {
       // Basis 1.0, Level 5, 0 Bonus, 1.0 Prestige => 5.0
       expect(calculateYieldPerSecond(1.0, 5, 0, 1.0)).toBe(5.0);

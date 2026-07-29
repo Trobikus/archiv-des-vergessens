@@ -96,8 +96,21 @@ export function calculateMaxAffordableLevel(baseCost, costMultiplier = 1.15, cur
 }
 
 /**
+ * Berechnet den Meilenstein-Multiplikator basierend auf der Gebäudestufe.
+ * Formel: Verdopplung (2x) alle 25 Stufen (2^(floor(Level / 25)))
+ * 
+ * @param {number} level - Aktuelle Stufe
+ * @returns {number} Multiplikator (1, 2, 4, 8, 16, ...)
+ */
+export function calculateMilestoneMultiplier(level) {
+  const safeLevel = Math.max(0, sanitizeNumber(level, 0));
+  const milestones = Math.floor(safeLevel / 25);
+  return Math.pow(2, milestones);
+}
+
+/**
  * Berechnet den Ertrag pro Sekunde.
- * Formel: ErtragProSekunde = BasisErtrag * Level * (1 + Summe(UpgradeBonusse)) * PrestigeMultiplikator
+ * Formel: ErtragProSekunde = BasisErtrag * Level * (1 + Summe(UpgradeBonusse)) * PrestigeMultiplikator * MeilensteinMultiplikator
  * 
  * @param {number} baseYield - Basisertrag pro Level
  * @param {number} level - Aktuelle Stufe
@@ -110,8 +123,9 @@ export function calculateYieldPerSecond(baseYield, level, upgradeBonusesSum = 0,
   const safeLevel = Math.max(0, sanitizeNumber(level, 0));
   const safeBonus = Math.max(0, sanitizeNumber(upgradeBonusesSum, 0));
   const safePrestige = Math.max(1.0, sanitizeNumber(prestigeMultiplier, 1.0));
+  const milestoneMult = calculateMilestoneMultiplier(safeLevel);
 
-  return safeBase * safeLevel * (1 + safeBonus) * safePrestige;
+  return safeBase * safeLevel * (1 + safeBonus) * safePrestige * milestoneMult;
 }
 
 /**
@@ -171,6 +185,7 @@ export default {
   calculateBuildingCost,
   calculateBulkBuildingCost,
   calculateMaxAffordableLevel,
+  calculateMilestoneMultiplier,
   calculateYieldPerSecond,
   calculateOfflineProgress,
   calculatePrestigeCurrency

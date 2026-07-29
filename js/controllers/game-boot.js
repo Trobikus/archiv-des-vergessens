@@ -207,12 +207,7 @@ export async function bootGame() {
   // Alte Gast-Speicherstände bereinigen
   await SaveManager.clearGuestSaves();
 
-  // Bei Login oder Umwandlung direkt speichern
-  eventBus.subscribe(EVENTS.AUTH_STATE_CHANGED, (data) => {
-    if (data && data.user && !data.user.isGuest && data.isLoggedIn) {
-      SaveManager.save(stateManager.getState());
-    }
-  });
+  // Account-Lager initialisieren
 
   // Account-Lager initialisieren
   await accountVaultService.init();

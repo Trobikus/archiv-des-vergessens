@@ -56,6 +56,7 @@ export function generateStoryBosses() {
             }
 
             const multiplier = 1 + (fight * 0.1);
+            const chapterExpScaling = Math.pow(1.25, chap - 1);
             bosses.push({
                 id: globalId++,
                 name,
@@ -64,7 +65,7 @@ export function generateStoryBosses() {
                 attack: Math.floor(baseAtk * multiplier * (isEndBoss ? 1.5 : (isMidBoss ? 1.2 : 1))),
                 defense: Math.floor(baseDef * multiplier * (isEndBoss ? 1.5 : (isMidBoss ? 1.2 : 1))),
                 reward: {
-                    exp: Math.floor(20 * chap * multiplier * (isEndBoss ? 3 : 1)),
+                    exp: Math.floor(20 * chap * chapterExpScaling * multiplier * (isEndBoss ? 3 : 1)),
                     items
                 }
             });

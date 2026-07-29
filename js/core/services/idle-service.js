@@ -25,6 +25,7 @@ import {
   calculateBuildingCost,
   calculateBulkBuildingCost,
   calculateMaxAffordableLevel,
+  calculateMilestoneMultiplier,
   calculateYieldPerSecond,
   calculateOfflineProgress,
   calculatePrestigeCurrency
@@ -74,6 +75,10 @@ export class IdleService {
 
   static calculateMaxAffordableLevel(baseCost, costMultiplier = 1.15, currentLevel = 0, availableResources = 0) {
     return calculateMaxAffordableLevel(baseCost, costMultiplier, currentLevel, availableResources);
+  }
+
+  static calculateMilestoneMultiplier(level) {
+    return calculateMilestoneMultiplier(level);
   }
 
   static calculateYieldPerSecond(baseYield, level, upgradeBonusesSum = 0, prestigeMultiplier = 1.0) {
