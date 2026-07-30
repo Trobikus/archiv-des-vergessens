@@ -15,6 +15,7 @@ import { sanitizeString, sanitizeNumber } from '../../utils/sanitizer.js';
 import { SaveManager } from './save-manager.js';
 import { APP_VERSION } from '../../utils/version.js';
 import { logger } from '../logger.js';
+import { SecureStorage } from './secure-storage.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
@@ -47,7 +48,7 @@ export class CloudManager {
       this._eventBus.subscribe('auth:stateChanged', (data) => {
         if (data && data.user) {
           this._userId = data.user.id;
-          localStorage.setItem(this._USER_ID_KEY, this._userId);
+          SecureStorage.setItemSync(this._USER_ID_KEY, this._userId);
           if (data.isLoggedIn) {
             this.setEnabled(true, false);
             this.loadFromCloud();
@@ -80,10 +81,10 @@ export class CloudManager {
   }
 
   _getUserId() {
-    let id = localStorage.getItem(this._USER_ID_KEY);
+    let id = SecureStorage.getItemSync(this._USER_ID_KEY);
     if (!id) {
       id = 'user_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
-      localStorage.setItem(this._USER_ID_KEY, id);
+      SecureStorage.setItemSync(this._USER_ID_KEY, id);
     }
     return id;
   }
@@ -169,7 +170,7 @@ export class CloudManager {
       };
 
       // Lokales Backup (immer sichern)
-      localStorage.setItem(this._STORAGE_KEY, JSON.stringify(cloudData));
+      SecureStorage.setItemSync(this._STORAGE_KEY, cloudData);
 
       // Falls Netzwerk verbunden, senden wir echtes WebSocket-Paket
       if (this._networkService && this._networkService.isConnected()) {
@@ -234,9 +235,8 @@ export class CloudManager {
 
   _loadFromLocal() {
     try {
-      const raw = localStorage.getItem(this._STORAGE_KEY);
-      if (!raw) return null;
-      const cloudData = JSON.parse(raw);
+      const cloudData = SecureStorage.getItemSync(this._STORAGE_KEY);
+      if (!cloudData) return null;
       return cloudData.saveData || null;
     } catch (error) {
       logger.warn('[CloudManager] Laden aus lokalem Backup fehlgeschlagen:', error);
@@ -249,9 +249,8 @@ export class CloudManager {
    */
   getCloudInfo() {
     try {
-      const raw = localStorage.getItem(this._STORAGE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
+      const data = SecureStorage.getItemSync(this._STORAGE_KEY);
+      if (!data) return null;
       return {
         userId: data.userId,
         timestamp: data.timestamp,
@@ -267,7 +266,7 @@ export class CloudManager {
    * Löscht alle Cloud-Daten.
    */
   clearCloudData() {
-    localStorage.removeItem(this._STORAGE_KEY);
+    SecureStorage.removeItem(this._STORAGE_KEY);
     this._isSynced = false;
     this._lastSync = null;
     this._eventBus.publish('cloud:cleared', {});
@@ -358,7 +357,7 @@ export class CloudManager {
         version: payload.version || APP_VERSION,
         device: 'cloud-server'
       };
-      localStorage.setItem(this._STORAGE_KEY, JSON.stringify(cloudData));
+      SecureStorage.setItemSync(this._STORAGE_KEY, cloudData);
 
       if (this._eventBus) {
         this._eventBus.publish('cloud:loaded', { saveData: payload.saveData, timestamp: payload.timestamp });

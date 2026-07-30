@@ -929,12 +929,17 @@ wss.on('connection', (ws, req) => {
               return;
             }
 
+            // Generate rotated token for enhanced session security
+            const newToken = generateToken();
+            const now = new Date().toISOString();
+            db.prepare('UPDATE users SET lastLogin = ?, sessionToken = ? WHERE id = ?').run(now, newToken, user.id);
+
             clientInfo.userId = user.id;
             clientInfo.username = user.username;
-            clientInfo.sessionToken = token;
+            clientInfo.sessionToken = newToken;
             clientInfo.isGuest = false;
 
-            console.log(`[Auth] Session verifiziert für '${user.username}' (${user.id})`);
+            console.log(`[Auth] Session verifiziert & Token rotiert für '${user.username}' (${user.id})`);
 
             const userObj = {
               id: user.id,
@@ -942,11 +947,11 @@ wss.on('connection', (ws, req) => {
               email: user.email,
               avatar: user.avatar || '🛡️',
               createdAt: user.createdAt,
-              lastLogin: user.lastLogin,
+              lastLogin: now,
               isGuest: false
             };
 
-            send(ws, 'auth:verifyToken:success', { user: userObj, token });
+            send(ws, 'auth:verifyToken:success', { user: userObj, token: newToken });
             send(ws, 'auth:success', { userId: user.id, username: user.username });
             sendChatHistory(ws);
           } catch (err) {

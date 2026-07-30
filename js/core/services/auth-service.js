@@ -12,6 +12,7 @@
  */
 
 import { logger } from '../logger.js';
+import { SecureStorage } from '../persistence/secure-storage.js';
 
 export class AuthService {
   /**
@@ -54,16 +55,13 @@ export class AuthService {
    */
   _initSession() {
     try {
-      const rawSession = localStorage.getItem(this._STORAGE_SESSION_KEY);
-      if (rawSession) {
-        const sessionData = JSON.parse(rawSession);
-        if (sessionData && sessionData.user && sessionData.token) {
-          if (!sessionData.expiresAt || new Date(sessionData.expiresAt) > new Date()) {
-            this._currentUser = sessionData.user;
-            this._sessionToken = sessionData.token;
-          } else {
-            this.logout();
-          }
+      const sessionData = SecureStorage.getItemSync(this._STORAGE_SESSION_KEY);
+      if (sessionData && sessionData.user && sessionData.token) {
+        if (!sessionData.expiresAt || new Date(sessionData.expiresAt) > new Date()) {
+          this._currentUser = sessionData.user;
+          this._sessionToken = sessionData.token;
+        } else {
+          this.logout();
         }
       }
     } catch (e) {
@@ -197,15 +195,15 @@ export class AuthService {
 
   _getAccounts() {
     try {
-      const raw = localStorage.getItem(this._STORAGE_ACCOUNTS_KEY);
-      return raw ? JSON.parse(raw) : {};
+      const accounts = SecureStorage.getItemSync(this._STORAGE_ACCOUNTS_KEY);
+      return accounts && typeof accounts === 'object' ? accounts : {};
     } catch {
       return {};
     }
   }
 
   _saveAccounts(accounts) {
-    localStorage.setItem(this._STORAGE_ACCOUNTS_KEY, JSON.stringify(accounts));
+    SecureStorage.setItemSync(this._STORAGE_ACCOUNTS_KEY, accounts);
   }
 
   isLoggedIn() {
@@ -221,10 +219,10 @@ export class AuthService {
   }
 
   loginAsGuest() {
-    let guestId = localStorage.getItem('archiv_guest_id');
+    let guestId = SecureStorage.getItemSync('archiv_guest_id');
     if (!guestId) {
       guestId = 'guest_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
-      localStorage.setItem('archiv_guest_id', guestId);
+      SecureStorage.setItemSync('archiv_guest_id', guestId);
     }
 
     this._currentUser = {
@@ -616,7 +614,7 @@ export class AuthService {
             this._saveAccounts(accounts);
             
             // Gast-ID aus LocalStorage entfernen
-            localStorage.removeItem('archiv_guest_id');
+            SecureStorage.removeItem('archiv_guest_id');
             
             if (this._eventBus) {
               this._eventBus.publish('auth:guestConverted', { 
@@ -658,7 +656,7 @@ export class AuthService {
     
     if (result.success) {
       // Gast-ID entfernen
-      localStorage.removeItem('archiv_guest_id');
+      SecureStorage.removeItem('archiv_guest_id');
       
       if (this._eventBus) {
         this._eventBus.publish('auth:guestConverted', { 
@@ -676,7 +674,7 @@ export class AuthService {
     this._sessionToken = null;
     this._pendingAuthResolves = {};
     this._isAuthenticating = false;
-    localStorage.removeItem(this._STORAGE_SESSION_KEY);
+    SecureStorage.removeItem(this._STORAGE_SESSION_KEY);
 
     if (this._eventBus) {
       this._eventBus.publish('auth:logout');
@@ -695,7 +693,7 @@ export class AuthService {
       token: this._sessionToken,
       expiresAt: expiresAt.toISOString()
     };
-    localStorage.setItem(this._STORAGE_SESSION_KEY, JSON.stringify(data));
+    SecureStorage.setItemSync(this._STORAGE_SESSION_KEY, data);
   }
 }
 
