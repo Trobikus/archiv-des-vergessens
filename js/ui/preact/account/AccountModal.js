@@ -20,7 +20,9 @@ function getAuthErrorMessage(errorCode, t, additionalData = {}) {
     'auth.error.user_not_found': t('auth.error.user_not_found', 'Kein Account mit diesen Daten gefunden.'),
     'auth.error.not_guest': t('auth.error.not_guest', 'Nur Gast-Accounts können umgewandelt werden.'),
     'auth.error.server_error': t('auth.error.server_error', 'Server-Fehler. Bitte versuche es später erneut.'),
-    'auth.error.server_timeout': t('auth.error.server_timeout', 'Server antwortet nicht. Offline-Modus aktiv.'),
+    'auth.error.server_timeout': t('auth.error.server_timeout', 'Zeitüberschreitung bei der Serververbindung.'),
+    'auth.error.server_offline': t('auth.error.server_offline', 'Der Server ist momentan nicht erreichbar.'),
+    'auth.error.in_progress': t('auth.error.in_progress', 'Authentifizierung läuft bereits.'),
     'auth.error.missing_fields': t('auth.error.missing_fields', 'Bitte fülle alle Felder aus.')
   };
   

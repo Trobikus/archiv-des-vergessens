@@ -77,6 +77,8 @@ export const EN = {
     'auth.error.username_taken': 'This username is already taken.',
     'auth.error.email_taken': 'This email address is already in use.',
     'auth.error.server_timeout': 'Server connection timed out.',
+    'auth.error.server_offline': 'The server is currently unreachable.',
+    'auth.error.in_progress': 'Authentication is already in progress.',
     'auth.error.not_guest': 'Account is not a guest account.',
     'auth.error.server_error': 'Server error occurred. Please try again later.',
     'auth.success.registered': 'Account created successfully!',

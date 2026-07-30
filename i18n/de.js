@@ -77,6 +77,8 @@ export const DE = {
     'auth.error.username_taken': 'Dieser Benutzername ist bereits vergeben.',
     'auth.error.email_taken': 'Diese E-Mail-Adresse wird bereits verwendet.',
     'auth.error.server_timeout': 'Zeitüberschreitung bei der Serververbindung.',
+    'auth.error.server_offline': 'Der Server ist momentan nicht erreichbar.',
+    'auth.error.in_progress': 'Authentifizierung läuft bereits.',
     'auth.error.not_guest': 'Konto ist kein Gast-Konto.',
     'auth.error.server_error': 'Serverfehler aufgetreten. Bitte versuche es später erneut.',
     'auth.success.registered': 'Konto erfolgreich erstellt!',
