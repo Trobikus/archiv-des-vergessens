@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/github/actions/workflow/status/Trobikus/archiv-des-vergessens/test.yml?branch=main&label=CI%2FCD%20Build&style=for-the-badge&color=2EA44F" alt="Build Status" />
   </a>
   <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
-    <img src="https://img.shields.io/badge/Version-v1.0.41-6B46C1?style=for-the-badge" alt="Latest Version" />
+    <img src="https://img.shields.io/badge/Version-v1.0.43-6B46C1?style=for-the-badge" alt="Latest Version" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-41B883?style=for-the-badge" alt="License" />
