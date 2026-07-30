@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.42] - 2026-07-30
+
+### 🚀 Navigation Refactoring & Legacy Cleanup
+- **Rerouted Back Navigation from Hub (`js/controllers/navigation.js`, `js/controllers/settings-controller.js`)**:
+  - `HUB_BACK_TO_MENU` and `showMenu()` now route directly to `showCharacterSelect()`, returning players to character selection rather than the obsolete single-player menu.
+- **Legacy UI Removal & MainApp Integration (`js/ui/preact/views/MainApp.js`)**:
+  - Removed deprecated `MenuView.js` component and redirected legacy `'menu'` view states to `CharacterSelectView`.
+- **Test Coverage**:
+  - Added [NavigationController.test.js](file:///c:/Users/hoffm/Desktop/Max_KI_Projekte/archiv-des-vergessens/js/_tests_/NavigationController.test.js) to verify navigation flow.
+
+---
+
 ## [1.0.37] - 2026-07-26
 
 ### 🎨 Layout, Navigation & Network Enhancements

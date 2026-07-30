@@ -14,7 +14,7 @@ export function TutorialUI({ stateManager, eventBus, services }) {
   const highlightRef = useRef(null);
   const dialogRef = useRef(null);
 
-  const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'menu');
+  const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
 
   useEventBus(eventBus, 'tutorial:step', (stepData) => {
     setStep(stepData);

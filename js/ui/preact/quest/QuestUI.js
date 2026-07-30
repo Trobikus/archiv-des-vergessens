@@ -26,7 +26,7 @@ export function QuestUI({ stateManager, eventBus, services }) {
     return obj[prop] || '';
   };
 
-  const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'menu');
+  const currentView = useStateSelector(stateManager, (state) => state.system?.currentView || 'intro');
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const quests = useStateSelector(stateManager, (state) => state.quests);
   const mainQuests = questService._mainQuests;

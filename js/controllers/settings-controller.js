@@ -62,7 +62,7 @@ export class SettingsController {
   showOptions() {
     const currentView = this._stateManager.getState()?.system?.currentView || 'hub';
     if (currentView !== 'options') {
-      this._previousView = (currentView === 'menu' ? 'hub' : currentView);
+      this._previousView = (currentView === 'menu' ? 'characterSelect' : currentView);
     }
     this._stateManager.dispatch(setCurrentView('options'));
   }
@@ -180,7 +180,7 @@ export class SettingsController {
       logger.error('[Settings] Fehler beim automatischen Speichern der Einstellungen:', err);
     });
 
-    const targetView = this._previousView && this._previousView !== 'options' && this._previousView !== 'menu'
+    const targetView = this._previousView && this._previousView !== 'options'
       ? this._previousView
       : 'hub';
 
@@ -204,7 +204,7 @@ export class SettingsController {
     this._clanService.reset();
     this._eventBus.publish(EVENTS.GAME_RESET);
     
-    await this.navigationController.showMenu();
+    await this.navigationController.showCharacterSelect();
     this._eventBus.publish(EVENTS.HERO_UPDATED, {});
     this._eventBus.publish(EVENTS.RESOURCES_UPDATED, {});
     this._eventBus.publish(EVENTS.CLAN_MEMBERS_UPDATED, {});

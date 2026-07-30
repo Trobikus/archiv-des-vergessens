@@ -45,7 +45,7 @@ export class NavigationController {
     this._eventBus.subscribe(EVENTS.MENU_QUIT, () => this._quitGame());
 
     // --- Hub-Events ---
-    this._eventBus.subscribe(EVENTS.HUB_BACK_TO_MENU, () => this.showMenu());
+    this._eventBus.subscribe(EVENTS.HUB_BACK_TO_MENU, () => this.showCharacterSelect());
     this._eventBus.subscribe(EVENTS.HUB_ENTER_GAME, () => this.showGame());
 
     // --- Character-Events ---
@@ -119,8 +119,7 @@ export class NavigationController {
   }
 
   showMenu() {
-    this._stateManager.dispatch(setCurrentView('menu'));
-    this._eventBus.publish(EVENTS.UI_REFRESH_QUEST);
+    this.showCharacterSelect();
   }
 
   showHub() {

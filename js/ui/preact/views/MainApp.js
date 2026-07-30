@@ -1,7 +1,6 @@
 import { h, html, useStateSelector, useState, useEffect } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
 import { IntroView } from './IntroView.js';
-import { MenuView } from './MenuView.js';
 import { OptionsView } from './OptionsView.js';
 import { HubView } from './HubView.js';
 import { GameView } from './GameView.js';
@@ -142,9 +141,8 @@ export function MainApp({ stateManager, eventBus, services }) {
       case 'login':
         return html`<${LoginView} eventBus=${eventBus} services=${services} />`;
       case 'characterSelect':
-        return html`<${CharacterSelectView} eventBus=${eventBus} services=${services} />`;
       case 'menu':
-        return html`<${MenuView} eventBus=${eventBus} services=${services} />`;
+        return html`<${CharacterSelectView} eventBus=${eventBus} services=${services} />`;
       case 'options':
         return html`<${OptionsView} stateManager=${stateManager} eventBus=${eventBus} services=${services} />`;
       case 'hub':
