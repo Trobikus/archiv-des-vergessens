@@ -2,7 +2,7 @@
  * ============================================================
  * FILE: core/services/network-service.js – Netzwerk & WebSocket
  * ============================================================
- * 
+ *
  * VERANTWORTUNG:
  * - WebSocket-Verbindung zum Server aufbauen & verwalten
  * - Automatischer Reconnect-Loop bei Verbindungsabbruch (alle 5s)
@@ -12,6 +12,7 @@
  */
 
 import { logger } from '../logger.js';
+import { SecureStorage } from '../persistence/secure-storage.js';
 
 export class NetworkService {
   /**
@@ -61,10 +62,12 @@ export class NetworkService {
 
   _getServerUrl() {
     // 1. Manuelle Überschreibung durch Einstellungen/localStorage
-    const customUrl = localStorage.getItem('archiv_server_url');
-    if (customUrl) return customUrl;
+    try {
+      const customUrl = typeof localStorage !== 'undefined' ? localStorage.getItem('archiv_server_url') : null;
+      if (customUrl) return customUrl;
+    } catch (_) {}
 
-    // 2. Umgebungs variable via Vite (.env) falls konfiguriert
+    // 2. Umgebungsvariable via Vite (.env) falls konfiguriert
     const envUrl = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WS_URL;
     if (envUrl) return envUrl;
 
@@ -87,11 +90,13 @@ export class NetworkService {
    * Ändert die Server-URL zur Laufzeit (z. B. zwischen Produktiv und Test-Server)
    */
   setServerUrl(url) {
-    if (!url) {
-      localStorage.removeItem('archiv_server_url');
-    } else {
-      localStorage.setItem('archiv_server_url', url);
-    }
+    try {
+      if (!url) {
+        localStorage.removeItem('archiv_server_url');
+      } else {
+        localStorage.setItem('archiv_server_url', url);
+      }
+    } catch (_) {}
     this._serverUrl = this._getServerUrl();
     if (this._ws) {
       try { this._ws.close(); } catch {}
@@ -108,12 +113,42 @@ export class NetworkService {
     throw new Error('Secure random generation is not supported in this environment.');
   }
 
+  /**
+   * User-ID konsistent mit AuthService/CloudManager (SecureStorage).
+   * Migriert alte Klartext-Einträge aus localStorage.
+   */
   _getUserId() {
-    let id = localStorage.getItem('archiv_user_id');
-    if (!id) {
-      id = 'user_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
-      localStorage.setItem('archiv_user_id', id);
+    // 1. Prefer AuthService ID if available (guest or registered)
+    try {
+      const authService = this._getAuthService();
+      if (authService) {
+        const user = authService.getCurrentUser();
+        if (user && user.id) {
+          SecureStorage.setItemSync('archiv_user_id', user.id);
+          return user.id;
+        }
+      }
+    } catch (_) {}
+
+    // 2. SecureStorage
+    let id = SecureStorage.getItemSync('archiv_user_id');
+    if (id && typeof id === 'string') {
+      return id;
     }
+
+    // 3. Legacy plain localStorage migration
+    try {
+      const legacy = typeof localStorage !== 'undefined' ? localStorage.getItem('archiv_user_id') : null;
+      if (legacy) {
+        SecureStorage.setItemSync('archiv_user_id', legacy);
+        try { localStorage.removeItem('archiv_user_id'); } catch (_) {}
+        return legacy;
+      }
+    } catch (_) {}
+
+    // 4. Neu erzeugen
+    id = 'user_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
+    SecureStorage.setItemSync('archiv_user_id', id);
     return id;
   }
 
@@ -123,6 +158,8 @@ export class NetworkService {
     this._cloudManager = cloudManager;
     this._authService = authService;
     this._connectTimeout = null;
+    // User-ID ggf. an Auth anpassen
+    this._userId = this._getUserId();
   }
 
   _clearConnectTimeout() {
@@ -190,16 +227,17 @@ export class NetworkService {
       this._triggerReconnect();
     };
 
-    this._ws.onerror = (err) => {
+    this._ws.onerror = () => {
       this._clearConnectTimeout();
-        if (this._reconnectAttempts === 1) {
-          logger.warn('[Network] Multiplayer-Server offline oder nicht erreichbar.');
-        }
+      if (this._reconnectAttempts === 1) {
+        logger.warn('[Network] Multiplayer-Server offline oder nicht erreichbar.');
+      }
     };
   }
 
   /**
    * Authentifiziert den Client beim Server.
+   * Registrierte User: verifyToken. Gäste: auth mit AuthService-User-ID.
    */
   _authenticate() {
     const authService = this._getAuthService();
@@ -210,14 +248,19 @@ export class NetworkService {
         this.send('auth:verifyToken', { userId: user.id, token });
         return;
       }
+      // Guest: AuthService-ID verwenden (nicht separate Network-ID)
+      if (user && user.id) {
+        this._userId = user.id;
+        SecureStorage.setItemSync('archiv_user_id', user.id);
+      }
     }
 
     const state = this._stateManager ? this._stateManager.getState() : null;
-    const username = state && state.hero ? state.hero.name : 'Gast-Hüter';
-    const guildId = state && state.guild ? state.guild.id : null;
+    const username = (state && state.hero && state.hero.name) ? state.hero.name : 'Gast-Hüter';
+    const guildId = (state && state.guild) ? state.guild.id : null;
 
     this.send('auth', {
-      userId: this._getUserId(),
+      userId: this._userId || this._getUserId(),
       username: username,
       guildId: guildId
     });
