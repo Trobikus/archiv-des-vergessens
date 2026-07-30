@@ -16,7 +16,9 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
   - `archiv_user_id` über SecureStorage (konsistent mit AuthService und CloudManager).
   - Migration alter Klartext-`localStorage`-Einträge.
   - Guest-Handshake nutzt `AuthService.getCurrentUser().id` statt einer separaten Network-ID → verhindert User-ID-Mismatch beim Server-Auth-Paket.
-- **Auswirkung**: Behebt fehlende Server-Verbindung / kaputte Sessions in der Release-`.exe` nach den SecureStorage- und Auth-Änderungen in v1.0.43.
+- **Lore & Dialog-System Fix**:
+  - Wiederherstellung der Pfad-Flags (`scholar_path`, `guardian_path`), Codex-Unlocks und visuellen Effekte in den Interaktiven Lore-Chroniken (`LORE_NODES`).
+  - Behebung des fehlschlagenden CI-Tests `DialogAndChoiceSystem.test.js`.
 
 ---
 

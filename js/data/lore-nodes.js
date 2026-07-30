@@ -17,14 +17,20 @@ export const LORE_NODES = {
         title: 'Lehre des Fleißes',
         text: 'Der Fall lehrt uns unermüdliches Streben. Jede Erfahrung formt den Geist.',
         passiveDescription: 'Dauerhaft +15% Helden-Erfahrungsgewinn (EXP).',
-        effects: { expMultiplier: 1.15 }
+        effects: { expMultiplier: 1.15 },
+        pathFlag: 'scholar_path',
+        codexUnlock: 'origin_of_mneme',
+        visualEffect: { theme: 'gold', particles: 'sparks', glowColor: '#ffd700' }
       },
       {
         id: 'metal',
         title: 'Lehre des Erzes',
         text: 'Nur die stärksten Materialien überdauern die Jahrhunderte. Die Materie siegt.',
         passiveDescription: 'Dauerhaft +10% Erhöhung der Schmiede- & Handwerksqualität.',
-        effects: { forgeQualityMultiplier: 1.10 }
+        effects: { forgeQualityMultiplier: 1.10 },
+        pathFlag: 'guardian_path',
+        codexUnlock: 'origin_of_mneme',
+        visualEffect: { theme: 'iron', particles: 'embers', glowColor: '#a0a0a0' }
       }
     ]
   },
