@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/github/actions/workflow/status/Trobikus/archiv-des-vergessens/test.yml?branch=main&label=CI%2FCD%20Build&style=for-the-badge&color=2EA44F" alt="Build Status" />
   </a>
   <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
-    <img src="https://img.shields.io/badge/Version-v1.0.41-6B46C1?style=for-the-badge" alt="Latest Version" />
+    <img src="https://img.shields.io/github/v/release/Trobikus/archiv-des-vergessens?style=for-the-badge&color=6B46C1&label=Version" alt="Latest Version" />
   </a>
   <a href="https://grimoireinteractive.duckdns.org">
     <img src="https://img.shields.io/website?url=https%3A%2F%2Fgrimoireinteractive.duckdns.org&up_message=online&down_message=offline&label=Server%20Status&style=for-the-badge&up_color=2EA44F&down_color=E53E3E" alt="Server Status" />
