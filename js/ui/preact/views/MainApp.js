@@ -104,7 +104,7 @@ export function MainApp({ stateManager, eventBus, services }) {
     };
   }, [eventBus, lang]);
 
-  // Global keydown listener for Escape key to close modals
+  // Global keydown listener for Escape key (close modals) and F11 key (fullscreen toggle)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -118,6 +118,22 @@ export function MainApp({ stateManager, eventBus, services }) {
           setAccountModalOpen(false);
         } else {
           eventBus.publish(EVENTS.UI_CLOSE_ALL_MODALS);
+        }
+      } else if (e.key === 'F11') {
+        e.preventDefault();
+        if (window.electronAPI && typeof window.electronAPI.toggleFullscreen === 'function') {
+          window.electronAPI.toggleFullscreen().catch(() => {});
+        } else {
+          // Browser fallback
+          if (!document.fullscreenElement) {
+            if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            }
+          } else {
+            if (document.exitFullscreen) {
+              document.exitFullscreen().catch(() => {});
+            }
+          }
         }
       }
     };

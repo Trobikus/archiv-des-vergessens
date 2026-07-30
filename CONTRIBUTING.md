@@ -73,13 +73,13 @@ Für die lokale Entwicklung verbindet sich der Client standardmäßig mit deinem
 VITE_WS_URL=ws://localhost:8080
 
 # Für spätere Tests gegen den Produktiv-Server:
-# VITE_WS_URL=wss://api.archiv-des-vergessens.de
+# VITE_WS_URL=wss://grimoireinteractive.duckdns.org
 ```
 
 > **Erläuterung der Umgebungsvariablen:**
 > - `VITE_WS_URL`: Bestimmt die Adresse des Multiplayer-Backend-Servers.
 >   - `ws://localhost:8080`: Nutzt deinen lokalen Node.js-Server (unkodiertes WebSocket).
->   - `wss://api.archiv-des-vergessens.de`: Verbindet sich mit dem offiziellen Produktiv-Server (TLS/SSL-verschlüsseltes WebSocket).
+>   - `wss://grimoireinteractive.duckdns.org`: Verbindet sich mit dem offiziellen Produktiv-Server (TLS/SSL-verschlüsseltes WebSocket).
 
 ---
 

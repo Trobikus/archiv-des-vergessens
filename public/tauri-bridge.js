@@ -213,8 +213,49 @@
       if (invoke) {
         invoke('quit_app').catch(err => console.warn('[Tauri Bridge] quit_app nicht verfügbar:', err));
       }
+    },
+
+    // --- Window Management ---
+    toggleFullscreen: async () => {
+      if (currentWindow) {
+        try {
+          const isFS = await currentWindow.isFullscreen();
+          if (isFS) {
+            await currentWindow.setFullscreen(false);
+            await currentWindow.maximize();
+          } else {
+            await currentWindow.setFullscreen(true);
+          }
+          return;
+        } catch (e) {
+          console.warn('[Tauri Bridge] Toggle Fullscreen via currentWindow fehlgeschlagen:', e);
+        }
+      }
+
+      // Browser Fallback
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
     }
   };
+
+  // Global F11 Listener in Tauri Bridge
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F11') {
+      e.preventDefault();
+      if (window.electronAPI && typeof window.electronAPI.toggleFullscreen === 'function') {
+        window.electronAPI.toggleFullscreen().catch(err => {
+          console.warn('[Tauri Bridge] F11 toggleFullscreen fehlgeschlagen:', err);
+        });
+      }
+    }
+  });
 
   // Fix background image loading automatically for Tauri and show window smoothly
   window.addEventListener('DOMContentLoaded', () => {

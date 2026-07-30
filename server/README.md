@@ -84,7 +84,7 @@ sudo ln -s /etc/nginx/sites-available/archiv-des-vergessens.conf /etc/nginx/site
 sudo nginx -t && sudo systemctl reload nginx
 
 # SSL-Zertifikat via Let's Encrypt abrufen
-sudo certbot --nginx -d api.archiv-des-vergessens.de
+sudo certbot --nginx -d grimoireinteractive.duckdns.org
 ```
 
-Der Server ist nun sicher verschlüsselt unter `wss://api.archiv-des-vergessens.de` erreichbar!
+Der Server ist nun sicher verschlüsselt unter `wss://grimoireinteractive.duckdns.org` erreichbar!

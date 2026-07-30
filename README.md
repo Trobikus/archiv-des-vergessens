@@ -24,7 +24,7 @@
   </a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4A90E2?style=for-the-badge" alt="Platforms" />
   <img src="https://img.shields.io/badge/Engine-Tauri%202-FF6B6B?style=for-the-badge" alt="Tauri Engine" />
-  <img src="https://img.shields.io/website?url=https%3A%2F%2Fapi.archiv-des-vergessens.de&up_message=online&down_message=offline&style=for-the-badge&label=Server" alt="Server Status" />
+  <img src="https://img.shields.io/website?url=https%3A%2F%2Fgrimoireinteractive.duckdns.org&up_message=online&down_message=offline&style=for-the-badge&label=Server" alt="Server Status" />
 </p>
 
 **Archiv des Vergessens** ist ein atmosphärisches, hybrides **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer, deutschem Idle-Formatierungsstandard, modernem Glassmorphic AAA-Design und einer einzigartigen Welt rund um Erinnerung, Vergessen und die Macht der Mneme.
@@ -201,7 +201,7 @@ archiv-des-vergessens/
 3. Der integrierte Launcher prüft automatisch auf Updates.
 4. Erstelle einen Account oder starte direkt als Gast.
 5. Der Client verbindet sich automatisch mit dem öffentlichen Multiplayer-Server:
-   - **Öffentlicher Server**: `wss://api.archiv-des-vergessens.de` (SSL-verschlüsselt, WSS)
+   - **Öffentlicher Server**: `wss://grimoireinteractive.duckdns.org` (SSL-verschlüsselt, WSS)
 
 ---
 
@@ -267,7 +267,7 @@ sudo ln -s /etc/nginx/sites-available/archiv-des-vergessens.conf /etc/nginx/site
 sudo nginx -t && sudo systemctl reload nginx
 
 # SSL-Zertifikat automatisch anfordern & konfigurieren
-sudo certbot --nginx -d api.archiv-des-vergessens.de
+sudo certbot --nginx -d grimoireinteractive.duckdns.org
 ```
 
 ### 3. Konfigurationsverwaltung & Kryptographische Sicherheit (`config.toml`)
