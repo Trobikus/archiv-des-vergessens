@@ -16,6 +16,9 @@
   <a href="https://github.com/Trobikus/archiv-des-vergessens/releases/latest">
     <img src="https://img.shields.io/badge/Version-v1.0.41-6B46C1?style=for-the-badge" alt="Latest Version" />
   </a>
+  <a href="https://grimoireinteractive.duckdns.org">
+    <img src="https://img.shields.io/website?url=https%3A%2F%2Fgrimoireinteractive.duckdns.org&up_message=online&down_message=offline&label=Server%20Status&style=for-the-badge&up_color=2EA44F&down_color=E53E3E" alt="Server Status" />
+  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-41B883?style=for-the-badge" alt="License" />
   </a>
@@ -200,7 +203,7 @@ archiv-des-vergessens/
 3. Der integrierte Launcher prüft automatisch auf Updates.
 4. Erstelle einen Account oder starte direkt als Gast.
 5. Der Client verbindet sich automatisch mit dem öffentlichen Multiplayer-Server:
-   - **Öffentlicher Server**: `wss://api.archiv-des-vergessens.de` (SSL-verschlüsselt, WSS)
+   - **Öffentlicher Server**: `wss://grimoireinteractive.duckdns.org` (SSL-verschlüsselt, WSS)
 
 ---
 
