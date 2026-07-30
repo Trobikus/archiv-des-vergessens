@@ -49,19 +49,7 @@ export class ChatService {
       }
     }
 
-    // FALLBACK: Lokale Simulation (Offline-Modus)
-    const playerName = this._stateManager.getState().hero.name;
-
-    const msg = {
-      id: Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4),
-      player: playerName,
-      message: cleanText,
-      timestamp: Date.now(),
-      type: 'global'
-    };
-
-    this.addReceivedGlobalMessage(msg);
-    return { success: true, msg };
+    return { success: false, message: 'auth.error.server_offline' };
   }
 
   sendClanMessage(text) {
@@ -79,19 +67,7 @@ export class ChatService {
       }
     }
 
-    // FALLBACK: Lokale Simulation (Offline-Modus)
-    const playerName = this._stateManager.getState().hero.name;
-
-    const msg = {
-      id: Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4),
-      player: playerName,
-      message: cleanText,
-      timestamp: Date.now(),
-      clanId: clanId
-    };
-
-    this.addReceivedClanMessage(msg);
-    return { success: true, msg };
+    return { success: false, message: 'auth.error.server_offline' };
   }
 
   /**

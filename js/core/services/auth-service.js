@@ -5,7 +5,7 @@
  * 
  * VERANTWORTUNG:
  * - Verwaltung von Benutzer-Registrierung, Login, Logout & Session-Tokens
- * - Server-Synchronisation über NetworkService mit offline-fähiger Speicherung
+ * - Server-Synchronisation über NetworkService
  * - Gast-Konto Generierung & Migration in permanente SQLite-Server-Konten
  * - Verknüpfung mit EventBus & CloudManager für Fortschritts-Sync
  * ============================================================
@@ -200,7 +200,7 @@ export class AuthService {
   }
 
   /**
-   * Registriert ein neues Konto auf dem Server (mit lokalem Offline-Fallback)
+   * Registriert ein neues Konto auf dem Server
    */
   async register(username, email, password) {
     if (this._isAuthenticating) {
