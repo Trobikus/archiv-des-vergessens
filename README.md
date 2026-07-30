@@ -24,6 +24,7 @@
   </a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4A90E2?style=for-the-badge" alt="Platforms" />
   <img src="https://img.shields.io/badge/Engine-Tauri%202-FF6B6B?style=for-the-badge" alt="Tauri Engine" />
+  <img src="https://img.shields.io/website?url=https%3A%2F%2Fapi.archiv-des-vergessens.de&up_message=online&down_message=offline&style=for-the-badge&label=Server" alt="Server Status" />
 </p>
 
 **Archiv des Vergessens** ist ein atmosphärisches, hybrides **Idle-RPG** mit narrativer Tiefe, Echtzeit-Multiplayer, deutschem Idle-Formatierungsstandard, modernem Glassmorphic AAA-Design und einer einzigartigen Welt rund um Erinnerung, Vergessen und die Macht der Mneme.
