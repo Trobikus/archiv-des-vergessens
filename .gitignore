@@ -1,62 +1,77 @@
-# Logs
-logs
+```
+# Dependencies
+node_modules/
+
+# Logs and temp files
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+*.tmp
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Environment Variables
+# Environment
 .env
 .env.local
-.env.*.local
+*.env.*
 
-# KI-Coding-Assistent Metadaten (Refact.ai) - lokal, nicht fürs Repo bestimmt
-.refact/
+# Editors
+.vscode/
+.idea/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+.env
 
-# Electron Build Output – lokale .exe Builds (werden via GitHub Actions + Release verteilt)
-release/
-!release/.gitkeep
-
-# electron-builder Cache
-.electron-builder-cache/
-
-# Tauri build output
-src-tauri/target/
-src-tauri/bin/
-src-tauri/gen/
-launcher/src-tauri/target/
-launcher/src-tauri/bin/
-launcher/src-tauri/gen/
+# Build outputs
+dist/
+build/
+*.o
+*.obj
+*.so
+*.a
+*.dll
 *.exe
+*.out
 
-# Security / Private Keys & Config
-*.key
-*.key.pub
-updater.key
-updater.key.pub
-src-tauri/updater.key*
-config.toml
-*.toml.secret
-data/
-*.db
-server/data/*.db
-server/data/*.db-wal
-server/data/*.db-shm
+# Compression
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Cache
+.mypy_cache/
+.pytest_cache/
+.cache/
+.target/
+
+# OS
+.DS_Store
+Thumbs.db
+```
