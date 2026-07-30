@@ -46,7 +46,8 @@ impl DbManager {
 
     /// Opens or creates a file-backed SQLite database at the specified path.
     pub fn open_at_path(path: &str) -> Result<Self, DbError> {
-        Self::open_at_path_with_password(path, "")
+        let password = std::env::var("MNEME_DB_PASSWORD").unwrap_or_default();
+        Self::open_at_path_with_password(path, &password)
     }
 
     /// Opens or creates a file-backed SQLite database using `DatabaseConfig`.
