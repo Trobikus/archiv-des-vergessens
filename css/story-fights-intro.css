@@ -1,0 +1,219 @@
+/* ============================================================
+   FILE: css/story-fights-intro.css – Story-Fights Cinematic Intro
+   ============================================================ */
+
+.sfi-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 21000;
+  background: #03040a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+  cursor: pointer;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sfi-overlay.sfi-visible {
+  opacity: 1;
+}
+
+.sfi-overlay.sfi-exit {
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: 0.45s;
+}
+
+.sfi-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #03040a;
+}
+
+.sfi-frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(1.06);
+  transition:
+    opacity var(--sfi-crossfade, 900ms) cubic-bezier(0.4, 0, 0.2, 1),
+    transform calc(var(--sfi-hold, 5000ms) + 400ms) linear;
+  will-change: opacity, transform;
+}
+
+.sfi-frame-active {
+  opacity: 1;
+  transform: scale(1);
+  z-index: 2;
+}
+
+.sfi-frame-past {
+  opacity: 0;
+  transform: scale(1.02);
+  z-index: 1;
+  transition-duration: var(--sfi-crossfade, 900ms);
+}
+
+.sfi-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+}
+
+.sfi-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, transparent 18%, transparent 78%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.sfi-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: sfiGrain 1.2s steps(3) infinite;
+}
+
+@keyframes sfiGrain {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-1%, 1%); }
+  66% { transform: translate(1%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+.sfi-progress {
+  position: absolute;
+  bottom: calc(11vh + 1.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  gap: 0.55rem;
+  pointer-events: none;
+}
+
+.sfi-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(180, 210, 255, 0.25);
+  border: 1px solid rgba(140, 190, 255, 0.35);
+  transition: background 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+}
+
+.sfi-dot.active {
+  background: rgba(120, 190, 255, 0.95);
+  box-shadow: 0 0 12px rgba(80, 170, 255, 0.7);
+  transform: scale(1.25);
+}
+
+.sfi-dot.done {
+  background: rgba(120, 190, 255, 0.55);
+}
+
+.sfi-frame-label {
+  position: absolute;
+  top: calc(11vh + 1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(190, 215, 255, 0.55);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.sfi-hint {
+  position: absolute;
+  bottom: calc(11vh + 2.8rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: rgba(210, 225, 255, 0.45);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: sfiHintPulse 2.8s ease-in-out infinite;
+}
+
+@keyframes sfiHintPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+.sfi-skip {
+  position: absolute;
+  top: calc(11vh + 0.85rem);
+  right: 1.4rem;
+  z-index: 14;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  color: rgba(200, 220, 255, 0.85);
+  border-color: rgba(120, 170, 255, 0.35) !important;
+  background: rgba(4, 8, 18, 0.55) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sfi-skip:hover {
+  color: #fff;
+  border-color: rgba(140, 190, 255, 0.7) !important;
+  box-shadow: 0 0 16px rgba(60, 140, 255, 0.25);
+}
+
+@media (max-width: 640px) {
+  .sfi-hint {
+    font-size: 0.68rem;
+    bottom: calc(11vh + 2.4rem);
+  }
+
+  .sfi-skip {
+    right: 0.75rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.7rem;
+  }
+
+  .sfi-frame-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sfi-frame,
+  .sfi-overlay,
+  .sfi-grain,
+  .sfi-hint {
+    animation: none !important;
+    transition: opacity 0.2s ease !important;
+  }
+
+  .sfi-frame-active {
+    transform: none;
+  }
+}

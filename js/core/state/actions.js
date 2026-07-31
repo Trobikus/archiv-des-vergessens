@@ -471,6 +471,19 @@ export function finishTutorial() {
   });
 }
 
+/**
+ * Markiert das Story-Fights-Cinematic-Intro als gesehen.
+ */
+export function markStoryFightsIntroSeen() {
+  return (state) => ({
+    ...state,
+    system: {
+      ...state.system,
+      storyFightsIntroSeen: true
+    }
+  });
+}
+
 // ============================================================
 // IDLE GAME ACTIONS
 // ============================================================
@@ -642,6 +655,7 @@ export default {
   setSavingStatus,
   setTutorialStep,
   finishTutorial,
+  markStoryFightsIntroSeen,
   addMnemeFragmente,
   removeMnemeFragmente,
   addEwigeMneme,

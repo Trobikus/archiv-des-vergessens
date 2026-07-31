@@ -72,6 +72,7 @@
 /* 23. Story & Bosse */
 @import url('story.css');
 @import url('story-events.css');
+@import url('story-fights-intro.css');
 
 /* 24. Responsive – alle Media-Queries */
 @import url('responsive.css');
