@@ -1,6 +1,5 @@
 // --- START OF FILE data/story_branches.js ---
-// Erweiterte Narrative: Prolog + Kapitel 1–4 mit Zwischenstationen,
-// moralischen Grauzonen und AAA-Szenenstruktur.
+// Erweiterte Narrative + Flag-Bedingungen an Optionen
 
 export const STORY_BRANCHES = {
     // =====================================================================
@@ -22,8 +21,8 @@ export const STORY_BRANCHES = {
         title: 'Die erste Stimme',
         text: 'Das Flüstern formt Worte – sanft, fast mütterlich:\n\n„Du erinnerst dich an nichts. Das ist ein Geschenk. Warum kämpfst du dagegen?“\n\nGleichzeitig materialisiert sich in der Ferne eine goldene Glyphe, die warm pulsiert – ein Siegel, das nicht von dieser Asche stammt. Zwei Richtungen. Zwei Versprechen.',
         options: [
-            { id: 'prologue_voice_fight', text: 'Zieh deine Klinge aus gefrorenem Licht und stelle dich dem Schatten!', next: 'prologue_malakor_appear' },
-            { id: 'prologue_voice_flee', text: 'Weiche zurück, flüchte in das Labyrinth der schwebenden Buchregale...', next: 'prologue_labyrinth' }
+            { id: 'prologue_voice_fight', text: 'Zieh deine Klinge aus gefrorenem Licht und stelle dich dem Schatten!', next: 'prologue_malakor_appear', flags: { aethel_affinity: 5 } },
+            { id: 'prologue_voice_flee', text: 'Weiche zurück, flüchte in das Labyrinth der schwebenden Buchregale...', next: 'prologue_labyrinth', flags: { lethe_affinity: 5 } }
         ],
         flags: { first_voice_heard: true }
     },
@@ -33,8 +32,8 @@ export const STORY_BRANCHES = {
         title: 'Das Feld der Asche',
         text: 'Soweit das Auge reicht: weiße Asche, die bei jedem Schritt leise knirscht. In der Ferne ragt der Turm der Ewigkeit empor – seine Spitze verschwindet im schwarzen Schlund. Zwischen dir und dem Turm liegt ein Garten aus zerbrochenem Glas und verwelkten Erinnerungen.\n\nEtwas bewegt sich dort. Eine Silhouette aus Obsidian und Sternenlicht.',
         options: [
-            { id: 'prologue_land_approach', text: 'Gehe dem Turm entgegen und stelle dich dem, was wartet', next: 'prologue_malakor_appear' },
-            { id: 'prologue_land_side', text: 'Suche einen anderen Weg – in die schwebenden Regale am Rand', next: 'prologue_labyrinth' }
+            { id: 'prologue_land_approach', text: 'Gehe dem Turm entgegen und stelle dich dem, was wartet', next: 'prologue_malakor_appear', flags: { aethel_affinity: 5 } },
+            { id: 'prologue_land_side', text: 'Suche einen anderen Weg – in die schwebenden Regale am Rand', next: 'prologue_labyrinth', flags: { lethe_affinity: 5 } }
         ],
         flags: { prologue_explored: true }
     },
@@ -45,7 +44,7 @@ export const STORY_BRANCHES = {
         text: 'Die Silhouette materialisiert sich vollständig. Eine hochgewachsene, ritterliche Gestalt aus purem Obsidian. In ihrer Brusthöhle rotiert ein goldenes Uhrwerk – blockiert von schwarzen Schlieren der Lethe. Das Schwert in ihrer Hand besteht aus kondensiertem Sternenlicht und flackert.\n\nSeine Stimme klingt wie das Echo von tausend brechenden Schwertern:\n\n„Ein neuer Funke. Willkommen im Asche-Garten. Ich war der Erste, der die Mneme trug. Ich habe eine ganze goldene Ära in mir begraben – und bin daran erstickt. Was willst du, Fremder? Kampf… oder Verständnis?“',
         options: [
             { id: 'prologue_m_fight', text: 'Zieh die Klinge. Der Asche-Garten wird zum Duell', next: 'chapter1_hero' },
-            { id: 'prologue_m_parley', text: 'Senke die Waffe und versuche, die leidende Seele anzusprechen', next: 'chapter1_hero_parley' }
+            { id: 'prologue_m_parley', text: 'Senke die Waffe und versuche, die leidende Seele anzusprechen', next: 'chapter1_hero_parley', flags: { diplomat_attempt: true } }
         ],
         flags: { prologue_completed: true, malakor_met: true }
     },
@@ -80,7 +79,7 @@ export const STORY_BRANCHES = {
         title: 'Worte gegen Obsidian',
         text: 'Du senkst die Klinge. Malakors Uhrwerk stockt für einen Moment.\n\n„Du… sprichst. Die meisten ziehen nur die Waffe. Hör zu: Tief unter dem Turm liegt die versiegelte Kammer der Ersten. Dort ruht die unberührte Aethel-Mneme. Die Koordinaten… sind in meinem Zerfall geschrieben. Wenn du mich besiegst oder verschonst – sie gehören dir.“\n\nEr hebt das Schwert erneut, aber zögernd.',
         options: [
-            { id: 'ch1_parley_spare', text: 'Verschone ihn und nimm die Koordinaten an', next: 'chapter1_hero_spared' },
+            { id: 'ch1_parley_spare', text: 'Verschone ihn und nimm die Koordinaten an', next: 'chapter1_hero_spared', flags: { aethel_affinity: 10 } },
             { id: 'ch1_parley_fight', text: 'Trotzdem kämpfen – seine Last muss enden', next: 'chapter1_hero' }
         ],
         flags: { hero_path: true, diplomat_attempt: true }
@@ -114,8 +113,8 @@ export const STORY_BRANCHES = {
         title: 'Unterschlupf bei Mira',
         text: 'Die Gestalt in dem zerrissenen Mantel ist Mira – Schattenschmugglerin, Händlerin mit dem, was der Orden lieber vergessen würde.\n\n„Pst. Du bist neu und du bist ängstlich. Beides ist hier kein Makel. Komm. Ich habe einen Winkel, in dem die Asche nicht so laut knirscht. Und Relikte, die der Archivar nicht sehen soll.“\n\nSie führt dich in eine Nische zwischen zwei umgestürzten Regalen. Eine schwache Laterne brennt.',
         options: [
-            { id: 'ch1_c_return', text: 'Überwinde deine Angst, kehre um und stelle dich der Dunkelheit', next: 'chapter1_coward_return' },
-            { id: 'ch1_c_stay', text: 'Bleibe und lerne von Mira und den verbotenen Schriften', next: 'chapter1_coward_study' }
+            { id: 'ch1_c_return', text: 'Überwinde deine Angst, kehre um und stelle dich der Dunkelheit', next: 'chapter1_coward_return', flags: { aethel_affinity: 5 } },
+            { id: 'ch1_c_stay', text: 'Bleibe und lerne von Mira und den verbotenen Schriften', next: 'chapter1_coward_study', flags: { lethe_affinity: 5 } }
         ],
         flags: { coward_path: true, mira_met: true }
     },
@@ -125,8 +124,8 @@ export const STORY_BRANCHES = {
         title: 'Verbotene Alchemie',
         text: 'Du ignorierst die Laterne und tauchst tiefer. Die Folianten werden älter, die Schrift fremder. Formeln beschreiben, wie Mneme und Lethe zwei Seiten derselben Medaille sind. Wer das Alte nicht sterben lässt, erstickt das Neue.\n\nStunden – oder Tage – vergehen. Du verstehst mehr, als dir lieb ist.',
         options: [
-            { id: 'ch1_cd_study', text: 'Vertiefe dich weiter in die Schattenlehre', next: 'chapter1_coward_study' },
-            { id: 'ch1_cd_emerge', text: 'Tritt aus dem Schatten und stelle dich dem Schicksal', next: 'chapter1_coward_return' }
+            { id: 'ch1_cd_study', text: 'Vertiefe dich weiter in die Schattenlehre', next: 'chapter1_coward_study', flags: { lethe_affinity: 8 } },
+            { id: 'ch1_cd_emerge', text: 'Tritt aus dem Schatten und stelle dich dem Schicksal', next: 'chapter1_coward_return', flags: { aethel_affinity: 5 } }
         ],
         flags: { coward_path: true, hidden_path: true, knowledge_started: true }
     },
@@ -146,7 +145,7 @@ export const STORY_BRANCHES = {
         title: 'Der lautlose Schattenwandler',
         text: 'Die Zeit im Archiv verliert jede Bedeutung. Du entzifferst Formeln der Lethe-Asche. Mira bringt dir gelegentlich Wasser und Schweigen. Irgendwann flüstert eine andere Stimme aus deinem eigenen Schatten – Nyx, noch ohne Namen, aber mit dem Versprechen von Frieden im Nichts.\n\nDu bist bereit, entweder das Wissen zu meistern oder endlich hervorzutreten.',
         options: [
-            { id: 'ch1_cs_master', text: 'Meistere die Kräfte der Lethe-Asche', next: 'chapter2_approach_shadow' },
+            { id: 'ch1_cs_master', text: 'Meistere die Kräfte der Lethe-Asche', next: 'chapter2_approach_shadow', flags: { lethe_affinity: 10 } },
             { id: 'ch1_cs_emerge', text: 'Tritt aus dem Schatten und konfrontiere das Schicksal', next: 'chapter2_approach' }
         ],
         flags: { coward_path: true, hidden_path: true, knowledge_gained: true }
@@ -172,7 +171,7 @@ export const STORY_BRANCHES = {
         options: [
             { id: 'ch2_apps_enter', text: 'Betrete die Plattform aus dem Schatten', next: 'chapter2_confrontation' }
         ],
-        flags: { chapter2_reached: true, lethe_affinity: true }
+        flags: { chapter2_reached: true, lethe_affinity: 10 }
     },
 
     chapter2_confrontation: {
@@ -182,7 +181,13 @@ export const STORY_BRANCHES = {
         options: [
             { id: 'ch2_c_theron', text: 'Höre Theron und dem Bund zu', next: 'chapter2_theron_offer' },
             { id: 'ch2_c_nyx', text: 'Lausche Nyx und dem Versprechen des Friedens', next: 'chapter2_nyx_temptation' },
-            { id: 'ch2_c_mira', text: 'Wende dich an Mira – den dritten Weg', next: 'chapter2_mira_deal' },
+            {
+                id: 'ch2_c_mira',
+                text: 'Wende dich an Mira – den dritten Weg',
+                next: 'chapter2_mira_deal',
+                // Mira-Pfad immer offen; stärker, wenn man sie schon kennt
+                condition: { op: 'or', conditions: [{ flag: 'mira_met' }, { flag: 'lone_wolf_path', value: false }] }
+            },
             { id: 'ch2_c_alone', text: 'Lehne alle ab und gehe deinen eigenen Weg', next: 'chapter2_lone_choice' }
         ],
         flags: { confrontation_seen: true }
@@ -193,9 +198,14 @@ export const STORY_BRANCHES = {
         title: 'Das Angebot des Archivars',
         text: 'Theron wendet sich dir zu. Die Glyphen hinter ihm flackern.\n\n„Siehst du das? Jedes Mal, wenn eine dieser Lichter erlischt, vergisst ein Kind auf einer fernen Welt das Gesicht seiner Mutter. Wir halten die Trümmer der Existenz mit blutenden Händen zusammen. Schwöre dem Bund die Treue. Trage das Wappen. Hilf uns, die Siegel zu verstärken – oder wir verlieren alles.“\n\nElara nickt knapp. Ihre Rüstung trägt die Runen längst vergessener Helden.',
         options: [
-            { id: 'ch2_th_join', text: 'Schwöre den Hütern die Treue und schütze die Schriften', next: 'chapter3_guardian' },
+            { id: 'ch2_th_join', text: 'Schwöre den Hütern die Treue und schütze die Schriften', next: 'chapter3_guardian', flags: { aethel_affinity: 12 } },
             { id: 'ch2_th_refuse', text: 'Lehne die Fesseln ihrer Dogmen ab', next: 'chapter2_lone_choice' },
-            { id: 'ch2_th_secret', text: '(Falls bekannt) Teile das Geheimnis der versiegelten Kammer', next: 'chapter2_share_secret' }
+            {
+                id: 'ch2_th_secret',
+                text: 'Teile das Geheimnis der versiegelten Kammer mit den Wächtern',
+                next: 'chapter2_share_secret',
+                requireFlags: ['secret_known']
+            }
         ],
         flags: { theron_heard: true }
     },
@@ -205,8 +215,8 @@ export const STORY_BRANCHES = {
         title: 'Das Flüstern der Lethe',
         text: 'Nyx tritt näher. Ihre Stimme ist ein sanftes Rauschen.\n\n„Theron hat seinen eigenen Namen vor Jahrhunderten vergessen, nur um das Rezept einer Medizin zu bewahren, die niemand mehr herstellen kann. Ist das Leben? Das Archiv ist eine ewige Folterkammer der Nostalgie. Lass uns die Siegel brechen. Wenn alles vergessen ist, gibt es keinen Schmerz mehr. Nur die unendliche, sanfte Stille. Ist das nicht der wahre Frieden?“',
         options: [
-            { id: 'ch2_ny_accept', text: 'Nimm den Pakt an und hilf, die Siegel zu öffnen', next: 'chapter3_scholar' },
-            { id: 'ch2_ny_reject', text: 'Weise sie zurück – du wirst das Archiv verteidigen', next: 'chapter2_theron_offer' },
+            { id: 'ch2_ny_accept', text: 'Nimm den Pakt an und hilf, die Siegel zu öffnen', next: 'chapter3_scholar', flags: { lethe_affinity: 15 } },
+            { id: 'ch2_ny_reject', text: 'Weise sie zurück – du wirst das Archiv verteidigen', next: 'chapter2_theron_offer', flags: { aethel_affinity: 8 } },
             { id: 'ch2_ny_alone', text: 'Weder Pakt noch Bund – dein eigener Weg', next: 'chapter2_lone_choice' }
         ],
         flags: { nyx_heard: true }
@@ -217,7 +227,7 @@ export const STORY_BRANCHES = {
         title: 'Der dritte Weg',
         text: 'Mira grinst schief und zieht dich beiseite.\n\n„Die beiden predigen Ewigkeit oder Nichts. Ich predige Wandel. Mneme darf nicht in Vitrinen verrotten – sie muss verbrannt, transformiert, als Treibstoff für etwas Neues genutzt werden. Altes muss sterben, damit Neues wachsen kann. Komm mit mir. Es gibt einen Untergrund-Markt und Leute, die experimentieren. Riskant. Aber lebendig.“',
         options: [
-            { id: 'ch2_mi_join', text: 'Folge Mira und den freien Wanderern', next: 'chapter3_lone_wolf' },
+            { id: 'ch2_mi_join', text: 'Folge Mira und den freien Wanderern', next: 'chapter3_lone_wolf', flags: { lethe_affinity: 5, aethel_affinity: 5 } },
             { id: 'ch2_mi_back', text: 'Kehre zur Konfrontation zurück', next: 'chapter2_confrontation' }
         ],
         flags: { mira_deal: true }
@@ -228,7 +238,7 @@ export const STORY_BRANCHES = {
         title: 'Das geteilte Geheimnis',
         text: 'Du erzählst Theron und Elara von den Koordinaten der versiegelten Kammer. Therons Augen weiten sich. Elara greift unwillkürlich zum Schwertknauf.\n\n„Die Kammer der Ersten… Wir dachten, sie sei Mythos. Wenn du uns dorthin führst, könntest du der wichtigste Hüter seit Generationen werden – oder der gefährlichste.“\n\nSie bieten dir den direkten Weg an: als Guardian mit Zugang zum Allerheiligsten.',
         options: [
-            { id: 'ch2_ss_guardian', text: 'Führe sie und tritt dem Bund bei', next: 'chapter3_guardian' },
+            { id: 'ch2_ss_guardian', text: 'Führe sie und tritt dem Bund bei', next: 'chapter3_guardian', flags: { aethel_affinity: 10 } },
             { id: 'ch2_ss_alone', text: 'Behalte die Kontrolle – gehe allein zur Kammer', next: 'chapter3_secrets' }
         ],
         flags: { secret_shared: true }
@@ -276,7 +286,13 @@ export const STORY_BRANCHES = {
         text: 'Du sprichst den Zweifel aus. Theron wird still. Elara legt die Hand auf den Schwertknauf – nicht bedrohlich, sondern müde.\n\n„Zweifel ist erlaubt“, sagt Theron. „Verrat nicht. Wenn du glaubst, es gibt einen besseren Weg als Stasis oder Krieg – dann finde ihn. Aber beeile dich. Die Lethe wartet nicht auf Philosophie.“\n\nDu stehst zwischen Loyalität und der Ahnung, dass beide Extreme – ewige Bewahrung und absolutes Vergessen – unvollständig sind.',
         options: [
             { id: 'ch3_gd_rebel', text: 'Suche den Weg der freien Wanderer und des Wandels', next: 'chapter3_lone_wolf' },
-            { id: 'ch3_gd_secrets', text: 'Suche die Kammer der Ersten auf eigene Faust', next: 'chapter3_secrets' },
+            {
+                id: 'ch3_gd_secrets',
+                text: 'Suche die Kammer der Ersten auf eigene Faust',
+                next: 'chapter3_secrets',
+                // Nur mit Geheimnis oder hohem Wissen sinnvoll
+                condition: { op: 'or', anyFlags: ['secret_known', 'knowledge_gained', 'secrets_path'] }
+            },
             { id: 'ch3_gd_return', text: 'Kehre dennoch zum Krieg gegen die Lethe zurück', next: 'chapter3_guardian_war' }
         ],
         flags: { guardian_path: true, doubt_spoken: true }
@@ -289,7 +305,12 @@ export const STORY_BRANCHES = {
         options: [
             { id: 'ch3_lw_fight', text: 'Konfrontiere den Orden und erkämpfe die Freiheit des Geistes', next: 'chapter4_rebel' },
             { id: 'ch3_lw_leave', text: 'Verlasse das Archiv und wandere in die ungeschriebene Leere', next: 'ending_exile' },
-            { id: 'ch3_lw_balance', text: 'Suche einen Mittelweg – weder Tyrannei noch Chaos', next: 'chapter3_secrets' }
+            {
+                id: 'ch3_lw_balance',
+                text: 'Suche einen Mittelweg – weder Tyrannei noch Chaos',
+                next: 'chapter3_secrets',
+                condition: { op: 'or', anyFlags: ['secret_known', 'knowledge_gained'] }
+            }
         ],
         flags: { lone_wolf_path: true }
     },
@@ -299,8 +320,8 @@ export const STORY_BRANCHES = {
         title: 'Das Allerheiligste der Ersten',
         text: 'Die verborgene Pforte schwingt auf – sei es durch Malakors Koordinaten, durch eigene Suche oder durch einen gestohlenen Schlüssel.\n\nVor dir erstreckt sich eine endlose, strahlende Kammer, erfüllt von flüssigem Gold: die Aethel-Mneme, die allererste, reine Erinnerung an die Schöpfung. Ein unbeschreiblicher Friede geht von ihr aus. Gleichzeitig spürst du, dass diese Macht jeden, der sie berührt, für immer verändert.\n\nDu stehst am Rand des Beckens.',
         options: [
-            { id: 'ch3_s_power', text: 'Nimm diese göttliche Macht in dich auf und werde zum Architekten der Realität', next: 'chapter4_god' },
-            { id: 'ch3_s_destroy', text: 'Zerstöre das goldene Becken, um den Kreislauf der Stasis zu brechen', next: 'ending_void' },
+            { id: 'ch3_s_power', text: 'Nimm diese göttliche Macht in dich auf und werde zum Architekten der Realität', next: 'chapter4_god', flags: { aethel_affinity: 15 } },
+            { id: 'ch3_s_destroy', text: 'Zerstöre das goldene Becken, um den Kreislauf der Stasis zu brechen', next: 'ending_void', flags: { lethe_affinity: 20 } },
             { id: 'ch3_s_leave', text: 'Lasse die Macht unberührt und kehre mit dem Wissen zurück', next: 'chapter3_scholar' }
         ],
         flags: { secrets_path: true }
@@ -311,9 +332,9 @@ export const STORY_BRANCHES = {
         title: 'Der dunkle Gelehrte',
         text: 'Durch Studien, Nyx’ Flüstern oder die Kammer der Ersten hast du die paradoxe Natur der Realität verstanden: Mneme und Lethe sind zwei Seiten derselben Medaille. Es kann keine neue Schöpfung geben, ohne dass das Alte vergeht. Doch der Orden weigert sich, diese Wahrheit zu akzeptieren – und Nyx will nur das eine Extrem.\n\nDu trägst Wissen, das beide Seiten fürchten.',
         options: [
-            { id: 'ch3_sc_teach', text: 'Kehre zum Orden zurück und versuche, die Wächter zu bekehren', next: 'chapter4_guardian_teach' },
+            { id: 'ch3_sc_teach', text: 'Kehre zum Orden zurück und versuche, die Wächter zu bekehren', next: 'chapter4_guardian_teach', flags: { aethel_affinity: 8 } },
             { id: 'ch3_sc_use', text: 'Nutze die Alchemie, um die Realität nach deinen Vorstellungen neu zu schmieden', next: 'chapter4_god' },
-            { id: 'ch3_sc_nyx', text: 'Erfülle Nyx’ Pakt und öffne die Siegel dem Vergessen', next: 'chapter4_void_path' }
+            { id: 'ch3_sc_nyx', text: 'Erfülle Nyx’ Pakt und öffne die Siegel dem Vergessen', next: 'chapter4_void_path', flags: { lethe_affinity: 15 } }
         ],
         flags: { scholar_path: true, knowledge_gained: true }
     },
@@ -464,12 +485,10 @@ export const STORY_BRANCHES = {
     }
 };
 
-// Hilfsfunktion: Knoten nach ID suchen
 export function getStoryNode(id) {
     return STORY_BRANCHES[id] || null;
 }
 
-// Hilfsfunktion: Prüfen, ob ein Knoten ein Ende ist
 export function isEndingNode(id) {
     const node = getStoryNode(id);
     return node ? node.isEnding === true : false;
