@@ -2,7 +2,7 @@
  * ============================================================
  * FILE: core/state/selectors.js – State-Selectoren
  * ============================================================
- * 
+ *
  * Memoized Selectoren für effiziente State-Abfragen.
  * Verwenden Reselect-ähnliche Memoization.
  * ============================================================
@@ -58,14 +58,14 @@ export function selectHeroAttributes(state) {
 
   const base = hero.baseStats;
   const spent = hero.spentStats;
-  
+
   const stats = {
     attack: base.attack + spent.attack,
     defense: base.defense + spent.defense,
     agility: base.agility + spent.agility,
     stamina: base.stamina + spent.stamina
   };
-  
+
   // Equipment-Boni
   const equipment = hero.equipment;
   for (const slot of Object.values(equipment)) {
@@ -76,7 +76,7 @@ export function selectHeroAttributes(state) {
       stats.stamina += slot.stats.stamina || 0;
     }
   }
-  
+
   cacheHero = hero;
   cachedAttributes = stats;
   return stats;
@@ -98,7 +98,7 @@ export function selectHeroCombatStats(state) {
     stats.attack = Math.floor(stats.attack * 1.5);
     stats.defense = Math.floor(stats.defense * 1.5);
   }
-  
+
   const combatStats = {
     ...stats,
     maxHp: 100 + (stats.stamina * 10) + (stats.defense * 2),
@@ -294,6 +294,9 @@ export function selectHubData(state) {
 /**
  * Holt den dominanten Story-Pfad für UI und Partikel.
  * Rückgabe: 'aethel', 'lethe' oder 'neutral'
+ *
+ * Nutzt explizite aethel_affinity / lethe_affinity (0–100) aus dem
+ * StoryBranchService sowie die klassischen Pfad-Flags.
  */
 export function selectDominantPath(state) {
   let aethel = 0;
@@ -301,19 +304,26 @@ export function selectDominantPath(state) {
 
   if (state) {
     const flags = state.storyBranch?.flags || {};
+
+    // Numerische Affinität aus Story-Entscheidungen (Hauptgewicht)
+    aethel += Math.floor((Number(flags.aethel_affinity) || 0) / 10);
+    lethe += Math.floor((Number(flags.lethe_affinity) || 0) / 10);
+
     if (flags.hero_path) aethel += 2;
     if (flags.guardian_path) aethel += 2;
     if (flags.secrets_path) aethel += 2;
     if (flags.god_path) aethel += 2;
     if (flags.seal_path) aethel += 1;
     if (flags.epic_path) aethel += 1;
+    if (flags.malakor_spared) aethel += 1;
 
     if (flags.coward_path) lethe += 2;
     if (flags.hidden_path) lethe += 2;
     if (flags.scholar_path) lethe += 2;
     if (flags.rebel_path) lethe += 2;
     if (flags.lone_wolf_path) lethe += 1;
-    
+    if (flags.void_path) lethe += 2;
+
     // Lore Node Entscheidungen
     if (flags.node_prologue === 'aethel') aethel += 2;
     if (flags.node_prologue === 'lethe') lethe += 2;
