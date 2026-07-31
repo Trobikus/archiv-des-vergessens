@@ -428,20 +428,13 @@ function getTop10() {
 // Holt den globalen Chatverlauf aus SQLite
 function getGlobalChatHistory(limit = 50) {
   try {
-    return db.prepare(`
-      SELECT id, player, message, timestamp, type
-      FROM chats
-      WHERE type = 'global'
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(limit).reverse();
+    return stmts.getGlobalChatHistory.all(limit).reverse();
   } catch (err) {
     console.error('[Chat] Fehler beim Laden des globalen Chatverlaufs:', err);
     return [];
   }
 }
 
-// Holt den Gilden-Chatverlauf aus SQLite
 // Sendet den gespeicherten Chatverlauf (Global) an eine Verbindung
 function sendChatHistory(ws) {
   const globalHistory = getGlobalChatHistory(50);
@@ -456,14 +449,7 @@ function pruneChatHistory(keepCount = 500) {
   chatMessageCounter++;
   if (chatMessageCounter % 25 !== 0) return; // Nur alle 25 Nachrichten ausführen
   try {
-    db.prepare(`
-      DELETE FROM chats
-      WHERE id NOT IN (
-        SELECT id FROM chats
-        ORDER BY timestamp DESC
-        LIMIT ?
-      )
-    `).run(keepCount);
+    stmts.pruneChats.run(keepCount);
   } catch (err) {
     console.error('[Chat] Fehler beim Bereinigen des Chatverlaufs:', err);
   }
@@ -521,12 +507,7 @@ function initPreparedStatements() {
   try {
     stmts = {
       checkUsername: db.prepare('SELECT id FROM users WHERE LOWER(username) = ? LIMIT 1'),
-      checkEmail: db.prepare('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1'),
-      insertUser: db.prepare('INSERT INTO users (id, username, email, passwordHash, salt, createdAt, lastLogin) VALUES (?, ?, ?, ?, ?, ?, ?)'),
-      getUserByUsername: db.prepare('SELECT * FROM users WHERE LOWER(username) = ?'),
       getUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
-      updateLastLogin: db.prepare('UPDATE users SET lastLogin = ? WHERE id = ?'),
-      updateSessionToken: db.prepare('UPDATE users SET sessionToken = ? WHERE id = ?'),
       getSave: db.prepare('SELECT saveData, version, timestamp FROM saves WHERE userId = ?'),
       upsertSave: db.prepare(`
         INSERT INTO saves (userId, username, saveData, version, timestamp)
@@ -557,7 +538,6 @@ function initPreparedStatements() {
       `),
       insertChat: db.prepare('INSERT INTO chats (id, player, message, timestamp, type, guildId) VALUES (?, ?, ?, ?, ?, ?)'),
       getGlobalChatHistory: db.prepare("SELECT id, player, message, timestamp, type FROM chats WHERE type = 'global' ORDER BY timestamp DESC LIMIT ?"),
-      getGuildChatHistory: db.prepare("SELECT id, player, message, timestamp, type, guildId FROM chats WHERE type = 'guild' AND guildId = ? ORDER BY timestamp DESC LIMIT ?"),
       pruneChats: db.prepare('DELETE FROM chats WHERE id NOT IN (SELECT id FROM chats ORDER BY timestamp DESC LIMIT ?)')
     };
     console.log('[Storage] Prepared Statements erfolgreich kompiliert.');
@@ -1177,16 +1157,6 @@ wss.on('connection', (ws, req) => {
           break;
         }
 
-        case 'chat:guild': {
-          send(ws, 'chat:error', { error: 'Gildenchat ist ohne serverseitige Mitgliedschaftsverwaltung deaktiviert.' });
-          break;
-        }
-
-        case 'chat:clan': {
-          send(ws, 'chat:error', { error: 'Clan-Chat wird serverseitig noch nicht unterstützt.' });
-          break;
-        }
-
         case 'chat:getHistory': {
           try {
             const rawGuildId = typeof payload?.guildId === 'string' ? payload.guildId : null;
@@ -1195,13 +1165,7 @@ wss.on('connection', (ws, req) => {
               send(ws, 'chat:error', { error: 'Gilden-Chatverlauf ist ohne serverseitige Mitgliedschaftsverwaltung nicht verfügbar.' });
               break;
             }
-            let rows;
-            if (stmts.getGlobalChatHistory) {
-              rows = stmts.getGlobalChatHistory.all(50);
-            } else {
-              rows = db.prepare('SELECT id, player, message, timestamp, type FROM chats WHERE type = "global" ORDER BY timestamp DESC LIMIT 50').all();
-            }
-            send(ws, 'chat:history', rows.reverse());
+            send(ws, 'chat:history', getGlobalChatHistory(50));
           } catch (err) {
             console.error('[Chat] Fehler beim Laden des Chat-Verlaufs:', err);
             send(ws, 'chat:history', []);

@@ -75,7 +75,7 @@ export function registerServices(container) {
   container.register('questService', (c) => new QuestService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService'), c.get('clanService')));
   container.register('achievementService', (c) => new AchievementService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
   container.register('friendService', (c) => new FriendService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
-  container.register('chatService', (c) => new ChatService(c.get('stateManager'), c.get('eventBus'), c.get('heroService'), c.get('clanService'), c.get('networkService')));
+  container.register('chatService', (c) => new ChatService(c.get('stateManager'), c.get('eventBus'), c.get('heroService'), c.get('clanService')));
   container.register('codexService', (c) => new CodexService(c.get('stateManager'), c.get('eventBus'), c.get('heroService')));
   container.register('relicHuntService', (c) => new RelicHuntService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));
   container.register('dailyRewardService', (c) => new DailyRewardService(c.get('stateManager'), c.get('eventBus'), c.get('resourceService'), c.get('heroService')));

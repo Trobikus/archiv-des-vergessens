@@ -17,6 +17,19 @@ export function OptionsView({ stateManager, eventBus, services }) {
   }, [services]);
 
   useEffect(() => {
+    if (!eventBus) return undefined;
+    const updateLastSync = ({ timestamp }) => {
+      if (timestamp) setCloudLastSync(new Date(timestamp).toLocaleString());
+    };
+    const subscriptions = [
+      eventBus.subscribe('cloud:synced', updateLastSync),
+      eventBus.subscribe('cloud:loaded', updateLastSync),
+      eventBus.subscribe('cloud:stateChanged', ({ enabled }) => setCloudEnabled(enabled))
+    ];
+    return () => subscriptions.forEach((subscription) => eventBus.unsubscribe(subscription));
+  }, [eventBus]);
+
+  useEffect(() => {
     if (eventBus) {
       const unsub = eventBus.subscribe('i18n:languageChanged', (data) => {
         setLang(data.language);

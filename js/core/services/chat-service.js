@@ -24,14 +24,12 @@ export class ChatService {
    * @param {EventBus} eventBus
    * @param {HeroService} heroService
    * @param {ClanService} clanService
-   * @param {import('./network-service.js').NetworkService} [networkService]
    */
-  constructor(stateManager, eventBus, heroService, clanService, networkService = null) {
+  constructor(stateManager, eventBus, heroService, clanService) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
     this._heroService = heroService;
     this._clanService = clanService;
-    this._networkService = networkService;
     this._maxMessages = 100;
   }
 
@@ -41,7 +39,6 @@ export class ChatService {
       return { success: false, message: 'Nachricht darf nicht leer sein.' };
     }
 
-    // Falls Netzwerk verbunden, senden wir über das WebSocket-Netzwerk
     if (this._networkService && this._networkService.isConnected()) {
       const sent = this._networkService.send('chat:global', { message: cleanText });
       if (sent) {
@@ -49,7 +46,6 @@ export class ChatService {
       }
     }
 
-    // FALLBACK: Lokale Simulation (Offline-Modus)
     const playerName = this._stateManager.getState().hero.name;
 
     const msg = {
@@ -72,13 +68,6 @@ export class ChatService {
     const clanId = 'local_clan';
 
     // Falls Netzwerk verbunden, senden wir über das WebSocket-Netzwerk
-    if (this._networkService && this._networkService.isConnected()) {
-      const sent = this._networkService.send('chat:clan', { message: cleanText, clanId });
-      if (sent) {
-        return { success: true };
-      }
-    }
-
     // FALLBACK: Lokale Simulation (Offline-Modus)
     const playerName = this._stateManager.getState().hero.name;
 

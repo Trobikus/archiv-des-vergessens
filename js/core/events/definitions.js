@@ -113,7 +113,6 @@ export const EVENTS = {
 
   // ==================== CHAT ====================
   CHAT_GLOBAL_MESSAGE: 'chat:globalMessage',
-  CHAT_GUILD_MESSAGE: 'chat:guildMessage',
   CHAT_CLEARED: 'chat:cleared',
   UI_OPEN_CHAT: 'ui:openChat',
 
@@ -147,6 +146,7 @@ export const EVENTS = {
   OPTIONS_SYNC_CLOUD: 'options:syncCloud',
   OPTIONS_HARD_RESET: 'options:hardReset',
   OPTIONS_BACK: 'options:back',
+  AUDIO_PREVIEW: 'audio:preview',
 
   // ==================== AUTH ====================
   AUTH_STATE_CHANGED: 'auth:stateChanged',

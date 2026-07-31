@@ -7,6 +7,7 @@
 import { initParticles } from './particles.js';
 import { initClickBurst } from './click-burst.js';
 import { initFloatingText } from './floating-text.js';
+import { initAudioSettings } from './audio-settings.js';
 import { EVENTS } from '../../core/events/definitions.js';
 
 export function initDOMUI({ eventBus, stateManager, settingsManager }) {
@@ -16,6 +17,7 @@ export function initDOMUI({ eventBus, stateManager, settingsManager }) {
 
   // Floating-Texts
   const floatingText = initFloatingText(eventBus, settingsManager);
+  const audioSettings = initAudioSettings(eventBus, settingsManager);
 
   // Event-Bindings für Floating-Texts
   eventBus.subscribe(EVENTS.CMD_SPAWN_FLOAT_TEXT, (data) => {
@@ -36,6 +38,7 @@ export function initDOMUI({ eventBus, stateManager, settingsManager }) {
       particles.destroy();
       clickBurst.destroy();
       floatingText.destroy();
+      audioSettings.destroy();
     }
   };
 }

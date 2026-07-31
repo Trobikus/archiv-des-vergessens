@@ -41,7 +41,6 @@ export class NavigationController {
     this._eventBus.subscribe(EVENTS.AUTH_PROCEED_TO_MENU, () => this.showCharacterSelect());
 
     // --- Menü-Events ---
-    this._eventBus.subscribe(EVENTS.MENU_OPTIONS, () => this._eventBus.publish(EVENTS.UI_OPEN_OPTIONS));
     this._eventBus.subscribe(EVENTS.MENU_QUIT, () => this._quitGame());
 
     // --- Hub-Events ---

@@ -102,6 +102,7 @@ export class SettingsController {
       settings: { ...state.settings, music: newVal, sfx: newVal }
     }), 'settings/toggleAudio');
     this._settingsManager.save(newState.settings);
+    if (newVal) this._eventBus.publish(EVENTS.AUDIO_PREVIEW, { channel: 'music' });
   }
 
   _setMusicVolume(val) {
@@ -111,6 +112,7 @@ export class SettingsController {
       settings: { ...state.settings, music: !isMuted, volume: val / 100 }
     }), 'settings/updateMusicVolume');
     this._settingsManager.save(newState.settings);
+    this._eventBus.publish(EVENTS.AUDIO_PREVIEW, { channel: 'music' });
   }
 
   _setSfxVolume(val) {
@@ -120,6 +122,7 @@ export class SettingsController {
       settings: { ...state.settings, sfx: !isMuted, sfxVolume: val / 100 }
     }), 'settings/updateSfxVolume');
     this._settingsManager.save(newState.settings);
+    this._eventBus.publish(EVENTS.AUDIO_PREVIEW, { channel: 'sfx' });
   }
 
   _setAutosave(val) {

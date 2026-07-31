@@ -285,15 +285,6 @@ export class NetworkService {
           }
           break;
 
-        case 'chat:guildMessage':
-          {
-            const chatService = this._getService(this._chatService);
-            if (chatService) {
-              chatService.addReceivedGuildMessage(payload);
-            }
-          }
-          break;
-
         // --- LEADERBOARD RESPONSES ---
         case 'leaderboard:update':
           {
