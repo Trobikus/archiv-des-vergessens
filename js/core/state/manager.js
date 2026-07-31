@@ -12,7 +12,7 @@
  * ============================================================
  */
 
-import { deepFreeze, isPlainObject, getNestedValue } from '../../utils/object-utils.js';
+import { deepFreeze, isPlainObject, getNestedValue, deepMerge } from '../../utils/object-utils.js';
 import { logger } from '../logger.js';
 import { EVENTS } from '../events/definitions.js';
 import { APP_VERSION } from '../../utils/version.js';
@@ -255,21 +255,13 @@ export class StateManager {
 
   /**
    * Migriert ältere Spielstände auf das aktuelle State-Schema (Abwärtskompatibilität).
-   * Wird einmalig bei der Initialisierung ausgeführt, um den Heißpfad beim Dispatch zu entlasten.
+   * Fehlende Felder werden aus dem Default-State per deepMerge ergänzt, vorhandene Werte bleiben erhalten.
    */
   _migrateState(state) {
-    let migrated = { ...state };
     const defaultState = this._getInitialState();
+    let migrated = deepMerge(defaultState, state && typeof state === 'object' ? state : {});
 
-    if (!migrated.leaderboard) {
-      migrated.leaderboard = defaultState.leaderboard;
-    } else {
-      migrated.leaderboard = sanitizeLeaderboardSlice(migrated.leaderboard);
-    }
-
-    if (!migrated.lore) {
-      migrated.lore = defaultState.lore;
-    }
+    migrated.leaderboard = sanitizeLeaderboardSlice(migrated.leaderboard || defaultState.leaderboard);
 
     if (migrated.clan && !migrated.clan.raid) {
       migrated.clan = {
@@ -312,12 +304,14 @@ export class StateManager {
       if (migrated.resources.ewigeMneme === undefined) migrated.resources.ewigeMneme = '0';
     }
 
-    // Alte Saves ohne Tutorial-Flag: Tutorial als abgeschlossen behandeln
-    if (migrated.system && migrated.system.tutorialFinished === undefined) {
+    // Alte Saves ohne Tutorial-Flag (oder ohne system-Slice): Tutorial als abgeschlossen behandeln
+    // deepMerge füllt sonst tutorialFinished:false aus Defaults
+    const rawSystem = state && state.system ? state.system : null;
+    if (!rawSystem || rawSystem.tutorialFinished === undefined) {
       migrated.system = {
         ...migrated.system,
         tutorialFinished: true,
-        tutorialStep: -1
+        tutorialStep: (rawSystem && rawSystem.tutorialStep !== undefined) ? rawSystem.tutorialStep : -1
       };
     }
 

@@ -142,4 +142,99 @@ describe('SaveManager', () => {
     const slots = await SaveManager.listSlots();
     expect(slots.every(s => s.hasSave === false)).toBe(true);
   });
+
+  test('migrates legacy main_save into slot 1 for registered users', async () => {
+    const mockAuthService = {
+      isGuest: () => false,
+      getCurrentUser: () => ({ id: 'usr_legacy_1', username: 'LegacyUser', isGuest: false })
+    };
+
+    SaveManager.setServices({
+      stateManager,
+      heroService,
+      resourceService,
+      authService: mockAuthService
+    });
+
+    await SaveManager._getDB();
+
+    globalThis.__indexedDB_store['main_save'] = {
+      timestamp: 111,
+      version: '1.6',
+      state: {
+        hero: { name: 'VergessenerHüter', level: 33, title: 'Chronist', avatar: '📜' },
+        resources: { particles: '500' },
+        system: { lastSave: 111 }
+      }
+    };
+
+    const slots = await SaveManager.listSlots('usr_legacy_1');
+    const slot1 = slots.find(s => s.slotId === 1);
+    expect(slot1.hasSave).toBe(true);
+    expect(slot1.name).toBe('VergessenerHüter');
+    expect(slot1.level).toBe(33);
+
+    const loaded = await SaveManager.load(1);
+    expect(loaded).not.toBeNull();
+    expect(loaded.hero.name).toBe('VergessenerHüter');
+    expect(loaded.hero.level).toBe(33);
+
+    // Nach Migration unter kanonischem Slot-Key
+    expect(globalThis.__indexedDB_store['slot_uusr_legacy_1_1']).toBeDefined();
+    expect(globalThis.__indexedDB_store['main_save']).toBeUndefined();
+  });
+
+  test('migrates username-scoped slot keys to id-scoped keys', async () => {
+    const mockAuthService = {
+      isGuest: () => false,
+      getCurrentUser: () => ({ id: 'usr_abc', username: 'MaxHüter', isGuest: false })
+    };
+
+    SaveManager.setServices({
+      stateManager,
+      heroService,
+      resourceService,
+      authService: mockAuthService
+    });
+
+    await SaveManager._getDB();
+
+    globalThis.__indexedDB_store['slot_uMaxHüter_2'] = {
+      key: 'slot_uMaxHüter_2',
+      timestamp: 222,
+      state: {
+        hero: { name: 'Umbenannt', level: 12 },
+        resources: { particles: '10' }
+      }
+    };
+
+    const loaded = await SaveManager.load(2);
+    expect(loaded.hero.name).toBe('Umbenannt');
+    expect(globalThis.__indexedDB_store['slot_uusr_abc_2']).toBeDefined();
+    expect(globalThis.__indexedDB_store['slot_uMaxHüter_2']).toBeUndefined();
+  });
+
+  test('migrates legacy account_vault into user vault key', async () => {
+    const mockAuthService = {
+      isGuest: () => false,
+      getCurrentUser: () => ({ id: 'usr_vault', username: 'VaultUser', isGuest: false })
+    };
+
+    SaveManager.setServices({
+      stateManager,
+      authService: mockAuthService
+    });
+
+    await SaveManager._getDB();
+    globalThis.__indexedDB_store['account_vault'] = {
+      key: 'account_vault',
+      vaultData: { particles: '777', sharedVault: [{ id: 'item_1' }] }
+    };
+
+    const vault = await SaveManager.loadAccountVault('usr_vault');
+    expect(vault.particles).toBe('777');
+    expect(vault.sharedVault).toHaveLength(1);
+    expect(globalThis.__indexedDB_store['vault_uusr_vault']).toBeDefined();
+    expect(globalThis.__indexedDB_store['account_vault']).toBeUndefined();
+  });
 });
