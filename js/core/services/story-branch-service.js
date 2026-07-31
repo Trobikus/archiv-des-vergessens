@@ -1,12 +1,12 @@
 /**
  * ============================================================
- * FILE: core/services/story-branch-service.js – Story-Verzweigungen
+ * FILE: core/services/story-branch-service.js - Story-Verzweigungen
  * ============================================================
  *
  * VERANTWORTUNG:
  * - Story-Knoten verwalten
- * - Optionen auswählen (flag- & zustandsabhängig)
- * - Flags setzen (Knoten- und Options-Flags, Affinität)
+ * - Optionen auswaehlen (flag- und zustandsabhaengig)
+ * - Flags setzen (Knoten- und Options-Flags, Affinitaet)
  * - Enden erkennen
  * ============================================================
  */
@@ -20,21 +20,21 @@ import { logger } from '../logger.js';
 
 /**
  * @typedef {Object} StoryCondition
- * @property {string} [flag] – Einzelnes Flag muss `value` entsprechen (Default: true)
+ * @property {string} [flag] Einzelnes Flag muss value entsprechen (Default: true)
  * @property {*} [value]
- * @property {string[]} [requireFlags] – Alle Flags müssen truthy sein
- * @property {string[]} [excludeFlags] – Keines dieser Flags darf truthy sein
- * @property {string[]} [anyFlags] – Mindestens eines muss truthy sein
- * @property {Object.<string, *>} [flags] – Map flag → erwarteter Wert (alle müssen matchen)
- * @property {number} [bossDefeated] – Boss-ID muss in defeatedBosses sein
+ * @property {string[]} [requireFlags] Alle Flags muessen truthy sein
+ * @property {string[]} [excludeFlags] Keines dieser Flags darf truthy sein
+ * @property {string[]} [anyFlags] Mindestens eines muss truthy sein
+ * @property {Object.<string, *>} [flags] Map flag zu erwartetem Wert (alle muessen matchen)
+ * @property {number} [bossDefeated] Boss-ID muss in defeatedBosses sein
  * @property {number} [minBossProgress]
  * @property {number} [prestigeLevel]
  * @property {number} [minAethel]
  * @property {number} [minLethe]
  * @property {number} [maxAethel]
  * @property {number} [maxLethe]
- * @property {'and'|'or'} [op] – Verknüpfung bei verschachtelten conditions
- * @property {StoryCondition[]} [conditions] – Verschachtelte Bedingungen
+ * @property {'and'|'or'} [op] Verknuepfung bei verschachtelten conditions
+ * @property {StoryCondition[]} [conditions] Verschachtelte Bedingungen
  */
 
 export class StoryBranchService {
@@ -50,7 +50,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Gibt den aktuellen Knoten zurück.
+   * Gibt den aktuellen Knoten zurueck.
    */
   getCurrentNode() {
     const state = this._stateManager.getState();
@@ -59,7 +59,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Gibt die verfügbaren Optionen zurück (Flags + Boss-Gate gefiltert).
+   * Gibt die verfuegbaren Optionen zurueck (Flags + Boss-Gate gefiltert).
    */
   getAvailableOptions() {
     const node = this.getCurrentNode();
@@ -75,7 +75,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Prüft, ob eine Option unter dem aktuellen State wählbar ist.
+   * Prueft, ob eine Option unter dem aktuellen State waehlbar ist.
    * @param {Object} opt
    * @param {Object} state
    * @returns {boolean}
@@ -99,7 +99,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Wählt eine Option aus.
+   * Waehlt eine Option aus.
    * @param {string} optionId
    */
   chooseOption(optionId) {
@@ -122,18 +122,18 @@ export class StoryBranchService {
     if (node.bossRequired && hero.prestige.bossProgress < node.bossRequired) {
       return {
         success: false,
-        message: `Du musst zuerst mehr Bosse besiegen (${node.bossRequired} benötigt).`
+        message: `Du musst zuerst mehr Bosse besiegen (${node.bossRequired} benoetigt).`
       };
     }
 
     if (!this._isOptionAvailable(option, state)) {
-      return { success: false, message: 'Diese Option ist mit deinem bisherigen Pfad nicht verfügbar.' };
+      return { success: false, message: 'Diese Option ist mit deinem bisherigen Pfad nicht verfuegbar.' };
     }
 
     // Flags: Knoten-Flags + Options-Flags mergen
     const newFlags = this._mergeFlags(state.storyBranch.flags, node.flags, option.flags);
 
-    // Affinität aus Pfad-Flags ableiten / erhöhen
+    // Affinitaet aus Pfad-Flags ableiten / erhoehen
     this._applyAffinityFromFlags(newFlags, node.flags, option.flags);
 
     if (option.action) {
@@ -145,9 +145,6 @@ export class StoryBranchService {
     if (!nextNode) {
       return { success: false, message: `Zielknoten "${nextNodeId}" nicht gefunden.` };
     }
-
-    // Flags des Zielknotens erst beim Betreten setzen (konsistent mit choose)
-    // – bereits in node.flags des aktuellen Knotens; nextNode.flags beim nächsten choose
 
     const history = [
       ...state.storyBranch.history,
@@ -195,7 +192,7 @@ export class StoryBranchService {
     if (nextNode.isEnding) {
       this._eventBus.publish('story:endingReached', { endingId: nextNodeId, node: nextNode });
       this._eventBus.publish('ui:showToast', {
-        message: `📖 Ende erreicht: ${nextNode.title}`,
+        message: `Ende erreicht: ${nextNode.title}`,
         type: 'info',
         duration: 4000
       });
@@ -211,7 +208,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Setzt die Story zurück.
+   * Setzt die Story zurueck.
    */
   resetStory() {
     this._stateManager.dispatch(
@@ -232,7 +229,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Prüft, ob die Story fortgesetzt werden kann.
+   * Prueft, ob die Story fortgesetzt werden kann.
    */
   canProgress() {
     const node = this.getCurrentNode();
@@ -245,7 +242,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Gibt den Fortschritt in Prozent zurück.
+   * Gibt den Fortschritt in Prozent zurueck.
    */
   getProgress() {
     const total = Object.keys(STORY_BRANCHES).length;
@@ -254,14 +251,14 @@ export class StoryBranchService {
   }
 
   /**
-   * Gibt die Flags zurück (Kopie).
+   * Gibt die Flags zurueck (Kopie).
    */
   getFlags() {
     return { ...this._stateManager.getState().storyBranch.flags };
   }
 
   /**
-   * Prüft ein einzelnes Flag.
+   * Prueft ein einzelnes Flag.
    * @param {string} key
    * @param {*} [expected=true]
    */
@@ -272,7 +269,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Setzt ein Flag manuell (z. B. aus Dialogen / Lore-Nodes).
+   * Setzt ein Flag manuell (z.B. aus Dialogen / Lore-Nodes).
    * @param {string} key
    * @param {*} value
    */
@@ -316,14 +313,14 @@ export class StoryBranchService {
   }
 
   /**
-   * Gibt die besuchten Knoten zurück.
+   * Gibt die besuchten Knoten zurueck.
    */
   getVisitedNodes() {
     return [...this._stateManager.getState().storyBranch.visited];
   }
 
   /**
-   * Aethel-/Lethe-Affinität (0–100, aus Flags).
+   * Aethel-/Lethe-Affinitaet (0-100, aus Flags).
    */
   getAffinity() {
     const flags = this.getFlags();
@@ -337,7 +334,7 @@ export class StoryBranchService {
 
   /**
    * Wertet eine Bedingung gegen den State aus.
-   * @param {StoryCondition|string} condition – Objekt oder Flag-Name (truthy)
+   * @param {StoryCondition|string} condition Objekt oder Flag-Name (truthy)
    * @param {Object} state
    * @returns {boolean}
    */
@@ -432,7 +429,7 @@ export class StoryBranchService {
 
   /**
    * Merged bestehende Flags mit Knoten- und Options-Flags.
-   * Spezielle Keys: aethel_affinity / lethe_affinity werden addiert, nicht überschrieben.
+   * Spezielle Keys: aethel_affinity / lethe_affinity werden addiert, nicht ueberschrieben.
    */
   _mergeFlags(current, nodeFlags, optionFlags) {
     const out = { ...current };
@@ -443,8 +440,6 @@ export class StoryBranchService {
         if (key === 'aethel_affinity' || key === 'lethe_affinity') {
           const prev = Number(out[key]) || 0;
           const add = Number(value) || 0;
-          // Wenn value bereits absolut groß wirkt und prev 0: absolute Setzung ok;
-          // sonst additiv (Story-Daten nutzen kleine Deltas 5–15)
           out[key] = Math.min(100, prev + add);
         } else {
           out[key] = value;
@@ -458,7 +453,7 @@ export class StoryBranchService {
   }
 
   /**
-   * Erhöht Affinität anhand bekannter Pfad-Flags, falls noch nicht gesetzt.
+   * Erhoeht Affinitaet anhand bekannter Pfad-Flags, falls noch nicht gesetzt.
    */
   _applyAffinityFromFlags(flags, nodeFlags, optionFlags) {
     const sources = [nodeFlags, optionFlags].filter(Boolean);
@@ -522,7 +517,7 @@ export class StoryBranchService {
   }
 
   destroy() {
-    // Keine Subscriptions – no-op für DI-Kompatibilität
+    // Keine Subscriptions - no-op fuer DI-Kompatibilitaet
   }
 }
 
