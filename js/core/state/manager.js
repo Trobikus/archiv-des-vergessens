@@ -16,6 +16,7 @@ import { deepFreeze, isPlainObject, getNestedValue } from '../../utils/object-ut
 import { logger } from '../logger.js';
 import { EVENTS } from '../events/definitions.js';
 import { APP_VERSION } from '../../utils/version.js';
+import { sanitizeLeaderboardSlice } from '../../utils/leaderboard-sanitize.js';
 
 /**
  * Friert nur den Root-State und seine direkten Kind-Objekte ein (O(n) statt O(n²)).
@@ -263,15 +264,7 @@ export class StateManager {
     if (!migrated.leaderboard) {
       migrated.leaderboard = defaultState.leaderboard;
     } else {
-      // JSON.stringify wandelt Infinity → null; Zeitrekorde wiederherstellen
-      const lb = { ...migrated.leaderboard };
-      for (const key of ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp']) {
-        const v = lb[key];
-        if (v == null || v === '' || v === 'Infinity' || (typeof v === 'number' && !Number.isFinite(v))) {
-          lb[key] = Infinity;
-        }
-      }
-      migrated.leaderboard = lb;
+      migrated.leaderboard = sanitizeLeaderboardSlice(migrated.leaderboard);
     }
 
     if (!migrated.lore) {

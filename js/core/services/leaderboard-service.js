@@ -12,43 +12,17 @@
  */
 
 import StateManager from '../state/manager.js';
-import { sanitizeNumber } from '../../utils/sanitizer.js';
+import {
+  sanitizeTimeRecord,
+  isBetterTime,
+  formatTimeRecord,
+  sanitizeLeaderboardSlice
+} from '../../utils/leaderboard-sanitize.js';
 
 /** @typedef {import('../events/bus.js').default} EventBus */
 
-/** Zeitfelder, die nach JSON-Save als null ankommen können (Infinity → null). */
-const TIME_RECORD_KEYS = ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp'];
-
-/**
- * Stellt Zeitrekorde wieder her: null/NaN → Infinity, gültige Zahlen bleiben.
- * @param {*} value
- * @returns {number}
- */
-export function sanitizeTimeRecord(value) {
-  if (value == null || value === '' || value === 'Infinity') return Infinity;
-  const n = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(n) || n < 0) return Infinity;
-  return n;
-}
-
-/**
- * @param {*} elapsed
- * @param {*} currentBest
- * @returns {boolean}
- */
-export function isBetterTime(elapsed, currentBest) {
-  return Number.isFinite(elapsed) && elapsed >= 0 && elapsed < sanitizeTimeRecord(currentBest);
-}
-
-/**
- * @param {*} value
- * @returns {string}
- */
-export function formatTimeRecord(value) {
-  const v = sanitizeTimeRecord(value);
-  if (!Number.isFinite(v)) return '—';
-  return `${Math.round(v * 10) / 10}s`;
-}
+// Re-export für bestehende Importe / Tests
+export { sanitizeTimeRecord, isBetterTime, formatTimeRecord, sanitizeLeaderboardSlice };
 
 export class LeaderboardService {
   /**
@@ -83,7 +57,7 @@ export class LeaderboardService {
         this._lastRelics = BigInt(state.resources?.relics || '0');
         
         if (state.leaderboard) {
-          const r = this._sanitizeRecords({ ...state.leaderboard });
+          const r = sanitizeLeaderboardSlice({ ...state.leaderboard });
           r.sessionCount++;
           this._records = r;
         }
@@ -172,24 +146,10 @@ export class LeaderboardService {
 
   // --- RECORD-GETTER & SETTER ---
 
-  /**
-   * Heilt Zeitfelder nach JSON-Load (Infinity → null).
-   * @param {Object} records
-   * @returns {Object}
-   */
-  _sanitizeRecords(records) {
-    if (!records || typeof records !== 'object') return this._getDefaultRecords();
-    const sanitized = { ...records };
-    for (const key of TIME_RECORD_KEYS) {
-      sanitized[key] = sanitizeTimeRecord(sanitized[key]);
-    }
-    return sanitized;
-  }
-
   get _records() {
     const state = this._stateManager.getState();
     if (state && state.leaderboard) {
-      return this._sanitizeRecords(state.leaderboard);
+      return sanitizeLeaderboardSlice(state.leaderboard);
     }
     return this._getDefaultRecords();
   }
@@ -200,7 +160,7 @@ export class LeaderboardService {
     try {
       this._stateManager.dispatch((state) => ({
         ...state,
-        leaderboard: this._sanitizeRecords(newRecords)
+        leaderboard: sanitizeLeaderboardSlice(newRecords) || this._getDefaultRecords()
       }), 'leaderboard/update');
     } finally {
       this._isUpdating = false;
@@ -224,7 +184,7 @@ export class LeaderboardService {
     if (!state || !state.hero || !state.leaderboard) return;
     if (this._isUpdating) return;
 
-    const r = { ...this._sanitizeRecords(state.leaderboard) };
+    const r = { ...sanitizeLeaderboardSlice(state.leaderboard) };
     let changed = false;
 
     // 🏆 Höchstes Prestige

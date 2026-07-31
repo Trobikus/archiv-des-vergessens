@@ -83,11 +83,9 @@ describe('LeaderboardService (State-Integrated)', () => {
   });
 
   test('sanitizeTimeRecord restores null from JSON Infinity loss', () => {
+    // Charakterisierung bleibt über Re-Export; Detailtests in LeaderboardSanitize.test.js
     expect(sanitizeTimeRecord(null)).toBe(Infinity);
-    expect(sanitizeTimeRecord(undefined)).toBe(Infinity);
-    expect(sanitizeTimeRecord('Infinity')).toBe(Infinity);
     expect(sanitizeTimeRecord(12.5)).toBe(12.5);
-    expect(sanitizeTimeRecord(-1)).toBe(Infinity);
   });
 
   test('null fastestBossKill still accepts new records and displays dash', () => {

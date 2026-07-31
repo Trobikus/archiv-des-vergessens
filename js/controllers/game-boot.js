@@ -31,6 +31,7 @@ import SettingsManager from '../core/settings.js';
 import { EVENTS } from '../core/events/definitions.js';
 import { CONFIG } from '../data/config.js';
 import { escapeHtml } from '../utils/sanitizer.js';
+import { sanitizeLeaderboardSlice } from '../utils/leaderboard-sanitize.js';
 import { selectDominantPath } from '../core/state/selectors.js';
 
 /**
@@ -237,12 +238,7 @@ export async function bootGame() {
       }
       // JSON.stringify: Infinity → null; Zeitrekorde der Bestenliste heilen
       if (savedState.leaderboard) {
-        for (const key of ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp']) {
-          const v = savedState.leaderboard[key];
-          if (v == null || v === '' || v === 'Infinity' || (typeof v === 'number' && !Number.isFinite(v))) {
-            savedState.leaderboard[key] = Infinity;
-          }
-        }
+        savedState.leaderboard = sanitizeLeaderboardSlice(savedState.leaderboard);
       }
       stateManager.dispatch(() => savedState, 'boot/hydrate');
       // Expeditionen bereinigen
@@ -301,12 +297,7 @@ export async function bootGame() {
       
       // In SaveManager (IndexedDB) persisten
       if (saveData.leaderboard) {
-        for (const key of ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp']) {
-          const v = saveData.leaderboard[key];
-          if (v == null || v === '' || v === 'Infinity' || (typeof v === 'number' && !Number.isFinite(v))) {
-            saveData.leaderboard[key] = Infinity;
-          }
-        }
+        saveData.leaderboard = sanitizeLeaderboardSlice(saveData.leaderboard);
       }
       await SaveManager.save(saveData);
 
