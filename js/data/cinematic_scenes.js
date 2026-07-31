@@ -1,7 +1,7 @@
 // ============================================================
 // FILE: data/cinematic_scenes.js – Cinematic Scene Definitions
 // ============================================================
-// Used by DialogUI + StoryUI for full-screen atmospheric cutscenes.
+// Used by DialogUI + StoryBranchUI for full-screen atmospheric cutscenes.
 // Each scene defines visual mood, particle theme, letterbox style
 // and optional background gradient / vignette intensity.
 // ============================================================
@@ -114,12 +114,99 @@ export const CINEMATIC_SCENES = {
 };
 
 /**
+ * Mapping: Story-Node-ID → Cinematic Scene ID
+ * Explizite Zuordnung für Prolog, Malakor, Kapitel 2 und Enden.
+ * Prefix-Fallbacks greifen, wenn kein exakter Treffer vorhanden ist.
+ */
+export const STORY_NODE_SCENES = {
+  // Prolog – Aschefeld
+  prologue: 'ash-field',
+  prologue_voice: 'ash-field',
+  prologue_landscape: 'ash-field',
+  prologue_labyrinth: 'shadow-niche',
+
+  // Malakor / Asche-Garten
+  prologue_malakor_appear: 'ash-garden',
+  chapter1_hero: 'ash-garden',
+  chapter1_hero_parley: 'ash-garden',
+  chapter1_hero_spared: 'ash-garden',
+  chapter1_hero_victory: 'ash-garden',
+
+  // Mira / Schattenpfad
+  chapter1_coward: 'shadow-niche',
+  chapter1_coward_deeper: 'shadow-niche',
+  chapter1_coward_study: 'shadow-niche',
+  chapter1_coward_return: 'iron-gates',
+
+  // Kapitel 2 – Auge des Archivs
+  chapter2_approach: 'eye-of-archive',
+  chapter2_approach_shadow: 'void-whisper',
+  chapter2_confrontation: 'eye-of-archive',
+  chapter2_theron_offer: 'archive-halls',
+  chapter2_nyx_temptation: 'void-whisper',
+  chapter2_mira_deal: 'shadow-niche',
+  chapter2_share_secret: 'archive-halls',
+  chapter2_lone_choice: 'ash-field',
+
+  // Kapitel 3
+  chapter3_guardian: 'iron-gates',
+  chapter3_guardian_war: 'iron-gates',
+  chapter3_guardian_doubt: 'archive-halls',
+  chapter3_lone_wolf: 'shadow-niche',
+  chapter3_secrets: 'archive-halls',
+  chapter3_scholar: 'void-whisper',
+
+  // Kapitel 4 / Finale
+  chapter4_epic: 'ash-garden',
+  chapter4_seal: 'archive-halls',
+  chapter4_rebel: 'iron-gates',
+  chapter4_god: 'eye-of-archive',
+  chapter4_guardian_teach: 'archive-halls',
+  chapter4_void_path: 'void-whisper',
+
+  // Enden
+  ending_victory: 'eye-of-archive',
+  ending_sacrifice: 'ash-garden',
+  ending_eternal: 'archive-halls',
+  ending_rebel: 'iron-gates',
+  ending_tyrant: 'iron-gates',
+  ending_ruler: 'eye-of-archive',
+  ending_free: 'ash-field',
+  ending_exile: 'ash-field',
+  ending_void: 'void-whisper'
+};
+
+/**
  * Holt eine Szene nach ID. Fallback auf archive-halls.
  * @param {string} id
  * @returns {Object}
  */
 export function getCinematicScene(id) {
   return CINEMATIC_SCENES[id] || CINEMATIC_SCENES['archive-halls'];
+}
+
+/**
+ * Löst die passende Cinematic Scene für einen Story-Knoten auf.
+ * Priorität: node.cinematic → STORY_NODE_SCENES[id] → Prefix-Heuristik → archive-halls
+ * @param {Object|null} node
+ * @returns {Object}
+ */
+export function resolveSceneForStoryNode(node) {
+  if (!node) return getCinematicScene('archive-halls');
+  if (node.cinematic) return getCinematicScene(node.cinematic);
+
+  const id = node.id || '';
+  if (STORY_NODE_SCENES[id]) return getCinematicScene(STORY_NODE_SCENES[id]);
+
+  if (id.startsWith('prologue')) return getCinematicScene('ash-field');
+  if (id.includes('malakor') || id.includes('ash') || id.includes('hero')) return getCinematicScene('ash-garden');
+  if (id.includes('nyx') || id.includes('void') || id.includes('scholar')) return getCinematicScene('void-whisper');
+  if (id.includes('mira') || id.includes('coward') || id.includes('lone') || id.includes('shadow')) return getCinematicScene('shadow-niche');
+  if (id.includes('elara') || id.includes('guardian') || id.includes('iron') || id.includes('rebel')) return getCinematicScene('iron-gates');
+  if (id.includes('chapter2') || id.includes('confrontation') || id.includes('eye')) return getCinematicScene('eye-of-archive');
+  if (id.startsWith('ending_')) return getCinematicScene('archive-halls');
+
+  return getCinematicScene('archive-halls');
 }
 
 export default CINEMATIC_SCENES;
