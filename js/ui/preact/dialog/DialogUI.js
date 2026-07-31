@@ -7,6 +7,7 @@
 import { h, html, useStateSelector, useEventBus, useState, useEffect } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
 import { getNPC, getDialog } from '../../../data/dialogs.js';
+import { getCinematicScene } from '../../../data/cinematic_scenes.js';
 import { logger } from '../../../core/logger.js';
 
 export function DialogUI({ stateManager, eventBus, services }) {
@@ -71,7 +72,11 @@ export function DialogUI({ stateManager, eventBus, services }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, dialog]);
 
-  const isCinematic = npc.isCinematic || dialog.isCinematic || ['theron', 'nyx', 'prestige_guide', 'shadow_figure'].includes(npcId);
+  // Cinematic scene resolution: dialog > npc > fallback
+  const sceneId = dialog.cinematic || npc.cinematic || 'archive-halls';
+  const scene = getCinematicScene(sceneId);
+  const isCinematic = npc.isCinematic || dialog.isCinematic || !!dialog.cinematic || !!npc.cinematic ||
+    ['theron', 'nyx', 'prestige_guide', 'shadow_figure', 'archivist', 'merchant', 'guardian_npc', 'shadow_voice'].includes(npcId);
 
   const handleOption = (option) => {
     if (option.action) {
@@ -119,26 +124,35 @@ export function DialogUI({ stateManager, eventBus, services }) {
   };
 
   if (isCinematic) {
+    const glow = scene.glowColor || 'var(--color-primary)';
+    const bgStyle = scene.background || 'rgba(5,5,7,0.95)';
+    const ambientClass = scene.ambientClass || '';
+    const vignetteClass = scene.vignette === 'extreme' ? 'cinematic-vignette-extreme' :
+                          scene.vignette === 'heavy' ? 'cinematic-vignette-heavy' :
+                          scene.vignette === 'medium' ? 'cinematic-vignette-medium' : '';
+
     return html`
-      <div class="cinematic-overlay cinematic-bars cinematic-active" onClick=${(e) => { if (e.target === e.currentTarget && dialog.canSkip !== false) setIsOpen(false); }}>
+      <div class="cinematic-overlay cinematic-bars cinematic-active ${ambientClass} ${vignetteClass}"
+           style="background: ${bgStyle};"
+           onClick=${(e) => { if (e.target === e.currentTarget && dialog.canSkip !== false) setIsOpen(false); }}>
         <div class="cinematic-content" style="max-width: 800px; width: 90%; text-align: center; position: relative; z-index: 9005;">
-          <div style="font-size: 5.5rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 25px var(--color-primary-glow));">
+          <div style="font-size: 5.5rem; margin-bottom: 1.5rem; filter: drop-shadow(0 0 25px ${glow});">
             ${npc.portrait || '👤'}
           </div>
-          <h2 class="cinzel" style="color: var(--color-primary); font-size: 2.2rem; letter-spacing: 3px; text-shadow: 0 0 20px var(--color-primary-glow); margin-bottom: 2rem; text-transform: uppercase;">
+          <h2 class="cinzel" style="color: ${glow}; font-size: 2.2rem; letter-spacing: 3px; text-shadow: 0 0 20px ${glow}; margin-bottom: 2rem; text-transform: uppercase;">
             ${getLocText(npc, 'name')}
           </h2>
-          <div style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; color: #fff; line-height: 1.8; margin-bottom: 3.5rem; text-shadow: 0 2px 8px rgba(0,0,0,0.9); font-style: italic; background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 8px; border-left: 2px solid var(--color-primary); border-right: 2px solid var(--color-primary);">
+          <div style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; color: #fff; line-height: 1.8; margin-bottom: 3.5rem; text-shadow: 0 2px 8px rgba(0,0,0,0.9); font-style: ${scene.textStyle || 'italic'}; background: rgba(0,0,0,0.35); padding: 1.5rem; border-radius: 8px; border-left: 2px solid ${glow}; border-right: 2px solid ${glow};">
             "${getLocText(dialog, 'text')}"
           </div>
           <div class="dialog-options" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
             ${dialog.isEnding || dialog.options.length === 0 ? html`
-              <button class="glass-btn primary cinzel" style="padding: 1rem 4rem; font-size: 1.2rem; border-color: var(--color-primary); letter-spacing: 2px;" onClick=${() => setIsOpen(false)}>
+              <button class="glass-btn primary cinzel" style="padding: 1rem 4rem; font-size: 1.2rem; border-color: ${glow}; letter-spacing: 2px;" onClick=${() => setIsOpen(false)}>
                 ${lang === 'de' ? 'Fortfahren' : 'Continue'}
               </button>
             ` : dialog.options.map(opt => html`
               <button class="glass-btn" style="width: 100%; max-width: 550px; padding: 1.2rem 2rem; font-size: 1.1rem; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); transition: all 0.3s ease; text-align: center; justify-content: center;" 
-                      onMouseOver=${(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = '0 0 15px var(--color-primary-glow)'; }}
+                      onMouseOver=${(e) => { e.currentTarget.style.borderColor = glow; e.currentTarget.style.boxShadow = `0 0 15px ${glow}`; }}
                       onMouseOut=${(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.boxShadow = 'none'; }}
                       onClick=${() => handleOption(opt)}>
                 ${getLocText(opt, 'text')}
