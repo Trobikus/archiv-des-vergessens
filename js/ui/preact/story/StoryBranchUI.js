@@ -16,27 +16,40 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
   const [isOpen, setIsOpen] = useState(false);
   const [lang, setLang] = useState(i18nService?.getLanguage?.() || 'de');
   const [tick, setTick] = useState(0);
+  const [exiting, setExiting] = useState(false);
 
   useEventBus(eventBus, 'i18n:languageChanged', (data) => {
     setLang(typeof data === 'string' ? data : data?.language || 'de');
   });
 
   useEventBus(eventBus, EVENTS.UI_OPEN_STORY_BRANCH, () => {
+    setExiting(false);
     setIsOpen(true);
     setTick((t) => t + 1);
   });
 
-  useEventBus(eventBus, EVENTS.UI_CLOSE_ALL_MODALS, () => setIsOpen(false));
+  useEventBus(eventBus, EVENTS.UI_CLOSE_ALL_MODALS, () => {
+    if (isOpen) closeBranch();
+  });
   useEventBus(eventBus, EVENTS.STORY_BRANCH_CHANGED, () => setTick((t) => t + 1));
+
+  const closeBranch = () => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setExiting(false);
+    }, 450);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') closeBranch();
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen]);
+  }, [isOpen, exiting]);
 
   if (!isOpen || !storyBranchService) return null;
 
@@ -60,6 +73,7 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
         : scene.vignette === 'medium'
           ? 'cinematic-vignette-medium'
           : '';
+  const exitClass = exiting ? 'cin-exit' : '';
 
   const isEnding = !!node.isEnding;
   const progress = storyBranchService.getProgress?.() ?? 0;
@@ -90,52 +104,57 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
 
   return html`
     <div
-      class="cinematic-overlay cinematic-bars cinematic-active ${ambientClass} ${vignetteClass}"
+      class="cinematic-overlay cinematic-bars cinematic-active ${ambientClass} ${vignetteClass} ${exitClass}"
       style="background: ${bgStyle}; z-index: 9500;"
       onClick=${(e) => {
-        if (e.target === e.currentTarget && isEnding) setIsOpen(false);
+        if (e.target === e.currentTarget && isEnding) closeBranch();
       }}
     >
+      <div class="cin-particles" aria-hidden="true"></div>
       <div
         class="cinematic-content"
-        style="max-width: 820px; width: 92%; text-align: center; position: relative; z-index: 9505;"
+        key=${node.id || tick}
+        style="max-width: 820px; width: 92%; text-align: center;"
       >
         <div
+          class="cin-scene-label"
           style="position: absolute; top: -2.5rem; left: 0; right: 0; font-size: 0.7rem; color: rgba(255,255,255,0.35); letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-header, Cinzel, serif);"
         >
           ${lang === 'de' ? 'Chronik' : 'Chronicle'} · ${progress}%
         </div>
 
-        <div style="font-size: 4.5rem; margin-bottom: 0.8rem; filter: drop-shadow(0 0 22px ${glow});">
+        <div class="cin-portrait" style="font-size: 4.5rem; margin-bottom: 0.8rem; filter: drop-shadow(0 0 22px ${glow});">
           ${portraitEmoji}
         </div>
 
         <div
-          style="font-size: 0.75rem; color: ${glow}; opacity: 0.7; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 1rem; font-family: var(--font-header, Cinzel, serif);"
+          class="cin-scene-label"
+          style="font-size: 0.75rem; color: ${glow}; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 1rem; font-family: var(--font-header, Cinzel, serif);"
         >
           ${lang === 'en' && scene.name_en ? scene.name_en : scene.name}
         </div>
 
         <h2
-          class="cinzel"
+          class="cinzel cin-title"
           style="color: ${glow}; font-size: 1.9rem; letter-spacing: 2px; text-shadow: 0 0 18px ${glow}; margin-bottom: 1.8rem; text-transform: uppercase; line-height: 1.3;"
         >
           ${title}
         </h2>
 
         <div
+          class="cin-text"
           style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; color: #f0eae0; line-height: 1.85; margin-bottom: 2.8rem; text-shadow: 0 2px 8px rgba(0,0,0,0.9); font-style: ${scene.textStyle || 'italic'}; background: rgba(0,0,0,0.4); padding: 1.6rem 1.8rem; border-radius: 8px; border-left: 2px solid ${glow}; border-right: 2px solid ${glow}; text-align: left; white-space: pre-wrap;"
         >
           ${text}
         </div>
 
-        <div class="dialog-options" style="display: flex; flex-direction: column; gap: 0.9rem; align-items: center;">
+        <div class="dialog-options cin-options" style="display: flex; flex-direction: column; gap: 0.9rem; align-items: center;">
           ${isEnding
             ? html`
                 <button
                   class="glass-btn primary cinzel"
                   style="padding: 1rem 3.5rem; font-size: 1.15rem; border-color: ${glow}; letter-spacing: 2px;"
-                  onClick=${() => setIsOpen(false)}
+                  onClick=${() => closeBranch()}
                 >
                   ${lang === 'de' ? 'Schließen' : 'Close'}
                 </button>
@@ -150,7 +169,7 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
                   <button
                     class="glass-btn cinzel"
                     style="padding: 0.9rem 2.5rem; font-size: 1rem;"
-                    onClick=${() => setIsOpen(false)}
+                    onClick=${() => closeBranch()}
                   >
                     ${lang === 'de' ? 'Zurück' : 'Back'}
                   </button>
@@ -181,7 +200,7 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
               <button
                 class="glass-btn btn-small"
                 style="margin-top: 2rem; opacity: 0.55; font-size: 0.8rem; padding: 0.45rem 1.2rem;"
-                onClick=${() => setIsOpen(false)}
+                onClick=${() => closeBranch()}
               >
                 ${lang === 'de' ? 'Später fortsetzen' : 'Continue later'}
               </button>
