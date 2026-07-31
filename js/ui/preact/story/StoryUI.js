@@ -6,12 +6,15 @@
 
 import { h, html, useStateSelector, useEventBus, useState, useEffect, useRef } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
+import Actions from '../../../core/state/actions.js';
 import { FloatingDamageOverlay } from '../combat/FloatingDamageOverlay.js';
 import { CombatAnalyticsModal } from '../combat/CombatAnalyticsModal.js';
+import { StoryFightsIntroSequence } from './StoryFightsIntroSequence.js';
 
 export function StoryUI({ stateManager, eventBus, services }) {
-  const { storyService, heroService, combatAnalyticsService } = services;
+  const { storyService, heroService, combatAnalyticsService, i18nService } = services;
   const [isOpen, setIsOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
   const [currentChapter, setCurrentChapter] = useState(1);
   const [fightResult, setFightResult] = useState('');
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
@@ -23,6 +26,7 @@ export function StoryUI({ stateManager, eventBus, services }) {
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const storyState = useStateSelector(stateManager, (state) => state.story);
   const bosses = storyService.getBosses();
+  const lang = i18nService?.getLanguage?.() || 'de';
 
   const logRef = useRef(null);
 
@@ -43,8 +47,33 @@ export function StoryUI({ stateManager, eventBus, services }) {
     }
   }, [maxUnlockedChapter, currentChapter]);
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_STORY, () => setIsOpen(true));
-  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
+  const openStoryModal = () => {
+    setShowIntro(false);
+    setIsOpen(true);
+  };
+
+  const completeIntro = () => {
+    stateManager.dispatch(Actions.markStoryFightsIntroSeen(), 'story/introSeen');
+    openStoryModal();
+  };
+
+  useEventBus(eventBus, EVENTS.UI_OPEN_STORY, () => {
+    if (showIntro) return;
+    const system = stateManager.getState()?.system || {};
+    const introSeen = system.storyFightsIntroSeen === true;
+    // Während des Tutorials kein Cinematic – #story-close muss erreichbar bleiben
+    const tutorialActive = system.tutorialFinished !== true;
+    if (!introSeen && !tutorialActive) {
+      setIsOpen(false);
+      setShowIntro(true);
+      return;
+    }
+    openStoryModal();
+  });
+  useEventBus(eventBus, 'ui:closeAllModals', () => {
+    setIsOpen(false);
+    setShowIntro(false);
+  });
   useEventBus(eventBus, 'story:battleResult', (data) => {
     if (data.victory) {
       setIsVictoryBurst(true);
@@ -68,8 +97,9 @@ export function StoryUI({ stateManager, eventBus, services }) {
     }
   }, [storyState.battleState ? storyState.battleState.combatLog.length : 0]);
 
-  // Escape-Taste zum Schließen des Modals / Dialogs
+  // Escape-Taste zum Schließen des Modals / Dialogs (Intro hat eigene Tastatur-Logik)
   useEffect(() => {
+    if (showIntro) return undefined;
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         if (storyState.battleState && storyState.battleState.activeDialogue) {
@@ -81,12 +111,12 @@ export function StoryUI({ stateManager, eventBus, services }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, storyState.battleState]);
+  }, [isOpen, showIntro, storyState.battleState]);
 
   const battleState = storyState.battleState;
   const hasActiveDialogue = battleState && battleState.activeDialogue;
 
-  if (!isOpen && !hasActiveDialogue) return null;
+  if (!isOpen && !hasActiveDialogue && !showIntro) return null;
 
   const chapterBosses = bosses.filter(b => b.chapter === currentChapter);
   const currentBoss = storyService.getCurrentBoss();
@@ -125,6 +155,13 @@ export function StoryUI({ stateManager, eventBus, services }) {
 
   return html`
     <div class="story-ui-root">
+      ${showIntro ? html`
+        <${StoryFightsIntroSequence}
+          lang=${lang}
+          onComplete=${completeIntro}
+        />
+      ` : ''}
+
       <!-- EIGENSTÄNDIGES BILDSCHIRMFÜLLENDES DIALOG-UI (ENTKOPPELT VOM BOSS-FENSTER) -->
       ${hasActiveDialogue ? html`
         <div class="cinematic-overlay cinematic-bars cinematic-active" style="position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(5, 5, 8, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20000; padding: 2rem; backdrop-filter: blur(12px);" onClick=${(e) => { if (e.target === e.currentTarget) storyService.advanceDialogue(); }}>

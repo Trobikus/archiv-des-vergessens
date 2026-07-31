@@ -218,6 +218,7 @@ export class StateManager {
         gameVersion: APP_VERSION,
         tutorialStep: 0,
         tutorialFinished: false,
+        storyFightsIntroSeen: false,
         timeWarpCharge: 0,
         timeWarpActive: false,
         timeWarpRemaining: 0
