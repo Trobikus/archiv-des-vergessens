@@ -261,7 +261,15 @@ export class StateManager {
     const defaultState = this._getInitialState();
     let migrated = deepMerge(defaultState, state && typeof state === 'object' ? state : {});
 
-    migrated.leaderboard = sanitizeLeaderboardSlice(migrated.leaderboard || defaultState.leaderboard);
+    if (!migrated.leaderboard) {
+      migrated.leaderboard = defaultState.leaderboard;
+    } else {
+      migrated.leaderboard = sanitizeLeaderboardSlice(migrated.leaderboard);
+    }
+
+    if (!migrated.lore) {
+      migrated.lore = defaultState.lore;
+    }
 
     if (migrated.clan && !migrated.clan.raid) {
       migrated.clan = {
@@ -304,14 +312,12 @@ export class StateManager {
       if (migrated.resources.ewigeMneme === undefined) migrated.resources.ewigeMneme = '0';
     }
 
-    // Alte Saves ohne Tutorial-Flag (oder ohne system-Slice): Tutorial als abgeschlossen behandeln
-    // deepMerge füllt sonst tutorialFinished:false aus Defaults
-    const rawSystem = state && state.system ? state.system : null;
-    if (!rawSystem || rawSystem.tutorialFinished === undefined) {
+    // Alte Saves ohne Tutorial-Flag: Tutorial als abgeschlossen behandeln
+    if (migrated.system && migrated.system.tutorialFinished === undefined) {
       migrated.system = {
         ...migrated.system,
         tutorialFinished: true,
-        tutorialStep: (rawSystem && rawSystem.tutorialStep !== undefined) ? rawSystem.tutorialStep : -1
+        tutorialStep: -1
       };
     }
 
