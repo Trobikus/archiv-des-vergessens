@@ -312,7 +312,36 @@ export class StateManager {
       if (migrated.resources.ewigeMneme === undefined) migrated.resources.ewigeMneme = '0';
     }
 
+    // Alte Saves ohne Tutorial-Flag: Tutorial als abgeschlossen behandeln
+    if (migrated.system && migrated.system.tutorialFinished === undefined) {
+      migrated.system = {
+        ...migrated.system,
+        tutorialFinished: true,
+        tutorialStep: -1
+      };
+    }
+
     return migrated;
+  }
+
+  /**
+   * Hydriert den State aus einem gespeicherten Spielstand.
+   * Führt Schema-Migrationen (_migrateState) aus und ersetzt den aktuellen State.
+   * @param {Object} saveData
+   * @param {string} [source='state/hydrate']
+   * @returns {Object|null} neuer State oder null bei Fehler
+   */
+  hydrate(saveData, source = 'state/hydrate') {
+    if (!this._initialized) {
+      logger.warn('[StateManager] hydrate aufgerufen, bevor init() ausgeführt wurde.');
+      return null;
+    }
+    if (!saveData || typeof saveData !== 'object' || Array.isArray(saveData)) {
+      logger.warn('[StateManager] hydrate: ungültige saveData');
+      return null;
+    }
+    const migrated = this._migrateState({ ...saveData });
+    return this.dispatch(() => migrated, source);
   }
 
   /**

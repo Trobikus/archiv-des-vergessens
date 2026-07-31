@@ -31,7 +31,6 @@ import SettingsManager from '../core/settings.js';
 import { EVENTS } from '../core/events/definitions.js';
 import { CONFIG } from '../data/config.js';
 import { escapeHtml } from '../utils/sanitizer.js';
-import { sanitizeLeaderboardSlice } from '../utils/leaderboard-sanitize.js';
 import { selectDominantPath } from '../core/state/selectors.js';
 
 /**
@@ -226,21 +225,12 @@ export async function bootGame() {
   const savedState = await SaveManager.load();
   if (savedState) {
     try {
-       // Migration: Falls es ein alter Spielstand ist, Tutorial als beendet markieren
-      if (savedState.system && savedState.system.tutorialFinished === undefined) {
-        savedState.system.tutorialFinished = true;
-        savedState.system.tutorialStep = -1;
-      }
-      // Erzwingen, dass das Intro beim Spielstart geladen wird, statt direkt ins Menü/Hub zu springen
+      // Boot-Session: Intro erzwingen; Schema-Migrationen laufen in hydrate()
       if (savedState.system) {
         savedState.system.currentView = 'intro';
         savedState.system.originalLastSave = savedState.system.lastSave;
       }
-      // JSON.stringify: Infinity → null; Zeitrekorde der Bestenliste heilen
-      if (savedState.leaderboard) {
-        savedState.leaderboard = sanitizeLeaderboardSlice(savedState.leaderboard);
-      }
-      stateManager.dispatch(() => savedState, 'boot/hydrate');
+      stateManager.hydrate(savedState, 'boot/hydrate');
       // Expeditionen bereinigen
       clanService.cleanupExpeditions();
       logger.info('[GameBoot] State hydriert (Save geladen)');
@@ -294,15 +284,10 @@ export async function bootGame() {
 
       // Prio 1: Cloud-Spielstand anwenden, wenn gleich oder neuer
       logger.info(`[CloudManager] Wende Cloud-Spielstand an (Zeitstempel: ${cloudTimestamp}).`);
-      
-      // In SaveManager (IndexedDB) persisten
-      if (saveData.leaderboard) {
-        saveData.leaderboard = sanitizeLeaderboardSlice(saveData.leaderboard);
-      }
-      await SaveManager.save(saveData);
 
-      // In StateManager hydrieren
-      stateManager.dispatch(() => saveData, 'cloud/hydrate');
+      // Hydrate migriert Schema (inkl. Leaderboard-Zeiten), danach lokal persistieren
+      stateManager.hydrate(saveData, 'cloud/hydrate');
+      await SaveManager.save(stateManager.getState());
 
       // Expeditionen & Theme aktualisieren
       clanService.cleanupExpeditions();

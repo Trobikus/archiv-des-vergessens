@@ -62,7 +62,7 @@ describe('SaveManager', () => {
     expect(loadedState).not.toBeNull();
 
     // State hydrieren
-    stateManager.dispatch(() => loadedState, 'test/hydrate');
+    stateManager.hydrate(loadedState, 'test/hydrate');
 
     const newState = stateManager.getState();
     expect(newState.hero.level).toBe(2);
