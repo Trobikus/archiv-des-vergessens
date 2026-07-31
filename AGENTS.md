@@ -27,3 +27,14 @@ Ich (Solo-Entwickler) muss in folgenden Fällen zwingend und **vorab** informier
 *   **Balancing:** Anpassungen an Formeln oder Basiswerten, die die Spielökonomie grundlegend verändern.
 
 In diesen Fällen lege mir zuerst deinen Plan vor und hole meine explizite Bestätigung ein.
+
+## Cursor Cloud specific instructions
+
+Dieses Repo ist ein Monorepo mit drei Teilen: Vite/Preact-Web-Frontend (Root), Node.js-WebSocket-Server (`server/`) und Tauri/Rust-Desktop-Core (`src-tauri/`). Standard-Befehle stehen in `README.md`, `CONTRIBUTING.md` und den `scripts`-Blöcken der `package.json`-Dateien. Nur nicht-offensichtliche Hinweise:
+
+- **Lokale Server-URL:** Für lokale Multiplayer-/Sync-Tests muss eine `.env` im Root mit `VITE_WS_URL=ws://localhost:8080` existieren (`.env` ist gitignored, also bei jeder frischen VM neu anlegen). Ohne `.env` verbindet sich der Client im Vite-Dev-Modus zwar auch per Fallback auf `ws://localhost:8080`, aber jeder andere Kontext (z.B. Preview-Build) zeigt auf den Produktiv-Server `wss://grimoireinteractive.duckdns.org`.
+- **Startreihenfolge:** Erst den WS-Server (`cd server && npm run dev`, Port 8080) starten, dann das Frontend (`npm run dev`, Port 3000). Beide sind separate Prozesse und laufen dauerhaft; nutze tmux. Der Vite-Dev-Server ist auf Port 3000 mit `strictPort: true` festgelegt (kein Auto-Fallback).
+- **Frontend testen ohne Tauri:** Das komplette Spiel läuft im Browser über den Vite-Dev-Server (`http://localhost:3000`). `npm run tauri:dev` benötigt native WebKitGTK-Systembibliotheken und ein Display und ist im Headless-Cloud-Setup nicht nötig, um Gameplay/UI zu testen.
+- **Server-Persistenz:** Der WS-Server legt beim Start automatisch die SQLite-DB und ein Backup unter `server/data/` an (gitignored). Kein manueller Migrationsschritt nötig.
+- **Bekannter Zustand:** `npm run typecheck` meldet einen vorbestehenden Fehler in `js/ui/preact/shared/ModalShell.js` (TS2367). Das ist nicht durch das Setup verursacht; Vitest (`npm run test`) und die Server-Tests (`cd server && npm test`) sind grün.
+- **Rust/Tauri:** `cargo test`/`cargo clippy` in `src-tauri/` brauchen die in `.github/workflows/test.yml` gelisteten System-Pakete (u.a. `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`). Ohne diese schlägt der Build von Tauri-Crates fehl.

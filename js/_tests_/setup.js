@@ -51,6 +51,7 @@ if (!globalThis.indexedDB) {
             return {
               objectStore(storeName) {
                 return {
+                  keyPath: 'key',
                   put(value, key) {
                     const req = { onsuccess: null, onerror: null };
                     setTimeout(() => {

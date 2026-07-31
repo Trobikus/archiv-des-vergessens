@@ -12,7 +12,7 @@
  * ============================================================
  */
 
-import { deepFreeze, isPlainObject, getNestedValue } from '../../utils/object-utils.js';
+import { deepFreeze, isPlainObject, getNestedValue, deepMerge } from '../../utils/object-utils.js';
 import { logger } from '../logger.js';
 import { EVENTS } from '../events/definitions.js';
 import { APP_VERSION } from '../../utils/version.js';
@@ -255,11 +255,11 @@ export class StateManager {
 
   /**
    * Migriert ältere Spielstände auf das aktuelle State-Schema (Abwärtskompatibilität).
-   * Wird einmalig bei der Initialisierung ausgeführt, um den Heißpfad beim Dispatch zu entlasten.
+   * Fehlende Felder werden aus dem Default-State per deepMerge ergänzt, vorhandene Werte bleiben erhalten.
    */
   _migrateState(state) {
-    let migrated = { ...state };
     const defaultState = this._getInitialState();
+    let migrated = deepMerge(defaultState, state && typeof state === 'object' ? state : {});
 
     if (!migrated.leaderboard) {
       migrated.leaderboard = defaultState.leaderboard;
