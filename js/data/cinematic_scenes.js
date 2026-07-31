@@ -2,9 +2,11 @@
 // FILE: data/cinematic_scenes.js – Cinematic Scene Definitions
 // ============================================================
 // Used by DialogUI + StoryBranchUI for full-screen atmospheric cutscenes.
-// Each scene defines visual mood, particle theme, letterbox style
-// and optional background gradient / vignette intensity.
+// Visual/audio parameters live in cinematic_assets.js;
+// this file defines mood + layout and binds assets per scene.
 // ============================================================
+
+import { getSceneAssets } from './cinematic_assets.js';
 
 export const CINEMATIC_SCENES = {
   // ---------- ARCHIVE / THERON ----------
@@ -115,30 +117,24 @@ export const CINEMATIC_SCENES = {
 
 /**
  * Mapping: Story-Node-ID → Cinematic Scene ID
- * Explizite Zuordnung für Prolog, Malakor, Kapitel 2 und Enden.
- * Prefix-Fallbacks greifen, wenn kein exakter Treffer vorhanden ist.
  */
 export const STORY_NODE_SCENES = {
-  // Prolog – Aschefeld
   prologue: 'ash-field',
   prologue_voice: 'ash-field',
   prologue_landscape: 'ash-field',
   prologue_labyrinth: 'shadow-niche',
 
-  // Malakor / Asche-Garten
   prologue_malakor_appear: 'ash-garden',
   chapter1_hero: 'ash-garden',
   chapter1_hero_parley: 'ash-garden',
   chapter1_hero_spared: 'ash-garden',
   chapter1_hero_victory: 'ash-garden',
 
-  // Mira / Schattenpfad
   chapter1_coward: 'shadow-niche',
   chapter1_coward_deeper: 'shadow-niche',
   chapter1_coward_study: 'shadow-niche',
   chapter1_coward_return: 'iron-gates',
 
-  // Kapitel 2 – Auge des Archivs
   chapter2_approach: 'eye-of-archive',
   chapter2_approach_shadow: 'void-whisper',
   chapter2_confrontation: 'eye-of-archive',
@@ -148,7 +144,6 @@ export const STORY_NODE_SCENES = {
   chapter2_share_secret: 'archive-halls',
   chapter2_lone_choice: 'ash-field',
 
-  // Kapitel 3
   chapter3_guardian: 'iron-gates',
   chapter3_guardian_war: 'iron-gates',
   chapter3_guardian_doubt: 'archive-halls',
@@ -156,7 +151,6 @@ export const STORY_NODE_SCENES = {
   chapter3_secrets: 'archive-halls',
   chapter3_scholar: 'void-whisper',
 
-  // Kapitel 4 / Finale
   chapter4_epic: 'ash-garden',
   chapter4_seal: 'archive-halls',
   chapter4_rebel: 'iron-gates',
@@ -164,7 +158,6 @@ export const STORY_NODE_SCENES = {
   chapter4_guardian_teach: 'archive-halls',
   chapter4_void_path: 'void-whisper',
 
-  // Enden
   ending_victory: 'eye-of-archive',
   ending_sacrifice: 'ash-garden',
   ending_eternal: 'archive-halls',
@@ -177,12 +170,16 @@ export const STORY_NODE_SCENES = {
 };
 
 /**
- * Holt eine Szene nach ID. Fallback auf archive-halls.
+ * Holt eine Szene nach ID inkl. aufgelöstem Asset-Bundle.
  * @param {string} id
- * @returns {Object}
+ * @returns {Object} scene + assets
  */
 export function getCinematicScene(id) {
-  return CINEMATIC_SCENES[id] || CINEMATIC_SCENES['archive-halls'];
+  const scene = CINEMATIC_SCENES[id] || CINEMATIC_SCENES['archive-halls'];
+  return {
+    ...scene,
+    assets: getSceneAssets(scene.id)
+  };
 }
 
 /**
