@@ -4,7 +4,7 @@
  * ============================================================
  */
 
-import { h, html, useStateSelector, useEventBus, useState } from '../setup.js';
+import { h, html, useStateSelector, useEventBus, useState, useEffect, useCallback } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
 
 export function LeaderboardUI({ stateManager, eventBus, services }) {
@@ -17,6 +17,14 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
 
   const stats = useStateSelector(stateManager, () => leaderboardService.getFormattedStats());
   const records = useStateSelector(stateManager, () => leaderboardService.getRecords());
+
+  const close = useCallback(() => setIsOpen(false), []);
+
+  const fetchGlobal = useCallback(() => {
+    setIsLoadingGlobal(true);
+    setConnectionError(false);
+    leaderboardService.requestGlobalLeaderboard();
+  }, [leaderboardService]);
 
   // Registriere Events
   useEventBus(eventBus, EVENTS.UI_OPEN_LEADERBOARD, (data) => {
@@ -35,16 +43,19 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
       setGlobalEntries([]);
     } else {
       setConnectionError(false);
-      setGlobalEntries(entries);
+      setGlobalEntries(Array.isArray(entries) ? entries : []);
     }
     setIsLoadingGlobal(false);
   });
 
-  const fetchGlobal = () => {
-    setIsLoadingGlobal(true);
-    setConnectionError(false);
-    leaderboardService.requestGlobalLeaderboard();
-  };
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, close]);
 
   const handleReset = async () => {
     if (await window.gameConfirm('Möchtest du deine persönlichen Rekorde zurücksetzen?')) {
@@ -60,9 +71,9 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
   if (!isOpen) return null;
 
   return html`
-    <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
+    <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) close(); }}>
       <div class="modal-content glass-panel" style="width: 600px; max-width: 95vw;" onClick=${(e) => e.stopPropagation()}>
-        <button class="modal-close" onClick=${() => setIsOpen(false)}>×</button>
+        <button class="modal-close" onClick=${close}>×</button>
         
         <h2 class="modal-title glow-text cinzel text-center mb-1">🏛️ Das Große Archiv</h2>
         
@@ -77,7 +88,7 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
           <button class="tab-btn" 
                   style="background: none; border: none; font-family: 'Cinzel', serif; font-size: 1rem; cursor: pointer; padding: 0.3rem 1.2rem; position: relative; color: ${activeTab === 'global' ? 'var(--color-gold)' : 'var(--color-text-muted)'}; transition: color 0.2s;" 
                   onClick=${() => { setActiveTab('global'); fetchGlobal(); }}>
-            🌐 Global (Top 100)
+            🌐 Global (Top 10)
             ${activeTab === 'global' && html`<div style="position: absolute; bottom: -0.6rem; left: 0; right: 0; height: 2px; background: var(--color-gold); box-shadow: 0 0 8px var(--color-gold);"></div>`}
           </button>
         </div>
@@ -98,8 +109,8 @@ export function LeaderboardUI({ stateManager, eventBus, services }) {
 
               <div class="leaderboard-meta" style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; padding: 0.8rem; border-top: 1px solid rgba(197,160,89,0.1);">
                 <span class="text-muted text-sm" style="font-size: 0.75rem;">Sitzungen: <span class="text-highlight" style="font-weight: bold;">${records.sessionCount}</span></span>
-                <span class="text-muted text-sm" style="font-size: 0.75rem;">Zuletzt gespielt: <span class="text-highlight" style="font-weight: bold;">${new Date(records.lastPlayed).toLocaleDateString()}</span></span>
-                <span class="text-muted text-sm" style="font-size: 0.75rem;">Gesamtspielzeit: <span class="text-highlight" style="font-weight: bold;">${Math.floor(records.totalPlayTime / 60)} Minuten</span></span>
+                <span class="text-muted text-sm" style="font-size: 0.75rem;">Zuletzt gespielt: <span class="text-highlight" style="font-weight: bold;">${records.lastPlayed ? new Date(records.lastPlayed).toLocaleDateString() : '—'}</span></span>
+                <span class="text-muted text-sm" style="font-size: 0.75rem;">Gesamtspielzeit: <span class="text-highlight" style="font-weight: bold;">${Math.floor((records.totalPlayTime || 0) / 60)} Minuten</span></span>
               </div>
 
               <button class="glass-btn btn-danger btn-small" style="display: block; margin: 1rem auto 0; padding: 0.3rem 1.2rem; font-size: 0.75rem;" onClick=${handleReset}>

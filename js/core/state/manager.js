@@ -262,6 +262,16 @@ export class StateManager {
 
     if (!migrated.leaderboard) {
       migrated.leaderboard = defaultState.leaderboard;
+    } else {
+      // JSON.stringify wandelt Infinity → null; Zeitrekorde wiederherstellen
+      const lb = { ...migrated.leaderboard };
+      for (const key of ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp']) {
+        const v = lb[key];
+        if (v == null || v === '' || v === 'Infinity' || (typeof v === 'number' && !Number.isFinite(v))) {
+          lb[key] = Infinity;
+        }
+      }
+      migrated.leaderboard = lb;
     }
 
     if (!migrated.lore) {

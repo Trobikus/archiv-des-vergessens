@@ -235,6 +235,15 @@ export async function bootGame() {
         savedState.system.currentView = 'intro';
         savedState.system.originalLastSave = savedState.system.lastSave;
       }
+      // JSON.stringify: Infinity → null; Zeitrekorde der Bestenliste heilen
+      if (savedState.leaderboard) {
+        for (const key of ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp']) {
+          const v = savedState.leaderboard[key];
+          if (v == null || v === '' || v === 'Infinity' || (typeof v === 'number' && !Number.isFinite(v))) {
+            savedState.leaderboard[key] = Infinity;
+          }
+        }
+      }
       stateManager.dispatch(() => savedState, 'boot/hydrate');
       // Expeditionen bereinigen
       clanService.cleanupExpeditions();
@@ -291,6 +300,14 @@ export async function bootGame() {
       logger.info(`[CloudManager] Wende Cloud-Spielstand an (Zeitstempel: ${cloudTimestamp}).`);
       
       // In SaveManager (IndexedDB) persisten
+      if (saveData.leaderboard) {
+        for (const key of ['fastestBossKill', 'fastestPrestige', 'fastestLevelUp']) {
+          const v = saveData.leaderboard[key];
+          if (v == null || v === '' || v === 'Infinity' || (typeof v === 'number' && !Number.isFinite(v))) {
+            saveData.leaderboard[key] = Infinity;
+          }
+        }
+      }
       await SaveManager.save(saveData);
 
       // In StateManager hydrieren

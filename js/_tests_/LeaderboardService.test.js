@@ -7,7 +7,11 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import EventBus from '../core/events/bus.js';
 import StateManager from '../core/state/manager.js';
-import LeaderboardService from '../core/services/leaderboard-service.js';
+import LeaderboardService, {
+  sanitizeTimeRecord,
+  isBetterTime,
+  formatTimeRecord
+} from '../core/services/leaderboard-service.js';
 
 describe('LeaderboardService (State-Integrated)', () => {
   let eventBus;
@@ -34,7 +38,6 @@ describe('LeaderboardService (State-Integrated)', () => {
   });
 
   test('state changes automatically update the leaderboard state slice', () => {
-    // Modify hero level in state
     stateManager.dispatch((state) => ({
       ...state,
       hero: {
@@ -43,13 +46,11 @@ describe('LeaderboardService (State-Integrated)', () => {
       }
     }), 'test/setLevel');
 
-    // Trigger update (done automatically via state:changed)
     leaderboardService._updateFromState();
 
     const records = leaderboardService.getRecords();
     expect(records.highestLevel).toBe(10);
-    
-    // Check that stateManager's central state actually updated!
+
     const centralLeaderboard = stateManager.getState().leaderboard;
     expect(centralLeaderboard.highestLevel).toBe(10);
   });
@@ -63,7 +64,6 @@ describe('LeaderboardService (State-Integrated)', () => {
   });
 
   test('game:reset event resets leaderboard records', () => {
-    // First level up
     stateManager.dispatch((state) => ({
       ...state,
       hero: {
@@ -75,13 +75,85 @@ describe('LeaderboardService (State-Integrated)', () => {
 
     expect(leaderboardService.getRecords().highestLevel).toBe(50);
 
-    // Reset StateManager to match real-game workflow
     stateManager.reset();
-
-    // Fire reset event
     eventBus.publish('game:reset', {});
 
     expect(leaderboardService.getRecords().highestLevel).toBe(1);
     expect(leaderboardService.getRecords().highestPrestige).toBe(0);
+  });
+
+  test('sanitizeTimeRecord restores null from JSON Infinity loss', () => {
+    expect(sanitizeTimeRecord(null)).toBe(Infinity);
+    expect(sanitizeTimeRecord(undefined)).toBe(Infinity);
+    expect(sanitizeTimeRecord('Infinity')).toBe(Infinity);
+    expect(sanitizeTimeRecord(12.5)).toBe(12.5);
+    expect(sanitizeTimeRecord(-1)).toBe(Infinity);
+  });
+
+  test('null fastestBossKill still accepts new records and displays dash', () => {
+    stateManager.dispatch((state) => ({
+      ...state,
+      leaderboard: {
+        ...state.leaderboard,
+        fastestBossKill: null,
+        fastestPrestige: null,
+        fastestLevelUp: null
+      }
+    }), 'test/corruptTimes');
+
+    const stats = leaderboardService.getFormattedStats();
+    expect(stats['⏱️ Schnellster Boss']).toBe('—');
+    expect(stats['⏱️ Schnellstes Prestige']).toBe('—');
+
+    expect(isBetterTime(12.34, null)).toBe(true);
+    leaderboardService.updateBossDefeated('boss_1', 12.34, 1);
+    expect(leaderboardService.getRecords().fastestBossKill).toBe(12.34);
+    expect(formatTimeRecord(12.34)).toBe('12.3s');
+  });
+
+  test('state migration restores null time fields to Infinity', () => {
+    const freshBus = new EventBus();
+    const freshManager = new StateManager(freshBus);
+    freshManager.init(null, null, null);
+
+    const migrated = freshManager._migrateState({
+      ...freshManager.getState(),
+      leaderboard: {
+        ...freshManager.getState().leaderboard,
+        highestPrestige: 2,
+        fastestBossKill: null,
+        fastestPrestige: null,
+        fastestLevelUp: null,
+        highestLevel: 5
+      }
+    });
+
+    expect(migrated.leaderboard.fastestBossKill).toBe(Infinity);
+    expect(migrated.leaderboard.fastestPrestige).toBe(Infinity);
+    expect(migrated.leaderboard.fastestLevelUp).toBe(Infinity);
+    expect(migrated.leaderboard.highestPrestige).toBe(2);
+    expect(migrated.leaderboard.highestLevel).toBe(5);
+
+    freshBus.destroy();
+  });
+
+  test('requestGlobalLeaderboard times out when connected but silent', () => {
+    vi.useFakeTimers();
+    const networkService = {
+      isConnected: () => true,
+      send: vi.fn()
+    };
+    const timedService = new LeaderboardService(stateManager, eventBus, networkService);
+    const handler = vi.fn();
+    eventBus.subscribe('leaderboard:globalUpdated', handler);
+
+    timedService.requestGlobalLeaderboard();
+    expect(networkService.send).toHaveBeenCalledWith('leaderboard:get');
+    expect(handler).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(5000);
+    expect(handler).toHaveBeenCalledWith(null);
+
+    vi.useRealTimers();
   });
 });
