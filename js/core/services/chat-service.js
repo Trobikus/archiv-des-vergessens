@@ -24,13 +24,19 @@ export class ChatService {
    * @param {EventBus} eventBus
    * @param {HeroService} heroService
    * @param {ClanService} clanService
+   * @param {any} [networkService]
    */
-  constructor(stateManager, eventBus, heroService, clanService) {
+  constructor(stateManager, eventBus, heroService, clanService, networkService = null) {
     this._stateManager = stateManager;
     this._eventBus = eventBus;
     this._heroService = heroService;
     this._clanService = clanService;
+    this._networkService = networkService;
     this._maxMessages = 100;
+  }
+
+  setNetworkService(networkService) {
+    this._networkService = networkService;
   }
 
   sendGlobalMessage(text) {

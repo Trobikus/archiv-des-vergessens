@@ -11,7 +11,8 @@ export function applyAudioSettings(settings, root = document) {
   const musicVolume = clampVolume(settings?.volume ?? 0.7);
   const sfxVolume = clampVolume(settings?.sfxVolume ?? 0.7);
 
-  root.querySelectorAll('audio[data-audio-channel]').forEach((element) => {
+  root.querySelectorAll('audio[data-audio-channel]').forEach((node) => {
+    const element = /** @type {HTMLAudioElement} */ (node);
     const isMusic = element.dataset.audioChannel === 'music';
     element.muted = isMusic ? !musicEnabled : !sfxEnabled;
     element.volume = isMusic ? musicVolume : sfxVolume;
