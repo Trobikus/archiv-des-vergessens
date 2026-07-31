@@ -161,6 +161,7 @@ export const EVENTS = {
   // ==================== NAVIGATION ====================
   UI_OPEN_HERO: 'ui:openHero',
   UI_OPEN_STORY: 'ui:openStory',
+  UI_OPEN_STORY_BRANCH: 'ui:openStoryBranch',
   UI_ENTER_GAME: 'ui:enterGame',
   UI_ENTER_HUB: 'ui:enterHub',
   UI_CLOSE_ALL_MODALS: 'ui:closeAllModals',
