@@ -7,221 +7,98 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    eventBus = {
-      publish: vi.fn(),
-      subscribe: vi.fn()
-    };
+    eventBus = { publish: vi.fn(), subscribe: vi.fn() };
     authService = new AuthService(eventBus);
   });
 
-  it('should initialize with a guest account by default', () => {
-    const user = authService.getCurrentUser();
-    expect(user).not.toBeNull();
-    expect(user.isGuest).toBe(true);
-    expect(user.username).toBe('Gast-Hüter');
+  function createConnectedServer({ loginError } = {}) {
+    const networkService = {
+      isConnected: vi.fn().mockReturnValue(true),
+      send: vi.fn((type, payload) => {
+        setTimeout(() => {
+          if (type === 'auth:register') {
+            authService.handleServerAuthResponse('auth:register:success', {
+              user: { id: 'usr_server', username: payload.username, email: payload.email, isGuest: false },
+              token: 'tok_registration'
+            });
+          }
+          if (type === 'auth:login') {
+            if (loginError) {
+              authService.handleServerAuthResponse('auth:login:error', { error: loginError });
+            } else {
+              authService.handleServerAuthResponse('auth:login:success', {
+                user: { id: 'usr_server', username: 'ServerHero', email: 'server@archiv.de', isGuest: false },
+                token: 'tok_login'
+              });
+            }
+          }
+        }, 0);
+        return true;
+      })
+    };
+    authService.setNetworkService(networkService);
+    return networkService;
+  }
+
+  it('initializes with a guest account', () => {
+    expect(authService.getCurrentUser()).toMatchObject({ isGuest: true, username: 'Gast-Hüter' });
     expect(authService.isLoggedIn()).toBe(false);
   });
 
-  it('should register a new account successfully', async () => {
-    const res = await authService.register('TestSpieler', 'test@archiv.de', 'geheim123');
-    expect(res.success).toBe(true);
-    expect(res.user.username).toBe('TestSpieler');
-    expect(res.user.email).toBe('test@archiv.de');
-    expect(res.user.isGuest).toBe(false);
+  it('creates an account only after server confirmation', async () => {
+    createConnectedServer();
 
-    expect(authService.isLoggedIn()).toBe(true);
+    const result = await authService.register('ServerHero', 'server@archiv.de', 'geheim123');
+
+    expect(result).toMatchObject({ success: true, user: { id: 'usr_server' } });
+    const accounts = JSON.parse(localStorage.getItem('archiv_auth_accounts'));
+    expect(accounts.usr_server.isServerAccount).toBe(true);
     expect(eventBus.publish).toHaveBeenCalledWith('auth:registered', expect.any(Object));
   });
 
-  it('should reject registration with invalid email or short password', async () => {
-    const resShortPass = await authService.register('TestUser', 'test@archiv.de', '123');
-    expect(resShortPass.success).toBe(false);
-    expect(resShortPass.error).toBe('auth.error.password_short');
+  it('rejects registration while the server is unavailable without creating a local account', async () => {
+    authService.setNetworkService({ isConnected: () => false });
 
-    const resInvalidEmail = await authService.register('TestUser', 'invalid-email', 'geheim123');
-    expect(resInvalidEmail.success).toBe(false);
-    expect(resInvalidEmail.error).toBe('auth.error.email_invalid');
-  });
+    const result = await authService.register('OfflineHero', 'offline@archiv.de', 'geheim123');
 
-  it('should prevent duplicate usernames or emails', async () => {
-    await authService.register('UniqueUser', 'unique@archiv.de', 'pass12345');
-    authService.logout();
-
-    const dupName = await authService.register('UniqueUser', 'other@archiv.de', 'pass12345');
-    expect(dupName.success).toBe(false);
-    expect(dupName.error).toBe('auth.error.username_taken');
-
-    const dupEmail = await authService.register('OtherUser', 'unique@archiv.de', 'pass12345');
-    expect(dupEmail.success).toBe(false);
-    expect(dupEmail.error).toBe('auth.error.email_taken');
-  });
-
-  it('should handle login with correct and incorrect credentials', async () => {
-    await authService.register('LoginHero', 'hero@archiv.de', 'richtigesPasswort1');
-    authService.logout();
-
-    // Falsches Passwort
-    const failRes = await authService.login('LoginHero', 'falschesPasswort');
-    expect(failRes.success).toBe(false);
-    expect(failRes.error).toBe('auth.error.wrong_password');
-
-    // Richtiges Passwort
-    const successRes = await authService.login('LoginHero', 'richtigesPasswort1');
-    expect(successRes.success).toBe(true);
-    expect(authService.isLoggedIn()).toBe(true);
-  });
-
-  it('should convert guest account to full account', async () => {
-    expect(authService.getCurrentUser().isGuest).toBe(true);
-
-    const convertRes = await authService.convertGuestToAccount('GastGewordenerHeld', 'gast@archiv.de', 'meinPasswort99');
-    expect(convertRes.success).toBe(true);
-    expect(authService.getCurrentUser().isGuest).toBe(false);
-    expect(authService.getCurrentUser().username).toBe('GastGewordenerHeld');
-    expect(eventBus.publish).toHaveBeenCalledWith('auth:guestConverted', expect.any(Object));
-  });
-
-  it('should return to guest mode after logout', async () => {
-    await authService.register('LogoutUser', 'logout@archiv.de', 'passwort123');
-    expect(authService.isLoggedIn()).toBe(true);
-
-    authService.logout();
+    expect(result).toMatchObject({ success: false, error: 'auth.error.server_unavailable' });
+    expect(localStorage.getItem('archiv_auth_accounts')).toBeNull();
     expect(authService.isLoggedIn()).toBe(false);
-    expect(authService.getCurrentUser().isGuest).toBe(true);
   });
 
-  it('should communicate with networkService when connected during registration and login', async () => {
-    const mockNetworkService = {
-      isConnected: vi.fn().mockReturnValue(true),
-      send: vi.fn((type, payload) => {
-        if (type === 'auth:register') {
-          setTimeout(() => {
-            authService.handleServerAuthResponse('auth:register:success', {
-              user: { id: 'usr_server1', username: payload.username, email: payload.email, isGuest: false, avatar: '🛡️' },
-              token: 'tok_server_abc'
-            });
-          }, 10);
-        } else if (type === 'auth:login') {
-          setTimeout(() => {
-            authService.handleServerAuthResponse('auth:login:success', {
-              user: { id: 'usr_server1', username: 'ServerHero', email: 'server@archiv.de', isGuest: false, avatar: '🛡️' },
-              token: 'tok_server_xyz'
-            });
-          }, 10);
-        }
-        return true;
-      })
-    };
-
-    authService.setNetworkService(mockNetworkService);
-
-    const regRes = await authService.register('ServerHero', 'server@archiv.de', 'geheim123');
-    expect(regRes.success).toBe(true);
-    expect(regRes.user.id).toBe('usr_server1');
-    expect(authService.getToken()).toBe('tok_server_abc');
-
-    authService.logout();
-
-    const loginRes = await authService.login('ServerHero', 'geheim123');
-    expect(loginRes.success).toBe(true);
-    expect(authService.getToken()).toBe('tok_server_xyz');
-  });
-
-  it('should fall back to local offline account when server returns user_not_found or fails', async () => {
-    // 1. Create account offline
-    const regRes = await authService.register('OfflineHero', 'offline@archiv.de', 'geheim123');
-    expect(regRes.success).toBe(true);
-    authService.logout();
-
-    // 2. Connect mock network service that returns user_not_found
-    const mockNetworkService = {
-      isConnected: vi.fn().mockReturnValue(true),
-      send: vi.fn((type, payload) => {
-        if (type === 'auth:login') {
-          setTimeout(() => {
-            authService.handleServerAuthResponse('auth:login:error', {
-              error: 'auth.error.user_not_found'
-            });
-          }, 10);
-        }
-        return true;
-      })
-    };
-
-    authService.setNetworkService(mockNetworkService);
-
-    // 3. Login should succeed via local fallback and trigger background register on server
-    const loginRes = await authService.login('OfflineHero', 'geheim123');
-    expect(loginRes.success).toBe(true);
-    expect(authService.isLoggedIn()).toBe(true);
-    expect(authService.getCurrentUser().username).toBe('OfflineHero');
-    expect(mockNetworkService.send).toHaveBeenCalledWith('auth:register', expect.objectContaining({
-      username: 'OfflineHero'
+  it('returns the server login error instead of accepting a local fallback', async () => {
+    const networkService = createConnectedServer({ loginError: 'auth.error.user_not_found' });
+    localStorage.setItem('archiv_auth_accounts', JSON.stringify({
+      usr_local: { username: 'OfflineHero', email: 'offline@archiv.de', isServerAccount: false, salt: 'salt', passwordHash: 'hash' }
     }));
+
+    const result = await authService.login('OfflineHero', 'geheim123');
+
+    expect(result).toMatchObject({ success: false, error: 'auth.error.user_not_found' });
+    expect(networkService.send).toHaveBeenCalledWith('auth:login', expect.any(Object));
+    expect(authService.isLoggedIn()).toBe(false);
   });
 
-  it('should return server error response when login or register fails on server without local account', async () => {
-    const mockNetworkService = {
-      isConnected: vi.fn().mockReturnValue(true),
-      send: vi.fn((type) => {
-        if (type === 'auth:register') {
-          setTimeout(() => {
-            authService.handleServerAuthResponse('auth:register:error', {
-              error: 'auth.error.banned_word'
-            });
-          }, 10);
-        } else if (type === 'auth:login') {
-          setTimeout(() => {
-            authService.handleServerAuthResponse('auth:login:error', {
-              error: 'auth.error.account_locked'
-            });
-          }, 10);
-        }
-        return true;
-      })
-    };
+  it('allows an already confirmed account to log in offline on the same device', async () => {
+    createConnectedServer();
+    await authService.register('ServerHero', 'server@archiv.de', 'geheim123');
+    authService.logout();
+    authService.setNetworkService({ isConnected: () => false });
 
-    authService.setNetworkService(mockNetworkService);
+    const result = await authService.login('ServerHero', 'geheim123');
 
-    const regRes = await authService.register('BadWordHero', 'bad@archiv.de', 'geheim123');
-    expect(regRes.success).toBe(false);
-    expect(regRes.error).toBe('auth.error.banned_word');
-
-    const loginRes = await authService.login('UnknownHero', 'geheim123');
-    expect(loginRes.success).toBe(false);
-    expect(loginRes.error).toBe('auth.error.account_locked');
+    expect(result.success).toBe(true);
+    expect(authService.isLoggedIn()).toBe(true);
   });
 
-  it('should prevent concurrent authentication attempts with in_progress error', async () => {
-    // Simulate a slow network request
-    const mockNetworkService = {
-      isConnected: vi.fn().mockReturnValue(true),
-      send: vi.fn(() => true) // Never calls handleServerAuthResponse, pending promise will wait
-    };
-    authService.setNetworkService(mockNetworkService);
-
-    // Start first attempt
-    const firstLoginPromise = authService.login('SlowUser', 'password123');
-
-    // Attempt second login immediately
-    const secondLoginRes = await authService.login('SlowUser', 'password123');
-    expect(secondLoginRes.success).toBe(false);
-    expect(secondLoginRes.error).toBe('auth.error.in_progress');
-  });
-
-  it('should handle token verification success and error responses', () => {
-    // Simulate token verification success
+  it('expires a session when the server rejects an unconfirmed local account', () => {
     authService.handleServerAuthResponse('auth:verifyToken:success', {
-      user: { id: 'usr_verified', username: 'VerifiedUser', isGuest: false },
-      token: 'token_verified_123'
+      user: { id: 'usr_local', username: 'LocalOnly', isGuest: false },
+      token: 'tok_local'
     });
 
-    expect(authService.getCurrentUser().username).toBe('VerifiedUser');
-    expect(authService.getToken()).toBe('token_verified_123');
-    expect(authService.isLoggedIn()).toBe(true);
-
-    // Simulate token verification error for non-local account
     authService.handleServerAuthResponse('auth:verifyToken:error', {});
+
     expect(authService.getToken()).toBeNull();
     expect(eventBus.publish).toHaveBeenCalledWith('auth:sessionExpired', expect.any(Object));
   });

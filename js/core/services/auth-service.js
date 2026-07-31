@@ -5,7 +5,7 @@
  * 
  * VERANTWORTUNG:
  * - Verwaltung von Benutzer-Registrierung, Login, Logout & Session-Tokens
- * - Server-Synchronisation über NetworkService mit offline-fähiger Speicherung
+ * - Server-Synchronisation über NetworkService mit lokalem Cache bestätigter Konten
  * - Gast-Konto Generierung & Migration in permanente SQLite-Server-Konten
  * - Verknüpfung mit EventBus & CloudManager für Fortschritts-Sync
  * ============================================================
@@ -93,7 +93,7 @@ export class AuthService {
     } else if (type === 'auth:verifyToken:error') {
       logger.warn('[AuthService] Token ungültig oder abgelaufen laut Server.');
       const accounts = this._getAccounts();
-      if (this._currentUser && !this._currentUser.isGuest && accounts[this._currentUser.id]) {
+      if (this._currentUser && !this._currentUser.isGuest && accounts[this._currentUser.id]?.isServerAccount) {
         logger.info('[AuthService] Lokales Konto vorhanden, behalte Offline-Session bei.');
       } else {
         this._sessionToken = null;
@@ -247,7 +247,7 @@ export class AuthService {
   }
 
   /**
-   * Registriert ein neues Konto auf dem Server (mit lokalem Offline-Fallback)
+   * Registriert ein neues Konto ausschließlich nach Server-Bestätigung.
    */
   async register(username, email, password) {
     if (this._isAuthenticating) {
@@ -340,7 +340,7 @@ export class AuthService {
               const salt = this._generateSalt();
               const passwordHash = await this._hashPassword(password, salt);
               const freshAccounts = this._getAccounts();
-              freshAccounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
+              freshAccounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash, isServerAccount: true };
               this._saveAccounts(freshAccounts);
 
               if (this._eventBus) {
@@ -360,46 +360,18 @@ export class AuthService {
         }
       }
 
-      // Offline Fallback Registrierung
-      const userId = 'usr_' + Date.now().toString(36) + '_' + this._secureRandomHex(2);
-      const salt = this._generateSalt();
-      const passwordHash = await this._hashPassword(password, salt);
-
-      const newUser = {
-        id: userId,
-        username: cleanUsername,
-        email: cleanEmail,
-        isGuest: false,
-        avatar: '🛡️',
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
+      return {
+        success: false,
+        error: 'auth.error.server_unavailable',
+        message: 'Konto konnte nicht erstellt werden: Der Server ist nicht erreichbar.'
       };
-
-      accounts[userId] = {
-        ...newUser,
-        salt,
-        passwordHash
-      };
-
-      this._saveAccounts(accounts);
-
-      this._currentUser = newUser;
-      this._sessionToken = this._generateToken();
-      this._persistSession();
-
-      if (this._eventBus) {
-        this._eventBus.publish('auth:registered', { user: this._currentUser });
-        this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-      }
-
-      return { success: true, user: this._currentUser };
     } finally {
       this._isAuthenticating = false;
     }
   }
 
   /**
-   * Anmelden mit Benutzername/E-Mail und Passwort (mit Server-Anbindung)
+   * Meldet sich online an oder offline mit einem zuvor serverbestätigten lokalen Cache an.
    */
   async login(usernameOrEmail, password) {
     if (this._isAuthenticating) {
@@ -433,7 +405,7 @@ export class AuthService {
               const salt = this._generateSalt();
               const passwordHash = await this._hashPassword(password, salt);
               const accounts = this._getAccounts();
-              accounts[res.user.id] = { ...res.user, salt, passwordHash };
+              accounts[res.user.id] = { ...res.user, salt, passwordHash, isServerAccount: true };
               this._saveAccounts(accounts);
 
               if (this._eventBus) {
@@ -443,60 +415,13 @@ export class AuthService {
 
               return { success: true, user: this._currentUser };
             } else if (res.error) {
-              // Bei user_not_found oder Server-Fehler checken wir den lokalen Speicher
-              const accounts = this._getAccounts();
-              let targetAcc = null;
-              for (const key in accounts) {
-                const acc = accounts[key];
-                if ((acc.username && acc.username.toLowerCase() === query) || (acc.email && acc.email.toLowerCase() === query)) {
-                  targetAcc = acc;
-                  break;
-                }
-              }
-              if (targetAcc && targetAcc.passwordHash && targetAcc.salt) {
-                const hash = await this._hashPassword(password, targetAcc.salt);
-                if (hash === targetAcc.passwordHash) {
-                  targetAcc.lastLogin = new Date().toISOString();
-                  accounts[targetAcc.id] = targetAcc;
-                  this._saveAccounts(accounts);
-
-                  this._currentUser = {
-                    id: targetAcc.id,
-                    username: targetAcc.username,
-                    email: targetAcc.email,
-                    isGuest: false,
-                    avatar: targetAcc.avatar || '🛡️',
-                    createdAt: targetAcc.createdAt,
-                    lastLogin: targetAcc.lastLogin
-                  };
-
-                  this._sessionToken = targetAcc.sessionToken || this._generateToken();
-                  this._persistSession();
-
-                  // Asynchron im Hintergrund Server-Registrierung nachholen
-                  this._networkService.send('auth:register', {
-                    username: targetAcc.username,
-                    email: targetAcc.email || `${targetAcc.username}@local.archiv`,
-                    password: password
-                  });
-
-                  if (this._eventBus) {
-                    this._eventBus.publish('auth:login', { user: this._currentUser });
-                    this._eventBus.publish('auth:stateChanged', { user: this._currentUser, isLoggedIn: true });
-                  }
-
-                  return { success: true, user: this._currentUser };
-                } else {
-                  return { success: false, error: 'auth.error.wrong_password' };
-                }
-              }
               return { success: false, error: res.error };
             }
           }
         }
       }
 
-      // Offline Fallback Login (wenn Server offline oder Timeout)
+      // Offline-Login ist ausschließlich für zuvor serverbestätigte Konten zulässig.
       const accounts = this._getAccounts();
       let targetAcc = null;
 
@@ -508,8 +433,8 @@ export class AuthService {
         }
       }
 
-      if (!targetAcc) {
-        return { success: false, error: 'auth.error.user_not_found' };
+      if (!targetAcc || !targetAcc.isServerAccount) {
+        return { success: false, error: 'auth.error.server_unavailable' };
       }
 
       if (!targetAcc.passwordHash || !targetAcc.salt) {
@@ -537,15 +462,6 @@ export class AuthService {
 
       this._sessionToken = targetAcc.sessionToken || this._generateToken();
       this._persistSession();
-
-      // Falls jetzt Server verbunden ist, registriere das bisher nur lokal existierende Konto auf dem Server nach
-      if (this._networkService && this._networkService.isConnected()) {
-        this._networkService.send('auth:register', {
-          username: targetAcc.username,
-          email: targetAcc.email || `${targetAcc.username}@local.archiv`,
-          password: password
-        });
-      }
 
       if (this._eventBus) {
         this._eventBus.publish('auth:login', { user: this._currentUser });
@@ -612,7 +528,7 @@ export class AuthService {
             const salt = this._generateSalt();
             const passwordHash = await this._hashPassword(password, salt);
             const accounts = this._getAccounts();
-            accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash };
+            accounts[res.user.id] = { ...res.user, email: cleanEmail, salt, passwordHash, isServerAccount: true };
             this._saveAccounts(accounts);
             
             // Gast-ID aus LocalStorage entfernen

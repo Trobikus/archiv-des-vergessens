@@ -15,7 +15,7 @@
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { promises as fs } from 'fs';
-import { join, dirname, basename } from 'path';
+import { join, dirname, basename, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---- KONSTANTEN & CONFIG ----
 const PORT = process.env.PORT || 8080;
-const DATA_DIR = join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : join(__dirname, 'data');
 const SAVES_DIR = join(DATA_DIR, 'saves');
 const LEADERBOARD_FILE = join(DATA_DIR, 'leaderboard.json');
 const DB_FILE = join(DATA_DIR, 'database.db');
@@ -40,6 +40,7 @@ const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_KEYLEN = 64;
 const PBKDF2_DIGEST = 'sha512';
 const MAX_PASSWORD_LENGTH = 128;
+const MAX_CLOUD_SAVE_BYTES = 240 * 1024;
 
 // ---- GLOBALE STATS & DATABASE ----
 const clients = new Map(); // Map: WebSocket -> { userId, username, sessionToken }
@@ -621,6 +622,23 @@ function checkRateLimit(ip) {
   return { allowed: true };
 }
 
+function hasActiveRegisteredSession(clientInfo) {
+  if (!clientInfo?.userId || !clientInfo.sessionToken || clientInfo.isGuest) {
+    return false;
+  }
+
+  return Boolean(db.prepare('SELECT id FROM users WHERE id = ? AND sessionToken = ?').get(
+    clientInfo.userId,
+    clientInfo.sessionToken
+  ));
+}
+
+function requireRegisteredSession(ws, clientInfo, eventNamespace) {
+  if (hasActiveRegisteredSession(clientInfo)) return true;
+  send(ws, `${eventNamespace}:error`, { error: 'Nicht authentifiziert oder Sitzung abgelaufen.' });
+  return false;
+}
+
 // ============================================================
 // SERVER ERSTELLEN
 // ============================================================
@@ -1160,40 +1178,12 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'chat:guild': {
-          if (!clientInfo.userId) return;
-          const rawGuildId = typeof payload?.guildId === 'string' ? payload.guildId : '';
-          const cleanGuildId = sanitize(rawGuildId, 64);
-          if (!cleanGuildId) return;
+          send(ws, 'chat:error', { error: 'Gildenchat ist ohne serverseitige Mitgliedschaftsverwaltung deaktiviert.' });
+          break;
+        }
 
-          const rawText = typeof payload?.message === 'string' ? payload.message : '';
-          const text = sanitize(rawText, 200);
-          if (!text) return;
-
-          const msg = {
-            id: Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
-            player: clientInfo.username,
-            message: text,
-            timestamp: Date.now(),
-            type: 'guild',
-            guildId: cleanGuildId
-          };
-
-          try {
-            if (stmts.insertChat) {
-              stmts.insertChat.run(msg.id, msg.player, msg.message, msg.timestamp, 'guild', msg.guildId);
-            } else {
-              db.prepare(`
-                INSERT INTO chats (id, player, message, timestamp, type, guildId)
-                VALUES (?, ?, ?, ?, 'guild', ?)
-              `).run(msg.id, msg.player, msg.message, msg.timestamp, msg.guildId);
-            }
-            pruneChatHistory(500);
-          } catch (err) {
-            console.error('[Chat] Fehler beim Speichern der Gilden-Nachricht:', err);
-          }
-
-          console.log(`[Chat:Guild:${cleanGuildId}] ${clientInfo.username}: ${text}`);
-          broadcast('chat:guildMessage', msg);
+        case 'chat:clan': {
+          send(ws, 'chat:error', { error: 'Clan-Chat wird serverseitig noch nicht unterstützt.' });
           break;
         }
 
@@ -1201,10 +1191,12 @@ wss.on('connection', (ws, req) => {
           try {
             const rawGuildId = typeof payload?.guildId === 'string' ? payload.guildId : null;
             const guildId = rawGuildId ? sanitize(rawGuildId, 64) : null;
+            if (guildId) {
+              send(ws, 'chat:error', { error: 'Gilden-Chatverlauf ist ohne serverseitige Mitgliedschaftsverwaltung nicht verfügbar.' });
+              break;
+            }
             let rows;
-            if (guildId && stmts.getGuildChatHistory) {
-              rows = stmts.getGuildChatHistory.all(guildId, 50);
-            } else if (stmts.getGlobalChatHistory) {
+            if (stmts.getGlobalChatHistory) {
               rows = stmts.getGlobalChatHistory.all(50);
             } else {
               rows = db.prepare('SELECT id, player, message, timestamp, type FROM chats WHERE type = "global" ORDER BY timestamp DESC LIMIT 50').all();
@@ -1219,8 +1211,7 @@ wss.on('connection', (ws, req) => {
 
         // ---- 3. CLOUD-SAVES ----
         case 'cloud:save': {
-          if (!clientInfo.userId) {
-            send(ws, 'cloud:save:error', { error: 'Nicht authentifiziert.' });
+          if (!requireRegisteredSession(ws, clientInfo, 'cloud:save')) {
             return;
           }
 
@@ -1241,7 +1232,18 @@ wss.on('connection', (ws, req) => {
             }
 
             // [Sicherheit] Payload Limit für Spielstände (2 MB = 2.000.000 B)
-            if (saveDataStr.length > 2_000_000) {
+            try {
+              const parsedSave = JSON.parse(saveDataStr);
+              if (!parsedSave || typeof parsedSave !== 'object' || Array.isArray(parsedSave)) {
+                throw new Error('Save data must be an object.');
+              }
+            } catch {
+              send(ws, 'cloud:save:error', { error: 'Speicherdaten müssen ein gültiges JSON-Objekt sein.' });
+              return;
+            }
+
+            // Reserve protocol overhead below the WebSocket's 256 KiB payload limit.
+            if (Buffer.byteLength(saveDataStr, 'utf8') > MAX_CLOUD_SAVE_BYTES) {
               send(ws, 'cloud:save:error', { error: 'Speicherstand zu groß.' });
               return;
             }
@@ -1272,8 +1274,7 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'cloud:load': {
-          if (!clientInfo.userId) {
-            send(ws, 'cloud:load:error', { error: 'Nicht authentifiziert.' });
+          if (!requireRegisteredSession(ws, clientInfo, 'cloud:load')) {
             return;
           }
 
@@ -1301,7 +1302,7 @@ wss.on('connection', (ws, req) => {
 
         // ---- 4. GLOBAL LEADERBOARD ----
         case 'leaderboard:submit': {
-          if (!clientInfo.userId || clientInfo.isGuest) return;
+          if (!requireRegisteredSession(ws, clientInfo, 'leaderboard')) return;
 
           // Nur registrierte Benutzer zulassen
           const isRegisteredUser = stmts.getUserById ? stmts.getUserById.get(clientInfo.userId) : db.prepare('SELECT id FROM users WHERE id = ?').get(clientInfo.userId);
