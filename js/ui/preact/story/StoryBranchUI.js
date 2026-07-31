@@ -3,7 +3,7 @@
  * FILE: ui/preact/story/StoryBranchUI.js – Cinematic Story Branches
  * ============================================================
  * Fullscreen narrative player for story_branches.js nodes.
- * Uses cinematic_scenes.js for atmosphere per node.
+ * Uses cinematic_scenes.js + cinematic_assets.js for atmosphere.
  * ============================================================
  */
 
@@ -40,7 +40,6 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
 
   if (!isOpen || !storyBranchService) return null;
 
-  // tick forces re-read after chooseOption
   void tick;
 
   const node = storyBranchService.getCurrentNode();
@@ -48,7 +47,9 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
 
   const options = storyBranchService.getAvailableOptions();
   const scene = resolveSceneForStoryNode(node);
-  const glow = scene.glowColor || 'var(--color-primary)';
+  const assets = scene.assets || {};
+  const portrait = assets.portrait || null;
+  const glow = portrait?.glow || scene.glowColor || 'var(--color-primary)';
   const bgStyle = scene.background || 'rgba(5,5,7,0.97)';
   const ambientClass = scene.ambientClass || '';
   const vignetteClass =
@@ -85,6 +86,7 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
 
   const title = node.title || '';
   const text = node.text || '';
+  const portraitEmoji = portrait?.emoji || '🕯️';
 
   return html`
     <div
@@ -102,6 +104,10 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
           style="position: absolute; top: -2.5rem; left: 0; right: 0; font-size: 0.7rem; color: rgba(255,255,255,0.35); letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-header, Cinzel, serif);"
         >
           ${lang === 'de' ? 'Chronik' : 'Chronicle'} · ${progress}%
+        </div>
+
+        <div style="font-size: 4.5rem; margin-bottom: 0.8rem; filter: drop-shadow(0 0 22px ${glow});">
+          ${portraitEmoji}
         </div>
 
         <div
