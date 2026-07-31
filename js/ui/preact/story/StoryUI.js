@@ -81,6 +81,11 @@ export function StoryUI({ stateManager, eventBus, services }) {
     if (next >= 1 && next <= 10) setCurrentChapter(next);
   };
 
+  const openChronicle = () => {
+    setIsOpen(false);
+    eventBus.publish(EVENTS.UI_OPEN_STORY_BRANCH);
+  };
+
   const getLogColorClass = (type) => {
     switch (type) {
       case 'spell-spear': return '#ff9999';
@@ -101,6 +106,14 @@ export function StoryUI({ stateManager, eventBus, services }) {
       <div class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 90vh;" onClick=${(e) => e.stopPropagation()}>
         <button class="modal-close" id="story-close" style="z-index: 1001;" onClick=${() => setIsOpen(false)}>×</button>
         <h2 class="story-modal-title glow-text text-gold cinzel text-center">📖 STORY & BOSSE 📖</h2>
+
+        ${!isBossFightActive ? html`
+          <div style="display: flex; justify-content: center; margin-bottom: 0.8rem;">
+            <button class="glass-btn primary cinzel" style="padding: 0.7rem 1.8rem; font-size: 0.95rem; letter-spacing: 1px;" onClick=${openChronicle}>
+              🕯️ Chronik öffnen
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Kapitel-Navigation (ausblenden während eines aktiven Kampfes für besseren Fokus) -->
         ${!isBossFightActive ? html`
