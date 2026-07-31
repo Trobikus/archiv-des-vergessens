@@ -270,11 +270,35 @@ export async function bootGame() {
       const localTimestamp = currentState?.system?.lastSave || currentState?.system?.originalLastSave || 0;
       const cloudTimestamp = timestamp || saveData?.system?.lastSave || 0;
 
-      // Prio 2: Prüfe, ob lokaler Spielstand neuer ist (z. B. offline gespielt)
+      const progressScore = (s) => {
+        if (!s || typeof s !== 'object') return 0;
+        const level = Number(s.hero?.level) || 0;
+        const prestige = Number(s.hero?.prestige?.level) || 0;
+        const particles = Number(s.resources?.totalParticles || s.resources?.particles || 0);
+        const relics = Number(s.resources?.totalRelics || s.resources?.relics || 0);
+        return prestige * 1e12 + level * 1e6 + (Number.isFinite(particles) ? particles : 0) + (Number.isFinite(relics) ? relics * 10 : 0);
+      };
+
+      const localScore = progressScore(currentState);
+      const cloudScore = progressScore(saveData);
+      const localLooksReal = localScore > 1e6 || (currentState?.hero?.name && currentState.hero.name !== 'Der Mneme-Bund');
+
+      // Prio 2: Lokaler Spielstand neuer ODER deutlich fortschrittlicher als Cloud
       if (localTimestamp > cloudTimestamp + 2000) {
         logger.info(`[CloudManager] Lokaler Spielstand (${localTimestamp}) ist neuer als Cloud (${cloudTimestamp}). Aktualisiere Cloud.`);
         eventBus.publish('ui:showToast', {
           message: 'ℹ️ Lokaler Spielstand war neuer – Cloud wurde aktualisiert.',
+          type: 'info',
+          duration: 4000
+        });
+        cloudManager.sync(currentState);
+        return;
+      }
+
+      if (localLooksReal && localScore > cloudScore * 1.05 + 1e6) {
+        logger.info(`[CloudManager] Lokaler Fortschritt (score=${localScore}) übertrifft Cloud (score=${cloudScore}). Behalte lokal.`);
+        eventBus.publish('ui:showToast', {
+          message: 'ℹ️ Vollständigerer lokaler Spielstand behalten – Cloud wird aktualisiert.',
           type: 'info',
           duration: 4000
         });

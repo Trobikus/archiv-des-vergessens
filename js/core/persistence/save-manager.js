@@ -19,6 +19,8 @@ import { logger } from '../logger.js';
 const DB_NAME = 'ArchivDB';
 const STORE_NAME = 'saves';
 const SAVE_KEY = 'main_save';
+const LEGACY_VAULT_KEY = 'account_vault';
+const DB_VERSION = 3;
 const LATEST_VERSION = APP_VERSION;
 
 export class SaveManager {
@@ -103,27 +105,165 @@ export class SaveManager {
     }
   }
 
+  static _resolveUserId(userId = null) {
+    if (userId) return userId;
+    if (!this._services?.authService) return null;
+    const u = this._services.authService.getCurrentUser();
+    if (u && !u.isGuest) return u.id || u.username || null;
+    return null;
+  }
+
+  static _getUserIdentity() {
+    if (!this._services?.authService) return { id: null, username: null };
+    const u = this._services.authService.getCurrentUser();
+    if (!u || u.isGuest) return { id: null, username: null };
+    return {
+      id: u.id || null,
+      username: u.username || null
+    };
+  }
+
   static _getSlotKey(slotId = this.getActiveSlot(), userId = null) {
-    let uId = userId;
-    if (!uId && this._services?.authService) {
-      const u = this._services.authService.getCurrentUser();
-      if (u && !u.isGuest) uId = u.id || u.username;
-    }
+    const uId = this._resolveUserId(userId);
     return uId ? `slot_u${uId}_${slotId}` : `slot_guest_${slotId}`;
+  }
+
+  /**
+   * Kandidaten-Keys für einen Slot (inkl. Username-Fallback bei ID-Wechsel).
+   */
+  static _getSlotKeyCandidates(slotId = this.getActiveSlot(), userId = null) {
+    const keys = [];
+    const primary = this._getSlotKey(slotId, userId);
+    keys.push(primary);
+
+    const identity = this._getUserIdentity();
+    if (identity.id && identity.username && identity.id !== identity.username) {
+      const alt = `slot_u${identity.username}_${slotId}`;
+      if (!keys.includes(alt)) keys.push(alt);
+    }
+    if (userId && identity.username && userId !== identity.username) {
+      const alt = `slot_u${identity.username}_${slotId}`;
+      if (!keys.includes(alt)) keys.push(alt);
+    }
+
+    return keys;
+  }
+
+  static async _getFromStore(db, key) {
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  /**
+   * Schreibt einen Record kompatibel zu Stores mit und ohne keyPath.
+   * Alte DBs (v2 ohne keyPath) brauchen den expliziten Key; neue DBs den keyPath.
+   */
+  static _putIntoStore(store, record, key) {
+    const keyedRecord = { ...record, key };
+    if (store.keyPath === 'key') {
+      return store.put(keyedRecord);
+    }
+    return store.put(keyedRecord, key);
+  }
+
+  static async _putRecord(db, key, record) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = this._putIntoStore(store, record, key);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  static async _deleteRecord(db, key) {
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.delete(key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => resolve(false);
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Migriert Legacy-Keys (main_save / username-Slot) einmalig auf den kanonischen Slot-Key.
+   */
+  static async _promoteRecordToSlot(db, storedData, targetKey, sourceKey = null) {
+    if (!storedData || !storedData.state || !targetKey) return storedData;
+    if (sourceKey && sourceKey === targetKey) return storedData;
+
+    try {
+      const promoted = {
+        ...storedData,
+        key: targetKey
+      };
+      await this._putRecord(db, targetKey, promoted);
+      if (sourceKey && sourceKey !== targetKey) {
+        await this._deleteRecord(db, sourceKey);
+        logger.info(`[SaveManager] Legacy-Spielstand von "${sourceKey}" nach "${targetKey}" migriert.`);
+      }
+      return promoted;
+    } catch (e) {
+      logger.warn('[SaveManager] Legacy-Migration fehlgeschlagen, nutze Quelldaten weiter:', e);
+      return storedData;
+    }
+  }
+
+  /**
+   * Liest einen Slot inkl. Legacy-Fallbacks (username-Key, main_save).
+   */
+  static async _loadSlotRecord(db, slotId, userId = null) {
+    const candidates = this._getSlotKeyCandidates(slotId, userId);
+    const targetKey = candidates[0];
+
+    for (const key of candidates) {
+      const storedData = await this._getFromStore(db, key);
+      if (storedData && storedData.state) {
+        if (key !== targetKey) {
+          return this._promoteRecordToSlot(db, storedData, targetKey, key);
+        }
+        return storedData;
+      }
+    }
+
+    // Pre-Multi-Slot Legacy: globaler main_save → Slot 1
+    if (slotId === 1) {
+      const legacy = await this._getFromStore(db, SAVE_KEY);
+      if (legacy && legacy.state) {
+        return this._promoteRecordToSlot(db, legacy, targetKey, SAVE_KEY);
+      }
+    }
+
+    return null;
   }
 
   static async _getDB() {
     if (this._db && this._dbReady) return this._db;
     
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, 2);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
       
       request.onupgradeneeded = (event) => {
         const db = request.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: 'key' });
         }
-        logger.info('[SaveManager] Datenbank aktualisiert');
+        // Bestehende Stores ohne keyPath bleiben erhalten; _putIntoStore schreibt dual-kompatibel.
+        logger.info(`[SaveManager] Datenbank aktualisiert (v${event.oldVersion} → v${DB_VERSION})`);
       };
 
       request.onblocked = (event) => {
@@ -164,15 +304,7 @@ export class SaveManager {
     const slots = [];
 
     for (let i = 1; i <= 5; i++) {
-      const key = this._getSlotKey(i, userId);
-      
-      let storedData = await new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.get(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => resolve(null);
-      });
+      const storedData = await this._loadSlotRecord(db, i, userId);
 
       if (storedData && storedData.state) {
         const st = storedData.state;
@@ -252,13 +384,7 @@ export class SaveManager {
       }
       saveData._checksum = checksum;
 
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.put(saveData);
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject(req.error);
-      });
+      await this._putRecord(db, slotKey, saveData);
 
       if (this._services?.stateManager) {
         this._services.stateManager.dispatch((s) => ({
@@ -309,15 +435,7 @@ export class SaveManager {
     let state = null;
     try {
       const db = await this._getDB();
-      const slotKey = this._getSlotKey(slotId);
-
-      let storedData = await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.get(slotKey);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
+      let storedData = await this._loadSlotRecord(db, slotId);
 
       if (storedData) {
         if (storedData._checksum) {
@@ -374,14 +492,8 @@ export class SaveManager {
 
     try {
       const db = await this._getDB();
-      const slotKey = this._getSlotKey(slotId);
-      return new Promise((resolve) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.count(slotKey);
-        req.onsuccess = () => resolve(req.result > 0);
-        req.onerror = () => resolve(false);
-      });
+      const storedData = await this._loadSlotRecord(db, slotId);
+      return !!(storedData && storedData.state);
     } catch {
       return false;
     }
@@ -421,11 +533,7 @@ export class SaveManager {
   }
 
   static _getVaultKey(userId = null) {
-    let uId = userId;
-    if (!uId && this._services?.authService) {
-      const u = this._services.authService.getCurrentUser();
-      if (u && !u.isGuest) uId = u.id || u.username;
-    }
+    const uId = this._resolveUserId(userId);
     return uId ? `vault_u${uId}` : `vault_guest`;
   }
 
@@ -451,12 +559,10 @@ export class SaveManager {
       const vaultKey = this._getVaultKey(userId);
       const safeData = JSON.parse(JSON.stringify(vaultData || {}));
 
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.put({ key: vaultKey, timestamp: Date.now(), vaultData: safeData });
-        req.onsuccess = () => resolve(true);
-        req.onerror = () => reject(req.error);
+      await this._putRecord(db, vaultKey, {
+        key: vaultKey,
+        timestamp: Date.now(),
+        vaultData: safeData
       });
 
       return true;
@@ -478,15 +584,38 @@ export class SaveManager {
   static async loadAccountVault(userId = null) {
     try {
       const db = await this._getDB();
-      const transaction = db.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
       const vaultKey = this._getVaultKey(userId);
+      let record = await this._getFromStore(db, vaultKey);
 
-      return new Promise((resolve) => {
-        const request = store.get(vaultKey);
-        request.onsuccess = () => resolve(request.result ? request.result.vaultData : null);
-        request.onerror = () => resolve(null);
-      });
+      // Legacy-Fallback: unscoped account_vault → nutzerbezogener Key
+      if ((!record || !record.vaultData) && vaultKey !== 'vault_guest') {
+        const legacy = await this._getFromStore(db, LEGACY_VAULT_KEY);
+        if (legacy && legacy.vaultData) {
+          await this._putRecord(db, vaultKey, {
+            ...legacy,
+            key: vaultKey
+          });
+          await this._deleteRecord(db, LEGACY_VAULT_KEY);
+          logger.info(`[SaveManager] Legacy-Account-Vault nach "${vaultKey}" migriert.`);
+          record = { ...legacy, key: vaultKey };
+        }
+      }
+
+      // Username-Fallback analog zu Slot-Keys
+      if ((!record || !record.vaultData)) {
+        const identity = this._getUserIdentity();
+        if (identity.id && identity.username && identity.id !== identity.username) {
+          const altKey = `vault_u${identity.username}`;
+          const alt = await this._getFromStore(db, altKey);
+          if (alt && alt.vaultData) {
+            await this._putRecord(db, vaultKey, { ...alt, key: vaultKey });
+            await this._deleteRecord(db, altKey);
+            record = { ...alt, key: vaultKey };
+          }
+        }
+      }
+
+      return record ? record.vaultData : null;
     } catch (e) {
       logger.error('[SaveManager] Fehler beim Laden des Account-Lagers:', e);
       return null;
