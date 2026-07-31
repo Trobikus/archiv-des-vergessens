@@ -68,12 +68,11 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
    2. AMBIENT OVERLAYS & VIGNETTES
    ============================================================ */
 
-/* Fullscreen tinting depending on path */
 .path-ambient-overlay {
     position: fixed;
     inset: 0;
     pointer-events: none;
-    z-index: 1; /* Below UI, above canvas */
+    z-index: 1;
     background: radial-gradient(circle at 50% 30%, var(--color-ambient-fog) 0%, transparent 60%);
     mix-blend-mode: screen;
     animation: ambientPulse 8s ease-in-out infinite alternate;
@@ -84,7 +83,6 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     100% { opacity: 1; transform: scale(1.02); }
 }
 
-/* Heavy vignette for dramatic moments */
 .story-vignette {
     position: fixed;
     inset: 0;
@@ -99,7 +97,7 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
 }
 
 /* ============================================================
-   3. CINEMATIC OVERLAY (Dialogs / Cutscenes)
+   3. CINEMATIC OVERLAY – ENTER / EXIT / LETTERBOX
    ============================================================ */
 
 .cinematic-overlay {
@@ -113,19 +111,37 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     align-items: center;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    animation: fadeInCinematic 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 0;
+    animation: cinEnter 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+.cinematic-overlay.cin-exit {
+    animation: cinExit 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
+    pointer-events: none;
+}
+
+@keyframes cinEnter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes cinExit {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Letterbox bars – same element carries .cinematic-bars.cinematic-active */
 .cinematic-bars::before,
 .cinematic-bars::after {
     content: '';
     position: fixed;
     left: 0;
     width: 100%;
-    height: 12vh;
+    height: 11vh;
     background: #000;
-    z-index: 9001;
-    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 9010;
+    pointer-events: none;
+    transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cinematic-bars::before {
@@ -137,59 +153,156 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     transform: translateY(100%);
 }
 
-.cinematic-active .cinematic-bars::before {
-    transform: translateY(0);
-}
-.cinematic-active .cinematic-bars::after {
+.cinematic-bars.cinematic-active::before,
+.cinematic-bars.cinematic-active::after {
     transform: translateY(0);
 }
 
-@keyframes fadeInCinematic {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.cinematic-overlay.cin-exit.cinematic-bars::before {
+    transform: translateY(-100%);
+    transition-duration: 0.4s;
+}
+.cinematic-overlay.cin-exit.cinematic-bars::after {
+    transform: translateY(100%);
+    transition-duration: 0.4s;
 }
 
 /* ============================================================
-   3b. CINEMATIC SCENE THEMES (Step 1)
+   3b. CONTENT REVEAL STAGGER
    ============================================================ */
 
-/* Vignette intensities for cinematic overlays */
-.cinematic-vignette-medium::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
-    z-index: 9002;
+.cinematic-content {
+    position: relative;
+    z-index: 9005;
+    opacity: 0;
+    transform: translateY(18px);
+    animation: cinContentIn 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s forwards;
 }
 
-.cinematic-vignette-heavy::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.75) 100%);
-    z-index: 9002;
+@keyframes cinContentIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
+.cin-portrait {
+    opacity: 0;
+    transform: scale(0.7);
+    animation: cinPortraitIn 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) 0.45s forwards;
+}
+
+@keyframes cinPortraitIn {
+    from { opacity: 0; transform: scale(0.7) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cin-scene-label {
+    opacity: 0;
+    animation: cinFadeUp 0.55s ease-out 0.55s forwards;
+}
+
+.cin-title {
+    opacity: 0;
+    animation: cinFadeUp 0.6s ease-out 0.65s forwards;
+}
+
+.cin-text {
+    opacity: 0;
+    animation: cinFadeUp 0.65s ease-out 0.8s forwards;
+}
+
+.cin-options {
+    opacity: 0;
+    animation: cinFadeUp 0.55s ease-out 1.0s forwards;
+}
+
+.cin-options .glass-btn {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: cinOptionIn 0.45s ease-out forwards;
+}
+.cin-options .glass-btn:nth-child(1) { animation-delay: 1.05s; }
+.cin-options .glass-btn:nth-child(2) { animation-delay: 1.15s; }
+.cin-options .glass-btn:nth-child(3) { animation-delay: 1.25s; }
+.cin-options .glass-btn:nth-child(4) { animation-delay: 1.35s; }
+.cin-options .glass-btn:nth-child(5) { animation-delay: 1.45s; }
+.cin-options .glass-btn:nth-child(6) { animation-delay: 1.55s; }
+
+@keyframes cinFadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cinOptionIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Node-Wechsel: kurzer Crossfade */
+.cinematic-content.cin-node-swap {
+    animation: cinNodeSwap 0.4s ease-out forwards;
+}
+
+@keyframes cinNodeSwap {
+    0% { opacity: 0.3; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   3c. VIGNETTE INTENSITIES
+   ============================================================ */
+
+.cinematic-vignette-medium::after,
+.cinematic-vignette-heavy::after,
 .cinematic-vignette-extreme::after {
     content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.88) 100%);
     z-index: 9002;
+    opacity: 0;
+    animation: cinVignetteIn 1s ease-out 0.2s forwards;
 }
 
-/* Scene: Archive Halls (Theron) */
+@keyframes cinVignetteIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.cinematic-vignette-medium::after {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
+}
+
+.cinematic-vignette-heavy::after {
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.75) 100%);
+}
+
+.cinematic-vignette-extreme::after {
+    background: radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.88) 100%);
+}
+
+/* ============================================================
+   3d. SCENE THEMES + AMBIENT FX
+   ============================================================ */
+
+/* Archive Halls (Theron) */
 .scene-archive-halls {
     --scene-accent: #c5a059;
 }
 .scene-archive-halls .cinematic-content {
-    animation: sceneFloat 6s ease-in-out infinite alternate;
+    animation: cinContentIn 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s forwards,
+               sceneFloat 6s ease-in-out 1.2s infinite alternate;
+}
+.scene-archive-halls .cin-particles {
+    background-image:
+      radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,223,100,0.7), transparent),
+      radial-gradient(1px 1px at 60% 70%, rgba(212,175,55,0.5), transparent),
+      radial-gradient(1.5px 1.5px at 80% 20%, rgba(230,190,110,0.6), transparent),
+      radial-gradient(1px 1px at 40% 50%, rgba(197,160,89,0.4), transparent);
+    background-size: 220px 220px;
+    animation: particleDrift 18s linear infinite;
 }
 
-/* Scene: Shadow Niche (Mira) */
+/* Shadow Niche (Mira) */
 .scene-shadow-niche {
     --scene-accent: #b432ff;
 }
@@ -197,32 +310,64 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 20% 80%, rgba(100,30,180,0.12) 0%, transparent 50%);
+    background: radial-gradient(circle at 20% 80%, rgba(100,30,180,0.14) 0%, transparent 50%);
     pointer-events: none;
     z-index: 9001;
+    animation: ambientPulse 6s ease-in-out infinite alternate;
+}
+.scene-shadow-niche .cin-particles {
+    background-image:
+      radial-gradient(2px 2px at 15% 40%, rgba(180,50,255,0.55), transparent),
+      radial-gradient(1.5px 1.5px at 70% 60%, rgba(140,80,240,0.45), transparent),
+      radial-gradient(2px 2px at 50% 20%, rgba(100,30,180,0.4), transparent);
+    background-size: 180px 180px;
+    animation: particleSmoke 12s ease-in-out infinite alternate;
 }
 
-/* Scene: Iron Gates (Elara) */
+/* Iron Gates (Elara) */
 .scene-iron-gates {
     --scene-accent: #a9b3c0;
 }
 .scene-iron-gates .cinematic-content {
     filter: drop-shadow(0 0 12px rgba(160,170,190,0.25));
 }
+.scene-iron-gates .cin-particles {
+    background-image:
+      radial-gradient(1px 1px at 30% 40%, rgba(200,210,230,0.8), transparent),
+      radial-gradient(1.5px 1.5px at 65% 25%, rgba(255,160,80,0.5), transparent),
+      radial-gradient(1px 1px at 80% 70%, rgba(160,170,190,0.5), transparent);
+    background-size: 160px 160px;
+    animation: particleSparks 8s linear infinite;
+}
 
-/* Scene: Void Whisper (Nyx) */
+/* Void Whisper (Nyx) */
 .scene-void-whisper {
     --scene-accent: #9b30ff;
-}
-.scene-void-whisper {
     animation: voidPulse 5s ease-in-out infinite alternate;
 }
 @keyframes voidPulse {
     0% { filter: brightness(0.95); }
     100% { filter: brightness(1.08); }
 }
+.scene-void-whisper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(60,20,100,0.22) 0%, transparent 45%);
+    pointer-events: none;
+    z-index: 9001;
+    animation: voidPulse 5s ease-in-out infinite alternate;
+}
+.scene-void-whisper .cin-particles {
+    background-image:
+      radial-gradient(3px 3px at 40% 50%, rgba(155,48,255,0.35), transparent),
+      radial-gradient(2px 2px at 60% 30%, rgba(80,20,120,0.4), transparent),
+      radial-gradient(2.5px 2.5px at 25% 70%, rgba(40,10,70,0.5), transparent);
+    background-size: 250px 250px;
+    animation: particleVoid 14s ease-in-out infinite alternate;
+}
 
-/* Scene: Ash Field (Prologue) */
+/* Ash Field (Prologue) */
 .scene-ash-field {
     --scene-accent: #c5a059;
 }
@@ -237,13 +382,29 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     pointer-events: none;
     z-index: 9001;
 }
+.scene-ash-field .cin-particles {
+    background-image:
+      radial-gradient(1.5px 1.5px at 20% 10%, rgba(210,210,220,0.7), transparent),
+      radial-gradient(1px 1px at 55% 40%, rgba(255,200,120,0.4), transparent),
+      radial-gradient(1.5px 1.5px at 80% 60%, rgba(169,169,179,0.5), transparent);
+    background-size: 200px 200px;
+    animation: ashFall 20s linear infinite;
+}
 
-/* Scene: Ash Garden (Malakor) */
+/* Ash Garden (Malakor) */
 .scene-ash-garden {
     --scene-accent: #d4af37;
 }
+.scene-ash-garden .cin-particles {
+    background-image:
+      radial-gradient(1.5px 1.5px at 35% 30%, rgba(220,230,255,0.7), transparent),
+      radial-gradient(1px 1px at 70% 55%, rgba(255,215,100,0.6), transparent),
+      radial-gradient(1.5px 1.5px at 15% 75%, rgba(212,175,55,0.45), transparent);
+    background-size: 170px 170px;
+    animation: particleShatter 10s ease-in-out infinite alternate;
+}
 
-/* Scene: Eye of the Archive (Confrontation) */
+/* Eye of the Archive (Confrontation) */
 .scene-eye-of-archive {
     --scene-accent: var(--color-primary);
 }
@@ -256,11 +417,67 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
       radial-gradient(circle at 70% 60%, rgba(140,40,200,0.1) 0%, transparent 40%);
     pointer-events: none;
     z-index: 9001;
+    animation: ambientPulse 7s ease-in-out infinite alternate;
+}
+.scene-eye-of-archive .cin-particles {
+    background-image:
+      radial-gradient(1.5px 1.5px at 25% 35%, rgba(255,223,100,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 75% 55%, rgba(140,50,220,0.6), transparent),
+      radial-gradient(1px 1px at 50% 20%, rgba(197,160,89,0.5), transparent),
+      radial-gradient(1px 1px at 40% 80%, rgba(180,50,255,0.45), transparent);
+    background-size: 200px 200px;
+    animation: particleDual 15s linear infinite;
+}
+
+/* Shared particle layer */
+.cin-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9003;
+    opacity: 0.55;
+    mix-blend-mode: screen;
 }
 
 @keyframes sceneFloat {
     0% { transform: translateY(0); }
     100% { transform: translateY(-6px); }
+}
+
+@keyframes particleDrift {
+    0% { background-position: 0 0, 40px 20px, 80px 60px, 10px 90px; }
+    100% { background-position: 40px -80px, 80px -60px, 120px -40px, 50px -100px; }
+}
+
+@keyframes particleSmoke {
+    0% { background-position: 0 0, 30px 40px, 60px 10px; opacity: 0.4; }
+    100% { background-position: -30px -50px, 10px -30px, 90px -70px; opacity: 0.65; }
+}
+
+@keyframes particleSparks {
+    0% { background-position: 0 100%, 50px 80%, 90px 90%; }
+    100% { background-position: 20px -20%, 70px -40%, 110px -10%; }
+}
+
+@keyframes particleVoid {
+    0% { background-position: 0 0, 40px 30px, 80px 60px; transform: scale(1); }
+    100% { background-position: 30px 20px, 10px 50px, 60px 10px; transform: scale(1.05); }
+}
+
+@keyframes particleShatter {
+    0% { background-position: 0 0, 20px 30px, 50px 10px; }
+    50% { background-position: 15px -15px, 5px 45px, 70px -5px; }
+    100% { background-position: -10px 20px, 40px 5px, 30px 40px; }
+}
+
+@keyframes particleDual {
+    0% { background-position: 0 0, 100px 50px, 50px 100px, 80px 20px; }
+    100% { background-position: 60px -80px, 40px 130px, 110px 20px, 20px -60px; }
+}
+
+@keyframes ashFall {
+    0% { background-position: 0 0; }
+    100% { background-position: -200px 1000px; }
 }
 
 /* ============================================================
@@ -278,7 +495,6 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     overflow: hidden;
 }
 
-/* Character Dissolving Effect */
 .character-dissolve {
     filter: drop-shadow(0 0 20px var(--color-primary));
     animation: dissolveEntity 4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -290,7 +506,6 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     100% { filter: blur(20px) brightness(3); opacity: 0; transform: scale(1.5); }
 }
 
-/* Ash Rain Overlay */
 .ash-rain {
     position: absolute;
     inset: 0;
@@ -302,12 +517,6 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     pointer-events: none;
 }
 
-@keyframes ashFall {
-    0% { background-position: 0 0; }
-    100% { background-position: -200px 1000px; }
-}
-
-/* The Grand Seal */
 .prestige-seal {
     font-family: var(--font-header);
     font-size: 5rem;
@@ -421,7 +630,6 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     letter-spacing: 2px;
 }
 
-/* Pact Burn - When selecting a dark pact */
 .pact-burn-effect {
     position: relative;
     overflow: hidden;
@@ -505,25 +713,57 @@ body:not(.path-guardian):not(.path-shadow):not(.path-lone) {
     .prestige-seal {
         font-size: 3rem;
     }
-    
+
     .lore-node-panel {
         padding: 1.2rem;
     }
-    
+
     .lore-node-title {
         font-size: 1.2rem;
     }
-    
+
     .feature-unlock-toast {
         padding: 1.5rem 2rem;
         width: 90vw;
     }
-    
+
     .feature-unlock-toast .unlock-icon {
         font-size: 3rem;
     }
-    
+
     .feature-unlock-toast h3 {
         font-size: 1.4rem;
+    }
+
+    .cinematic-bars::before,
+    .cinematic-bars::after {
+        height: 8vh;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .cinematic-overlay,
+    .cinematic-content,
+    .cin-portrait,
+    .cin-scene-label,
+    .cin-title,
+    .cin-text,
+    .cin-options,
+    .cin-options .glass-btn,
+    .cin-particles,
+    .scene-archive-halls .cinematic-content,
+    .scene-void-whisper,
+    .scene-ash-field::before {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+    }
+
+    .cinematic-bars::before,
+    .cinematic-bars::after {
+        transform: translateY(0) !important;
+        transition: none !important;
     }
 }
