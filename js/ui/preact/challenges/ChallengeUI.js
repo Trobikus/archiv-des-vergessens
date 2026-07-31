@@ -16,7 +16,20 @@ export function ChallengeUI({ stateManager, eventBus, services }) {
   const activeChallenge = useStateSelector(stateManager, (state) => state.challenges.active);
   const completed = useStateSelector(stateManager, (state) => state.challenges.completed);
 
-  useEventBus(eventBus, 'ui:openChallenges', () => setIsOpen(true));
+  useEventBus(eventBus, 'ui:openChallenges', () => {
+    const state = stateManager.getState();
+    const bossProgress = state.hero?.prestige?.bossProgress || 0;
+    const prestigeLevel = state.hero?.prestige?.level || 0;
+    if (prestigeLevel > 0 || bossProgress >= 20) {
+      setIsOpen(true);
+    } else {
+      eventBus.publish('ui:showToast', {
+        message: '🔒 Anomalien werden erst nach der ersten Verewigung (Prestige) freigeschaltet!',
+        type: 'warning',
+        duration: 3000
+      });
+    }
+  });
   useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'challenge:started', () => {});
   useEventBus(eventBus, 'challenge:completed', () => {});

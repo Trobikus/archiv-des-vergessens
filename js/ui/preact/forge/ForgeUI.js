@@ -29,7 +29,20 @@ export function ForgeUI({ stateManager, eventBus, services }) {
   const hero = useStateSelector(stateManager, (state) => state.hero);
   const recipes = forgeService.getRecipes();
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_FORGE, () => setIsOpen(true));
+  useEventBus(eventBus, EVENTS.UI_OPEN_FORGE, () => {
+    const state = stateManager.getState();
+    const bossProgress = state.hero?.prestige?.bossProgress || 0;
+    const prestigeLevel = state.hero?.prestige?.level || 0;
+    if (bossProgress >= 1 || prestigeLevel > 0) {
+      setIsOpen(true);
+    } else {
+      eventBus.publish('ui:showToast', {
+        message: lang === 'de' ? '🔒 Die Artefakt-Schmiede wird erst nach dem 1. Boss freigeschaltet!' : '🔒 The Artifact Forge is unlocked after the 1st Boss!',
+        type: 'warning',
+        duration: 3000
+      });
+    }
+  });
   useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
 
   if (!isOpen) return null;

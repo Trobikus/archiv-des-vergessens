@@ -17,7 +17,20 @@ export function CraftingUI({ stateManager, eventBus, services }) {
   const crafting = useStateSelector(stateManager, (state) => state.crafting);
   const recipes = craftingService.getAvailableRecipes();
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_CRAFTING, () => setIsOpen(true));
+  useEventBus(eventBus, EVENTS.UI_OPEN_CRAFTING, () => {
+    const state = stateManager.getState();
+    const bossProgress = state.hero?.prestige?.bossProgress || 0;
+    const prestigeLevel = state.hero?.prestige?.level || 0;
+    if (bossProgress >= 1 || prestigeLevel > 0) {
+      setIsOpen(true);
+    } else {
+      eventBus.publish('ui:showToast', {
+        message: '🔒 Die Meisterwerkstatt wird erst nach dem 1. Boss freigeschaltet!',
+        type: 'warning',
+        duration: 3000
+      });
+    }
+  });
   useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
 
   if (!isOpen) return null;

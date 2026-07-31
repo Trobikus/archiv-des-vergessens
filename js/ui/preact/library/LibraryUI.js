@@ -22,7 +22,20 @@ export function LibraryUI({ stateManager, eventBus, services }) {
 
   const resources = useStateSelector(stateManager, (state) => state.resources);
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_LIBRARY, () => setIsOpen(true));
+  useEventBus(eventBus, EVENTS.UI_OPEN_LIBRARY, () => {
+    const state = stateManager.getState();
+    const bossProgress = state.hero?.prestige?.bossProgress || 0;
+    const prestigeLevel = state.hero?.prestige?.level || 0;
+    if (bossProgress >= 1 || prestigeLevel > 0) {
+      setIsOpen(true);
+    } else {
+      eventBus.publish('ui:showToast', {
+        message: '🔒 Die Bibliothek wird erst nach dem 1. Boss freigeschaltet!',
+        type: 'warning',
+        duration: 3000
+      });
+    }
+  });
   useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'resources:updated', () => {});
 

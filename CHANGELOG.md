@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an **Archiv des Vergessens** werden in dieser Dat
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.45] - 2026-07-31
+
+### 🎬 Story & Cinematic Overhaul
+- **HubView Modularisierung & Refactoring**: HubView in dedizierte Kategorien-Komponenten aufgeteilt (`HubCategoryCore`, `HubCategoryCrafting`, `HubCategoryCollection`, `HubCategorySocial`, `HubCategorySettings`, `HubHeader`, `HubNavigation`, `HubWikiModal`).
+- **Cinematic Event & Story System**: Integrierung des Cinematic-Asset-Katalogs, Staggered Cutscene Animationen, Partikeleffekte und entkoppeltes Story & Dialog UI (`StoryBranchUI`, `DialogUI`).
+
 ## [1.0.42] - 2026-07-30
 
 ### 🚀 Navigation Refactoring & Legacy Cleanup

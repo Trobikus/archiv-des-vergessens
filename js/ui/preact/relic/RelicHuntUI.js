@@ -17,7 +17,20 @@ export function RelicHuntUI({ stateManager, eventBus, services }) {
   const resources = useStateSelector(stateManager, (state) => state.resources);
   const hero = useStateSelector(stateManager, (state) => state.hero);
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_RELICHUNT, () => setIsOpen(true));
+  useEventBus(eventBus, EVENTS.UI_OPEN_RELICHUNT, () => {
+    const state = stateManager.getState();
+    const bossProgress = state.hero?.prestige?.bossProgress || 0;
+    const prestigeLevel = state.hero?.prestige?.level || 0;
+    if (bossProgress >= 3 || prestigeLevel > 0) {
+      setIsOpen(true);
+    } else {
+      eventBus.publish('ui:showToast', {
+        message: '🔒 Die Relikt-Jagd wird erst nach dem 3. Boss freigeschaltet!',
+        type: 'warning',
+        duration: 3000
+      });
+    }
+  });
   useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
   useEventBus(eventBus, 'relicHunt:result', (data) => {
     setResult(data.message);

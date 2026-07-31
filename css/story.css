@@ -17,6 +17,27 @@
     flex-shrink: 0;
 }
 
+/* ---- Chapter Unlock Banner ---- */
+.chapter-unlock-banner {
+    padding: 0.8rem 1.5rem;
+    background: linear-gradient(90deg, rgba(197, 160, 89, 0.15), rgba(212, 175, 55, 0.35), rgba(197, 160, 89, 0.15));
+    border: 1px solid var(--color-gold);
+    border-radius: 4px;
+    color: var(--color-gold-hover);
+    font-family: var(--font-header);
+    font-size: 1.1rem;
+    text-align: center;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px var(--color-gold-glow);
+    margin-bottom: 0.8rem;
+    animation: chapterBannerPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes chapterBannerPulse {
+    0% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+    100% { box-shadow: 0 0 25px rgba(212, 175, 55, 0.6); }
+}
+
 /* ---- Chapter Navigation ---- */
 .story-chapter-nav {
     display: flex;

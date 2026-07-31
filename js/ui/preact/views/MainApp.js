@@ -93,7 +93,20 @@ export function MainApp({ stateManager, eventBus, services }) {
     const sub3 = eventBus.subscribe(EVENTS.UI_OPEN_ACCOUNT_MODAL, openAccount);
     const sub4 = eventBus.subscribe(EVENTS.UI_CLOSE_ACCOUNT_MODAL, closeAccount);
     const sub5 = eventBus.subscribe(EVENTS.UI_OPEN_CONFIRM, openConfirm);
-    const sub6 = eventBus.subscribe(EVENTS.UI_OPEN_SHARED_VAULT, () => setVaultModalOpen(true));
+    const sub6 = eventBus.subscribe(EVENTS.UI_OPEN_SHARED_VAULT, () => {
+      const state = stateManager.getState();
+      const bossProgress = state.hero?.prestige?.bossProgress || 0;
+      const prestigeLevel = state.hero?.prestige?.level || 0;
+      if (bossProgress >= 3 || prestigeLevel > 0) {
+        setVaultModalOpen(true);
+      } else {
+        eventBus.publish('ui:showToast', {
+          message: lang === 'de' ? '🔒 Das Account-Lager wird erst nach dem 3. Boss freigeschaltet!' : '🔒 The Account Vault is unlocked after the 3rd Boss!',
+          type: 'warning',
+          duration: 3000
+        });
+      }
+    });
 
     return () => {
       eventBus.unsubscribe(sub1);
