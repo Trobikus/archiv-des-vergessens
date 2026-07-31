@@ -225,17 +225,12 @@ export async function bootGame() {
   const savedState = await SaveManager.load();
   if (savedState) {
     try {
-       // Migration: Falls es ein alter Spielstand ist, Tutorial als beendet markieren
-      if (savedState.system && savedState.system.tutorialFinished === undefined) {
-        savedState.system.tutorialFinished = true;
-        savedState.system.tutorialStep = -1;
-      }
-      // Erzwingen, dass das Intro beim Spielstart geladen wird, statt direkt ins Menü/Hub zu springen
+      // Boot-Session: Intro erzwingen; Schema-Migrationen laufen in hydrate()
       if (savedState.system) {
         savedState.system.currentView = 'intro';
         savedState.system.originalLastSave = savedState.system.lastSave;
       }
-      stateManager.dispatch(() => savedState, 'boot/hydrate');
+      stateManager.hydrate(savedState, 'boot/hydrate');
       // Expeditionen bereinigen
       clanService.cleanupExpeditions();
       logger.info('[GameBoot] State hydriert (Save geladen)');
@@ -289,12 +284,10 @@ export async function bootGame() {
 
       // Prio 1: Cloud-Spielstand anwenden, wenn gleich oder neuer
       logger.info(`[CloudManager] Wende Cloud-Spielstand an (Zeitstempel: ${cloudTimestamp}).`);
-      
-      // In SaveManager (IndexedDB) persisten
-      await SaveManager.save(saveData);
 
-      // In StateManager hydrieren
-      stateManager.dispatch(() => saveData, 'cloud/hydrate');
+      // Hydrate migriert Schema (inkl. Leaderboard-Zeiten), danach lokal persistieren
+      stateManager.hydrate(saveData, 'cloud/hydrate');
+      await SaveManager.save(stateManager.getState());
 
       // Expeditionen & Theme aktualisieren
       clanService.cleanupExpeditions();

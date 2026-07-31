@@ -4,12 +4,13 @@
  * ============================================================
  */
 
-import { h, html, useStateSelector, useEventBus, useState } from '../setup.js';
+import { h, html, useStateSelector, useEventBus } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
+import { useModal } from '../shared/useModal.js';
+import { ModalShell } from '../shared/ModalShell.js';
 
 export function LibraryUI({ stateManager, eventBus, services }) {
-  const { libraryService, resourceService } = services;
-  const [isOpen, setIsOpen] = useState(false);
+  const { libraryService } = services;
 
   const upgrades = useStateSelector(stateManager, (state) => {
     const upg = state.library.upgrades;
@@ -22,24 +23,23 @@ export function LibraryUI({ stateManager, eventBus, services }) {
 
   const resources = useStateSelector(stateManager, (state) => state.resources);
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_LIBRARY, () => {
-    const state = stateManager.getState();
-    const bossProgress = state.hero?.prestige?.bossProgress || 0;
-    const prestigeLevel = state.hero?.prestige?.level || 0;
-    if (bossProgress >= 1 || prestigeLevel > 0) {
-      setIsOpen(true);
-    } else {
+  const { isOpen, close } = useModal(eventBus, {
+    openEvent: EVENTS.UI_OPEN_LIBRARY,
+    canOpen: () => {
+      const state = stateManager.getState();
+      const bossProgress = state.hero?.prestige?.bossProgress || 0;
+      const prestigeLevel = state.hero?.prestige?.level || 0;
+      if (bossProgress >= 1 || prestigeLevel > 0) return true;
       eventBus.publish('ui:showToast', {
         message: '🔒 Die Bibliothek wird erst nach dem 1. Boss freigeschaltet!',
         type: 'warning',
         duration: 3000
       });
+      return false;
     }
   });
-  useEventBus(eventBus, 'ui:closeAllModals', () => setIsOpen(false));
-  useEventBus(eventBus, 'resources:updated', () => {});
 
-  if (!isOpen) return null;
+  useEventBus(eventBus, 'resources:updated', () => {});
 
   const handleBuy = (id) => {
     const result = libraryService.buyUpgrade(id);
@@ -59,43 +59,45 @@ export function LibraryUI({ stateManager, eventBus, services }) {
   };
 
   return html`
-    <div class="modal-overlay" style="display: flex;" onClick=${(e) => { if (e.target === e.currentTarget) setIsOpen(false); }}>
-      <div class="modal-content glass-panel" style="width: 700px; max-width: 95vw; max-height: 85vh;" onClick=${(e) => e.stopPropagation()}>
-        <button class="modal-close" onClick=${() => setIsOpen(false)}>×</button>
-        <h2 class="modal-title glow-text text-highlight cinzel text-center">Die Archiv-Bibliothek</h2>
-        <div class="text-muted text-sm mb-1 glass-inner-panel text-center" style="padding: 0.8rem; margin-bottom: 1rem;">
-          Erweitere dein Wissen für permanente Boni.<br />
-          Forschungen können unbegrenzt aufgewertet werden.
-        </div>
+    <${ModalShell}
+      isOpen=${isOpen}
+      onClose=${close}
+      title="Die Archiv-Bibliothek"
+      titleClass="modal-title glow-text text-highlight cinzel text-center"
+      contentStyle="width: 700px; max-width: 95vw; max-height: 85vh;"
+    >
+      <div class="text-muted text-sm mb-1 glass-inner-panel text-center" style="padding: 0.8rem; margin-bottom: 1rem;">
+        Erweitere dein Wissen für permanente Boni.<br />
+        Forschungen können unbegrenzt aufgewertet werden.
+      </div>
 
-        <div class="modal-scroll-area" style="max-height: 60vh; overflow-y: auto; padding-right: 0.5rem;">
-          ${upgrades.map(upg => {
-            const cost = libraryService.getUpgradeCost(upg.id);
-            const canAfford = Object.entries(cost).every(([key, amt]) => (BigInt(resources[key] || '0') >= BigInt(amt)));
-            const isMaxed = upg.level >= upg.maxLevel;
+      <div class="modal-scroll-area" style="max-height: 60vh; overflow-y: auto; padding-right: 0.5rem;">
+        ${upgrades.map(upg => {
+          const cost = libraryService.getUpgradeCost(upg.id);
+          const canAfford = Object.entries(cost).every(([key, amt]) => (BigInt(resources[key] || '0') >= BigInt(amt)));
+          const isMaxed = upg.level >= upg.maxLevel;
 
-            return html`
-              <div class="library-card glass-inner-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1.2rem; margin-bottom: 0.6rem; border-left: 3px solid ${isMaxed ? 'var(--color-success)' : canAfford ? 'var(--color-dust)' : 'var(--color-text-muted)'}; opacity: ${isMaxed ? 1 : canAfford ? 1 : 0.6}; transition: all 0.3s ease;">
-                <div class="library-info" style="flex: 1; min-width: 0;">
-                  <div class="library-name" style="font-family: var(--font-header); font-size: 1.05rem; color: ${isMaxed ? 'var(--color-success)' : 'var(--color-highlight)'};">${upg.name} (Stufe ${upg.level})</div>
-                  <div class="library-desc" style="color: var(--color-text-muted); font-size: 0.85rem;">${upg.desc}</div>
-                  <div class="library-cost" style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.1rem;">
-                    ${isMaxed ? html`<span class="text-success">✦ Maximalstufe erreicht ✦</span>` :
-                      html`Kosten: <span class="${canAfford ? 'text-dust' : 'text-danger'}">${Object.entries(cost).map(([k, v]) => `${v} ${k}`).join(' | ')}</span>`}
-                  </div>
-                </div>
-                <div class="library-action" style="flex-shrink: 0; margin-left: 1rem; min-width: 100px; text-align: center;">
-                  ${!isMaxed ? html`
-                    <button class="glass-btn primary btn-small research-btn" onClick=${() => handleBuy(upg.id)} disabled=${!canAfford}>
-                      📚 Forschen
-                    </button>
-                  ` : html`<span class="library-maxed" style="color: var(--color-success); font-weight: bold;">✦ Max</span>`}
+          return html`
+            <div class="library-card glass-inner-panel" style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1.2rem; margin-bottom: 0.6rem; border-left: 3px solid ${isMaxed ? 'var(--color-success)' : canAfford ? 'var(--color-dust)' : 'var(--color-text-muted)'}; opacity: ${isMaxed ? 1 : canAfford ? 1 : 0.6}; transition: all 0.3s ease;">
+              <div class="library-info" style="flex: 1; min-width: 0;">
+                <div class="library-name" style="font-family: var(--font-header); font-size: 1.05rem; color: ${isMaxed ? 'var(--color-success)' : 'var(--color-highlight)'};">${upg.name} (Stufe ${upg.level})</div>
+                <div class="library-desc" style="color: var(--color-text-muted); font-size: 0.85rem;">${upg.desc}</div>
+                <div class="library-cost" style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.1rem;">
+                  ${isMaxed ? html`<span class="text-success">✦ Maximalstufe erreicht ✦</span>` :
+                    html`Kosten: <span class="${canAfford ? 'text-dust' : 'text-danger'}">${Object.entries(cost).map(([k, v]) => `${v} ${k}`).join(' | ')}</span>`}
                 </div>
               </div>
-            `;
-          })}
-        </div>
+              <div class="library-action" style="flex-shrink: 0; margin-left: 1rem; min-width: 100px; text-align: center;">
+                ${!isMaxed ? html`
+                  <button class="glass-btn primary btn-small research-btn" onClick=${() => handleBuy(upg.id)} disabled=${!canAfford}>
+                    📚 Forschen
+                  </button>
+                ` : html`<span class="library-maxed" style="color: var(--color-success); font-weight: bold;">✦ Max</span>`}
+              </div>
+            </div>
+          `;
+        })}
       </div>
-    </div>
+    </${ModalShell}>
   `;
 }

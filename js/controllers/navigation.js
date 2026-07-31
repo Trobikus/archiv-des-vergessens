@@ -52,7 +52,7 @@ export class NavigationController {
       if (data && data.slotId) {
         const state = await this._saveManager.load(data.slotId);
         if (state) {
-          this._stateManager.dispatch(() => state, 'character/load');
+          this._stateManager.hydrate(state, 'character/load');
         }
         this.showHub();
       }
