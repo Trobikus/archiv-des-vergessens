@@ -9,6 +9,7 @@ import { GameView } from './GameView.js';
 import { ToastManager } from '../shared/ToastManager.js';
 import { HeroUI } from '../hero/HeroUI.js';
 import { StoryUI } from '../story/StoryUI.js';
+import { StoryBranchUI } from '../story/StoryBranchUI.js';
 import { ForgeUI } from '../forge/ForgeUI.js';
 import { CraftingUI } from '../crafting/CraftingUI.js';
 import { QuestUI } from '../quest/QuestUI.js';
@@ -166,6 +167,7 @@ export function MainApp({ stateManager, eventBus, services }) {
       <${FeatureUnlockToast} eventBus=${eventBus} stateManager=${stateManager} lang=${lang} />
       <${HeroUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${StoryUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
+      <${StoryBranchUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${ForgeUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${CraftingUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
       <${QuestUI} stateManager=${stateManager} eventBus=${eventBus} services=${services} />
