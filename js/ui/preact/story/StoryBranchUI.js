@@ -9,25 +9,25 @@
 
 import { h, html, useState, useEffect, useEventBus } from '../setup.js';
 import { EVENTS } from '../../../core/events/definitions.js';
-import { getCinematicScene } from '../../../data/cinematic_scenes.js';
+import { resolveSceneForStoryNode } from '../../../data/cinematic_scenes.js';
 
 export function StoryBranchUI({ stateManager, eventBus, services }) {
   const { storyBranchService, i18nService } = services;
   const [isOpen, setIsOpen] = useState(false);
   const [lang, setLang] = useState(i18nService?.getLanguage?.() || 'de');
-  const [tick, setTick] = useState(0); // force re-render after choose
+  const [tick, setTick] = useState(0);
 
   useEventBus(eventBus, 'i18n:languageChanged', (data) => {
     setLang(typeof data === 'string' ? data : data?.language || 'de');
   });
 
-  useEventBus(eventBus, EVENTS.UI_OPEN_STORY_BRANCH || 'ui:openStoryBranch', () => {
+  useEventBus(eventBus, EVENTS.UI_OPEN_STORY_BRANCH, () => {
     setIsOpen(true);
     setTick((t) => t + 1);
   });
 
   useEventBus(eventBus, EVENTS.UI_CLOSE_ALL_MODALS, () => setIsOpen(false));
-  useEventBus(eventBus, 'story:branchChanged', () => setTick((t) => t + 1));
+  useEventBus(eventBus, EVENTS.STORY_BRANCH_CHANGED, () => setTick((t) => t + 1));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -40,12 +40,14 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
 
   if (!isOpen || !storyBranchService) return null;
 
+  // tick forces re-read after chooseOption
+  void tick;
+
   const node = storyBranchService.getCurrentNode();
   if (!node) return null;
 
   const options = storyBranchService.getAvailableOptions();
-  const sceneId = node.cinematic || 'archive-halls';
-  const scene = getCinematicScene(sceneId);
+  const scene = resolveSceneForStoryNode(node);
   const glow = scene.glowColor || 'var(--color-primary)';
   const bgStyle = scene.background || 'rgba(5,5,7,0.97)';
   const ambientClass = scene.ambientClass || '';
@@ -66,14 +68,14 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
     if (result?.success) {
       setTick((t) => t + 1);
       if (result.node?.isEnding) {
-        eventBus.publish('ui:showToast', {
+        eventBus.publish(EVENTS.UI_SHOW_TOAST, {
           message: lang === 'de' ? `Ende: ${result.node.title}` : `Ending: ${result.node.title}`,
           type: 'info',
           duration: 4000
         });
       }
     } else if (result?.message) {
-      eventBus.publish('ui:showToast', {
+      eventBus.publish(EVENTS.UI_SHOW_TOAST, {
         message: result.message,
         type: 'warning',
         duration: 3000
@@ -96,21 +98,18 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
         class="cinematic-content"
         style="max-width: 820px; width: 92%; text-align: center; position: relative; z-index: 9505;"
       >
-        <!-- Progress -->
         <div
           style="position: absolute; top: -2.5rem; left: 0; right: 0; font-size: 0.7rem; color: rgba(255,255,255,0.35); letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-header, Cinzel, serif);"
         >
           ${lang === 'de' ? 'Chronik' : 'Chronicle'} · ${progress}%
         </div>
 
-        <!-- Scene name (subtle) -->
         <div
           style="font-size: 0.75rem; color: ${glow}; opacity: 0.7; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 1rem; font-family: var(--font-header, Cinzel, serif);"
         >
           ${lang === 'en' && scene.name_en ? scene.name_en : scene.name}
         </div>
 
-        <!-- Title -->
         <h2
           class="cinzel"
           style="color: ${glow}; font-size: 1.9rem; letter-spacing: 2px; text-shadow: 0 0 18px ${glow}; margin-bottom: 1.8rem; text-transform: uppercase; line-height: 1.3;"
@@ -118,14 +117,12 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
           ${title}
         </h2>
 
-        <!-- Narrative text -->
         <div
           style="font-family: 'Outfit', sans-serif; font-size: 1.2rem; color: #f0eae0; line-height: 1.85; margin-bottom: 2.8rem; text-shadow: 0 2px 8px rgba(0,0,0,0.9); font-style: ${scene.textStyle || 'italic'}; background: rgba(0,0,0,0.4); padding: 1.6rem 1.8rem; border-radius: 8px; border-left: 2px solid ${glow}; border-right: 2px solid ${glow}; text-align: left; white-space: pre-wrap;"
         >
           ${text}
         </div>
 
-        <!-- Options / Ending -->
         <div class="dialog-options" style="display: flex; flex-direction: column; gap: 0.9rem; align-items: center;">
           ${isEnding
             ? html`
@@ -173,7 +170,6 @@ export function StoryBranchUI({ stateManager, eventBus, services }) {
                 )}
         </div>
 
-        <!-- Close hint -->
         ${!isEnding
           ? html`
               <button
