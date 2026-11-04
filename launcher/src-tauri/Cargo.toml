@@ -15,7 +15,7 @@ serde_json = "1.0"
 reqwest = { version = "0.12", features = ["json", "stream"] }
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
-zip = "2.2"
+zip = "9.0"
 dirs = "5.0"
 ed25519-dalek = "2.1"
 hex = "0.4.3"
